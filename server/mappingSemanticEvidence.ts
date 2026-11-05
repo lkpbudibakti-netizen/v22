@@ -90,6 +90,21 @@ function detectDomainConflict(labelTokens: string[], evidenceTokens: string[]): 
 }
 
 function detectExplicitMovementConflict(label: string, evidence: string): string | null {
+  const normLabel = normalizeText(label);
+  const normEvidence = normalizeText(evidence);
+
+  const mathTokens = ['pecahan', 'pembagian', 'perkalian', 'penjumlahan', 'pengurangan', 'bilangan', 'geometri', 'aljabar'];
+  const pjokTokens = ['melempar', 'menangkap', 'menendang', 'berlari', 'melompat', 'lokomotor', 'non-lokomotor', 'manipulatif', 'kebugaran', 'senam', 'renang'];
+
+  const labelHasMath = mathTokens.some(t => normLabel.includes(t));
+  const evidenceHasPjok = pjokTokens.some(t => normEvidence.includes(t));
+  const labelHasPjok = pjokTokens.some(t => normLabel.includes(t));
+  const evidenceHasMath = mathTokens.some(t => normEvidence.includes(t));
+
+  if ((labelHasMath && evidenceHasPjok) || (labelHasPjok && evidenceHasMath)) {
+    return 'Konflik domain mata pelajaran eksplisit antara Matematika dan Pendidikan Jasmani.';
+  }
+
   const domains = (text: string) => normalizeText(text).split(/\s+/u)
     .filter(token => ['lokomotor', 'non-lokomotor', 'manipulatif'].includes(token));
   const labelDomains = new Set(domains(label));

@@ -59,6 +59,7 @@ import {
   parseBabMateriXlsx,
   downloadBabMateriTemplateXlsx,
   ATPUnitMappingImportResult,
+  ATPUnitMappingImportMode,
 } from '../services/atpUnitMappingImportService';
 import { validateATPDataWorkflow } from '../services/cpWorkflowService';
 import { buildATPUnitMappingDiagnosticReport } from '../services/diagnosticService';
@@ -749,6 +750,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
   // Import Bab & Materi State (Section 4, 5, 6)
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importMode, setImportMode] = useState<ATPUnitMappingImportMode>('FULL_STRUCTURE');
   const [isImporting, setIsImporting] = useState(false);
   const [importPreviewResult, setImportPreviewResult] = useState<ATPUnitMappingImportResult | null>(null);
   const [importErrors, setImportErrors] = useState<string[] | null>(null);
@@ -771,6 +773,14 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       ]);
       return;
     }
+
+    if (importMode === 'UPDATE_BAB_TITLES_ONLY' && units.length === 0) {
+      setImportErrors([
+        'Tidak ada Bab tersimpan dalam draf untuk diperbarui nama judulnya. Silakan buat atau impor Bab & Materi terlebih dahulu.',
+      ]);
+      return;
+    }
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
       fileInputRef.current.click();
@@ -795,7 +805,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
     try {
       const buffer = await file.arrayBuffer();
-      const result = parseBabMateriXlsx(buffer);
+      const result = parseBabMateriXlsx(buffer, importMode, units);
       if (!result.success || !result.units || result.units.length === 0) {
         setImportErrors(result.errors || ['Gagal membaca file XLSX.']);
         setImportPreviewResult(null);
@@ -815,6 +825,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   const handleApplyImportToDraft = () => {
     if (!importPreviewResult?.units || importPreviewResult.units.length === 0) return;
 
+    const isTitlesOnly = importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY';
     setUnits(importPreviewResult.units);
     setHasChanges(true);
 
@@ -829,9 +840,15 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     setAnalysisFingerprint(null);
 
     const stats = importPreviewResult.stats;
-    setImportSuccessNotice(
-      `Berhasil menerapkan ${stats?.totalBabs || importPreviewResult.units.length} Bab dan ${stats?.totalMaterials || 0} Lingkup Materi ke Draf. Silakan klik 'Analisis & Selaraskan' untuk menyelaraskan dengan ATP & TP kanonikal.`
-    );
+    if (isTitlesOnly) {
+      setImportSuccessNotice(
+        `Berhasil memperbarui ${stats?.titleChangesCount || 0} judul Bab pada draf. Klik 'Simpan Perubahan' untuk menyimpan.`
+      );
+    } else {
+      setImportSuccessNotice(
+        `Berhasil menerapkan ${stats?.totalBabs || importPreviewResult.units.length} Bab dan ${stats?.totalMaterials || 0} Lingkup Materi ke Draf. Silakan klik 'Analisis & Selaraskan' untuk menyelaraskan dengan ATP & TP kanonikal.`
+      );
+    }
 
     setImportPreviewResult(null);
   };
@@ -1331,6 +1348,29 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             </button>
           </div>
         )}
+
+        {importErrors && importErrors.length > 0 && (
+          <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1.5 animate-fadeIn">
+            <div className="flex items-center justify-between font-bold">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Gagal Mengimpor Excel ({importErrors.length} kendala/diagnosis):</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportErrors(null)}
+                className="text-rose-600 hover:text-rose-800 text-xs cursor-pointer font-bold"
+              >
+                Tutup
+              </button>
+            </div>
+            <ul className="list-disc pl-5 space-y-0.5 text-rose-800">
+              {importErrors.map((err, idx) => (
+                <li key={idx}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Main AI toolbar precedes manual/import controls at every viewport width. */}
@@ -1396,19 +1436,47 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             </button>
           </div>
 
-          {/* Action Buttons: Import, AI Generate, AI Analyze */}
+          {/* Action Buttons: Mode Selector, Import, Download Template */}
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Download Template Button */}
             <button
               id="btn-download-bab-materi-template"
               type="button"
               onClick={() => downloadBabMateriTemplateXlsx()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-2xs transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold shadow-2xs transition cursor-pointer"
               title="Download template Excel untuk struktur Bab & Materi"
             >
               <Download className="w-4 h-4 text-slate-600" />
               <span>Download Template</span>
             </button>
+
+            {/* Mode Selector */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button
+                id="mode-full-structure"
+                type="button"
+                onClick={() => { setImportMode('FULL_STRUCTURE'); setImportErrors(null); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  importMode === 'FULL_STRUCTURE'
+                    ? 'bg-white text-emerald-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Impor Bab & Materi
+              </button>
+              <button
+                id="mode-update-titles-only"
+                type="button"
+                onClick={() => { setImportMode('UPDATE_BAB_TITLES_ONLY'); setImportErrors(null); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  importMode === 'UPDATE_BAB_TITLES_ONLY'
+                    ? 'bg-white text-emerald-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Perbarui Nama Bab Saja
+              </button>
+            </div>
 
             {/* Import Bab & Materi Button */}
             <input
@@ -1426,16 +1494,24 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
               title={
                 !isATPReady
                   ? 'Selesaikan ATP terlebih dahulu sebelum mengimpor struktur Bab & Materi.'
+                  : importMode === 'UPDATE_BAB_TITLES_ONLY'
+                  ? 'Perbarui hanya judul Bab dari file Excel (sheet BAB_MATERI)'
                   : 'Impor struktur Bab dan Lingkup Materi dari file Excel (sheet BAB_MATERI)'
               }
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border shadow-2xs transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                 !isATPReady
                   ? 'bg-slate-100 border-slate-200 text-slate-400'
-                  : 'bg-white border-emerald-300 text-emerald-800 hover:bg-emerald-50'
+                  : 'bg-emerald-700 text-white hover:bg-emerald-800'
               }`}
             >
-              <FileSpreadsheet className={`w-4 h-4 ${isImporting ? 'animate-spin' : 'text-emerald-700'}`} />
-              <span>{isImporting ? 'Membaca XLSX...' : 'Import Bab & Materi'}</span>
+              <FileSpreadsheet className={`w-4 h-4 ${isImporting ? 'animate-spin' : 'text-white'}`} />
+              <span>
+                {isImporting
+                  ? 'Membaca XLSX...'
+                  : importMode === 'UPDATE_BAB_TITLES_ONLY'
+                  ? 'Pilih Excel Judul Bab'
+                  : 'Pilih Excel Bab & Materi'}
+              </span>
             </button>
 
             {/* Import Preview Modal (Section 4, 7, 8) */}
@@ -1448,9 +1524,15 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                         <FileSpreadsheet className="w-5 h-5 text-emerald-700" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">Pratinjau Import Bab & Lingkup Materi</h3>
+                        <h3 className="font-bold text-slate-900 text-sm">
+                          {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY'
+                            ? 'Pratinjau Perbarui Nama Bab Saja'
+                            : 'Pratinjau Import Bab & Lingkup Materi'}
+                        </h3>
                         <p className="text-xs text-slate-500">
-                          Struktur Bab & Materi dari sheet <code>BAB_MATERI</code> berhasil divalidasi.
+                          {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY'
+                            ? `Meninjau ${importPreviewResult.titleChanges?.length || 0} Bab dari sheet BAB_MATERI.`
+                            : 'Struktur Bab & Materi dari sheet BAB_MATERI berhasil divalidasi.'}
                         </p>
                       </div>
                     </div>
@@ -1464,73 +1546,141 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                   </div>
 
                   {/* Stats Summary */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-emerald-900">Jumlah Bab:</span>
-                      <span className="text-sm font-extrabold text-emerald-700">
-                        {importPreviewResult.stats?.totalBabs || importPreviewResult.units.length}
-                      </span>
+                  {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-emerald-900">Jumlah Bab Tersimpan:</span>
+                        <span className="text-sm font-extrabold text-emerald-700">
+                          {importPreviewResult.stats?.totalBabs || 0}
+                        </span>
+                      </div>
+                      <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-blue-900">Judul Diperbarui:</span>
+                        <span className="text-sm font-extrabold text-blue-700">
+                          {importPreviewResult.stats?.titleChangesCount || 0} Bab
+                        </span>
+                      </div>
                     </div>
-                    <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-3 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-indigo-900">Jumlah Materi:</span>
-                      <span className="text-sm font-extrabold text-indigo-700">
-                        {importPreviewResult.stats?.totalMaterials || 0}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Warnings & Notices (Section 7 & 8) */}
-                  {hasCanonicalMapping && (
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="font-semibold leading-tight">
-                          Pemetaan Bab sudah tersimpan. Struktur hasil import hanya akan mengganti draf saat ini. Data tersimpan baru berubah setelah Anda menekan Simpan Perubahan.
-                        </p>
-                        <p className="text-[11px] text-amber-800">
-                          Perubahan pada struktur Bab/Materi dapat memengaruhi pemetaan Tujuan Pembelajaran (TP) yang sudah ada sebelumnya.
-                        </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-emerald-900">Jumlah Bab:</span>
+                        <span className="text-sm font-extrabold text-emerald-700">
+                          {importPreviewResult.stats?.totalBabs || importPreviewResult.units.length}
+                        </span>
+                      </div>
+                      <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-3 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-900">Jumlah Materi:</span>
+                        <span className="text-sm font-extrabold text-indigo-700">
+                          {importPreviewResult.stats?.totalMaterials || 0}
+                        </span>
                       </div>
                     </div>
                   )}
 
-                  {/* Lineage Isolation Notice (Section 3 & 9) */}
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
-                    <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>
-                      Struktur Bab & Materi diimpor dengan lineage kosong. Gunakan fitur <strong>Analisis & Selaraskan</strong> setelah menerapkan ke draf untuk menghubungkan dengan TP & ATP kanonikal.
-                    </span>
-                  </div>
-
-                  {/* Scrollable List of Babs & Materials */}
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1 border border-slate-200 rounded-xl p-3 bg-slate-50/30 max-h-[35vh]">
-                    {importPreviewResult.units.map((u) => (
-                      <div key={u.id} className="bg-white rounded-lg border border-slate-200 p-2.5 space-y-1.5 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold">
-                              Bab {u.order}
-                            </span>
-                            <span className="font-bold text-slate-800 text-xs">{u.title}</span>
+                  {/* Notices */}
+                  {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY' ? (
+                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-center gap-2">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>
+                        <strong>Mode Perbarui Nama Bab Saja:</strong> Seluruh ID Bab, Lingkup Materi, pemetaan TP/ATP, JP, dan relasi kanonikal TETAP UTUH tanpa perubahan.
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      {hasCanonicalMapping && (
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="font-semibold leading-tight">
+                              Pemetaan Bab sudah tersimpan. Struktur hasil import hanya akan mengganti draf saat ini. Data tersimpan baru berubah setelah Anda menekan Simpan Perubahan.
+                            </p>
+                            <p className="text-[11px] text-amber-800">
+                              Perubahan pada struktur Bab/Materi dapat memengaruhi pemetaan Tujuan Pembelajaran (TP) yang sudah ada sebelumnya.
+                            </p>
                           </div>
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            {u.materials?.length || 0} materi
-                          </span>
                         </div>
-                        {u.materials && u.materials.length > 0 && (
-                          <div className="pl-4 pt-1 space-y-1 border-t border-slate-100">
-                            {u.materials.map((m) => (
-                              <div key={m.id} className="flex items-center gap-2 text-[11px] text-slate-600">
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                                <span className="text-slate-400 font-semibold">{m.order}.</span>
-                                <span>{m.title}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      )}
+
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
+                        <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>
+                          Struktur Bab & Materi diimpor dengan lineage kosong. Gunakan fitur <strong>Analisis & Selaraskan</strong> setelah menerapkan ke draf untuk menghubungkan dengan TP & ATP kanonikal.
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
+
+                  {/* Scrollable List of Babs & Materials or Title Changes */}
+                  {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY' ? (
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1 border border-slate-200 rounded-xl p-3 bg-slate-50/30 max-h-[35vh]">
+                      {importPreviewResult.titleChanges?.map((ch) => {
+                        const isChanged = ch.oldTitle !== ch.newTitle;
+                        return (
+                          <div
+                            key={ch.babOrder}
+                            className={`bg-white rounded-lg border p-3 space-y-1 shadow-2xs ${
+                              isChanged ? 'border-blue-200 bg-blue-50/20' : 'border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold">
+                                Bab {ch.babOrder}
+                              </span>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  isChanged
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {isChanged ? 'Diperbarui' : 'Tetap'}
+                              </span>
+                            </div>
+                            <div className="text-xs space-y-0.5 pt-1">
+                              <div className="text-slate-500 flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-400 w-20 shrink-0">Judul Lama:</span>
+                                <span className="line-through decoration-slate-300">{ch.oldTitle}</span>
+                              </div>
+                              <div className="text-slate-900 font-bold flex items-center gap-1.5">
+                                <span className="font-semibold text-blue-600 w-20 shrink-0">Judul Baru:</span>
+                                <span className="text-blue-900">{ch.newTitle}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 border border-slate-200 rounded-xl p-3 bg-slate-50/30 max-h-[35vh]">
+                      {importPreviewResult.units.map((u) => (
+                        <div key={u.id} className="bg-white rounded-lg border border-slate-200 p-2.5 space-y-1.5 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold">
+                                Bab {u.order}
+                              </span>
+                              <span className="font-bold text-slate-800 text-xs">{u.title}</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              {u.materials?.length || 0} materi
+                            </span>
+                          </div>
+                          {u.materials && u.materials.length > 0 && (
+                            <div className="pl-4 pt-1 space-y-1 border-t border-slate-100">
+                              {u.materials.map((m) => (
+                                <div key={m.id} className="flex items-center gap-2 text-[11px] text-slate-600">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                                  <span className="text-slate-400 font-semibold">{m.order}.</span>
+                                  <span>{m.title}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Modal Actions */}
                   <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
@@ -1547,7 +1697,9 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                       onClick={handleApplyImportToDraft}
                       className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition cursor-pointer shadow-xs"
                     >
-                      Terapkan ke Draf
+                      {importPreviewResult.mode === 'UPDATE_BAB_TITLES_ONLY'
+                        ? 'Terapkan Perubahan Judul ke Draf'
+                        : 'Terapkan ke Draf'}
                     </button>
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import * as XLSX from 'xlsx';
 import {
   validateAndBuildATPUnitMappings,
+  validateAndUpdateBabTitlesOnly,
   parseBabMateriXlsx,
   createBabMateriTemplateWorkbook,
   RawBabMateriRow,
@@ -176,6 +177,168 @@ console.log('Testing Case F: Missing sheet BAB_MATERI -> ERROR...');
   assert.strictEqual(result.success, false, 'Should fail when sheet BAB_MATERI missing');
   assert.ok(result.errors?.some((err) => err.includes('BAB_MATERI')));
   console.log('✅ Case F passed');
+}
+
+// ==========================================
+// CASE G: UPDATE_BAB_TITLES_ONLY mode (Success & Integrity)
+// ==========================================
+console.log('Testing Case G: UPDATE_BAB_TITLES_ONLY mode (Success & Integrity)...');
+{
+  const savedUnits = [
+    {
+      id: 'unit-orig-1',
+      title: 'Bab 1: Judul Lama 1',
+      order: 1,
+      linkedAtpItemIds: ['atp-1', 'atp-2'],
+      linkedTpIds: ['tp-1'],
+      materials: [
+        {
+          id: 'mat-orig-1',
+          title: 'Materi Asli 1.1',
+          order: 1,
+          linkedAtpItemIds: ['atp-1'],
+          linkedTpIds: ['tp-1'],
+        },
+      ],
+    },
+    {
+      id: 'unit-orig-2',
+      title: 'Bab 2: Judul Lama 2',
+      order: 2,
+      linkedAtpItemIds: ['atp-3'],
+      linkedTpIds: ['tp-2'],
+      materials: [
+        {
+          id: 'mat-orig-2',
+          title: 'Materi Asli 2.1',
+          order: 1,
+          linkedAtpItemIds: ['atp-3'],
+          linkedTpIds: ['tp-2'],
+        },
+      ],
+    },
+  ];
+
+  // Excel with empty material columns
+  const titleOnlyRows: RawBabMateriRow[] = [
+    { babOrder: 1, babTitle: 'Bab 1: Judul Baru Yang Diperbarui', materialOrder: '', materialTitle: '' },
+    { babOrder: 2, babTitle: 'Bab 2: Judul Baru Permainan', materialOrder: null, materialTitle: undefined },
+  ];
+
+  const result = validateAndUpdateBabTitlesOnly(titleOnlyRows, savedUnits);
+
+  assert.strictEqual(result.success, true, 'Result success must be true in title-only mode');
+  assert.strictEqual(result.mode, 'UPDATE_BAB_TITLES_ONLY');
+  assert.strictEqual(result.units?.length, 2, 'Must preserve unit count of 2');
+  assert.strictEqual(result.stats?.titleChangesCount, 2, 'Should report 2 title changes');
+
+  // Verify unit 1 updated title while keeping ID, materials, and lineage
+  assert.strictEqual(result.units?.[0].id, 'unit-orig-1', 'Unit ID must be preserved');
+  assert.strictEqual(result.units?.[0].order, 1, 'Unit order must be preserved');
+  assert.strictEqual(result.units?.[0].title, 'Bab 1: Judul Baru Yang Diperbarui');
+  assert.deepStrictEqual(result.units?.[0].linkedAtpItemIds, ['atp-1', 'atp-2'], 'Unit linkedAtpItemIds preserved');
+  assert.deepStrictEqual(result.units?.[0].linkedTpIds, ['tp-1'], 'Unit linkedTpIds preserved');
+  assert.strictEqual(result.units?.[0].materials.length, 1, 'Materials count preserved');
+  assert.strictEqual(result.units?.[0].materials[0].id, 'mat-orig-1', 'Material ID preserved');
+  assert.strictEqual(result.units?.[0].materials[0].title, 'Materi Asli 1.1', 'Material title preserved');
+  assert.deepStrictEqual(result.units?.[0].materials[0].linkedAtpItemIds, ['atp-1']);
+  assert.deepStrictEqual(result.units?.[0].materials[0].linkedTpIds, ['tp-1']);
+
+  // Verify unit 2
+  assert.strictEqual(result.units?.[1].id, 'unit-orig-2');
+  assert.strictEqual(result.units?.[1].title, 'Bab 2: Judul Baru Permainan');
+  assert.strictEqual(result.units?.[1].materials[0].title, 'Materi Asli 2.1');
+
+  console.log('✅ Case G passed');
+}
+
+// ==========================================
+// CASE H: Mismatched Bab count in UPDATE_BAB_TITLES_ONLY -> ERROR & Diagnosis
+// ==========================================
+console.log('Testing Case H: Mismatched Bab count in UPDATE_BAB_TITLES_ONLY -> ERROR & Diagnosis...');
+{
+  const savedUnits = [
+    { id: 'u1', title: 'Bab 1', order: 1, linkedAtpItemIds: [], linkedTpIds: [], materials: [] },
+    { id: 'u2', title: 'Bab 2', order: 2, linkedAtpItemIds: [], linkedTpIds: [], materials: [] },
+    { id: 'u3', title: 'Bab 3', order: 3, linkedAtpItemIds: [], linkedTpIds: [], materials: [] },
+  ];
+
+  // Excel has only 2 Babs (count mismatch)
+  const rowsWith2Babs: RawBabMateriRow[] = [
+    { babOrder: 1, babTitle: 'Bab 1 Baru' },
+    { babOrder: 2, babTitle: 'Bab 2 Baru' },
+  ];
+
+  const result = validateAndUpdateBabTitlesOnly(rowsWith2Babs, savedUnits);
+
+  assert.strictEqual(result.success, false, 'Should fail when Bab count mismatches');
+  assert.strictEqual(result.units, undefined, 'No partial units on error');
+  assert.ok(result.errors?.some((err) => err.includes('Jumlah Bab dalam file Excel (2) tidak cocok dengan jumlah Bab tersimpan (3)')));
+
+  console.log('✅ Case H passed');
+}
+
+// ==========================================
+// CASE I: Empty babTitle or Conflicting Title in UPDATE_BAB_TITLES_ONLY -> ERROR
+// ==========================================
+console.log('Testing Case I: Empty babTitle or Conflicting Title in UPDATE_BAB_TITLES_ONLY -> ERROR...');
+{
+  const savedUnits = [
+    { id: 'u1', title: 'Bab 1', order: 1, linkedAtpItemIds: [], linkedTpIds: [], materials: [] },
+  ];
+
+  // Empty title
+  const rowsEmptyTitle: RawBabMateriRow[] = [
+    { babOrder: 1, babTitle: '' },
+  ];
+  const resEmpty = validateAndUpdateBabTitlesOnly(rowsEmptyTitle, savedUnits);
+  assert.strictEqual(resEmpty.success, false);
+  assert.ok(resEmpty.errors?.some((err) => err.includes('babTitle')));
+
+  // Conflicting title for babOrder 1
+  const rowsConflict: RawBabMateriRow[] = [
+    { babOrder: 1, babTitle: 'Judul X' },
+    { babOrder: 1, babTitle: 'Judul Y' },
+  ];
+  const resConflict = validateAndUpdateBabTitlesOnly(rowsConflict, savedUnits);
+  assert.strictEqual(resConflict.success, false);
+  assert.ok(resConflict.errors?.some((err) => err.includes('bertentangan')));
+
+  console.log('✅ Case I passed');
+}
+
+// ==========================================
+// CASE J: parseBabMateriXlsx with mode 'UPDATE_BAB_TITLES_ONLY' via XLSX buffer
+// ==========================================
+console.log('Testing Case J: parseBabMateriXlsx with mode UPDATE_BAB_TITLES_ONLY...');
+{
+  const savedUnits = [
+    { id: 'u1', title: 'Bab 1 Lama', order: 1, linkedAtpItemIds: ['a1'], linkedTpIds: ['t1'], materials: [] },
+    { id: 'u2', title: 'Bab 2 Lama', order: 2, linkedAtpItemIds: ['a2'], linkedTpIds: ['t2'], materials: [] },
+  ];
+
+  const wsData = [
+    ['babOrder', 'babTitle'],
+    [1, 'Bab 1 Reborn'],
+    [2, 'Bab 2 Reborn'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'BAB_MATERI');
+
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const result = parseBabMateriXlsx(buf, 'UPDATE_BAB_TITLES_ONLY', savedUnits);
+
+  assert.strictEqual(result.success, true);
+  assert.strictEqual(result.mode, 'UPDATE_BAB_TITLES_ONLY');
+  assert.strictEqual(result.units?.[0].title, 'Bab 1 Reborn');
+  assert.strictEqual(result.units?.[0].id, 'u1');
+  assert.deepStrictEqual(result.units?.[0].linkedAtpItemIds, ['a1']);
+  assert.strictEqual(result.units?.[1].title, 'Bab 2 Reborn');
+  assert.strictEqual(result.units?.[1].id, 'u2');
+
+  console.log('✅ Case J passed');
 }
 
 // ==========================================

@@ -205,15 +205,21 @@ runTest('6. Local/manual save uses generatedBy: "TEACHER" or preserves valid pre
   );
 });
 
-runTest('7. basedOnCpUpdatedAt remains tied to current CP timestamp', () => {
+runTest('7. basedOnCpUpdatedAt and review workflow handles confirmation rules: unconfirmed save preserves old reference, confirmed valid update rebase and sets SIAP, confirmed invalid preserves old reference and sets PERLU_DILENGKAPI', () => {
   const compPath = path.resolve(process.cwd(), 'src/components/CPAnalysisManager.tsx');
   const compSource = fs.readFileSync(compPath, 'utf-8').replace(/\r\n/g, '\n');
 
-  // Explicit save preserves stored lineage; pulling structure never rebases or saves.
-  const matches = compSource.match(/basedOnCpUpdatedAt:\s*cp\.updatedAt/g);
   assert.ok(
-    compSource.includes('cpAnalysis?.basedOnCpUpdatedAt ||') && compSource.includes('cp.updatedAt ||'),
-    'Explicit save must preserve existing basedOnCpUpdatedAt; local derive references current CP'
+    compSource.includes('reviewConfirmed ? cp.updatedAt : cpAnalysis?.basedOnCpUpdatedAt'),
+    'handleSave must conditionally use reviewConfirmed to rebase basedOnCpUpdatedAt or preserve old reference'
+  );
+  assert.ok(
+    compSource.includes('basedOnCpUpdatedAt:cpAnalysis?.basedOnCpUpdatedAt') || compSource.includes('basedOnCpUpdatedAt: cpAnalysis?.basedOnCpUpdatedAt'),
+    'handleSave must preserve old reference when review is confirmed but not ready'
+  );
+  assert.ok(
+    compSource.includes("workflowStatus: ready ? 'SIAP' : 'PERLU_DILENGKAPI'"),
+    'handleSave must assign workflowStatus based on ready condition'
   );
 });
 
@@ -620,14 +626,14 @@ runTest('23. Ordinary save preserves previous basedOnCpUpdatedAt to prevent stal
   const compPath = path.resolve(process.cwd(), 'src/components/CPAnalysisManager.tsx');
   const compSource = fs.readFileSync(compPath, 'utf-8').replace(/\r\n/g, '\n');
 
-  // Verify handleSave implementation preserves existing basedOnCpUpdatedAt
+  // Verify handleSave implementation preserves existing basedOnCpUpdatedAt unless review is confirmed
   const match = compSource.match(/const handleSave = \(\): boolean => \{([\s\S]*?)\n  \};/);
   assert.ok(match, 'handleSave must exist');
   const body = match[1];
 
   assert.ok(
-    body.includes('cpAnalysis?.basedOnCpUpdatedAt ||'),
-    'handleSave must preserve existing basedOnCpUpdatedAt before falling back'
+    body.includes('reviewConfirmed ? cp.updatedAt : cpAnalysis?.basedOnCpUpdatedAt'),
+    'handleSave must preserve existing basedOnCpUpdatedAt unless review is confirmed'
   );
   assert.ok(
     !body.includes('basedOnCpUpdatedAt: cp.updatedAt ||'),
