@@ -9,14 +9,25 @@ export interface RawBabMateriRow {
   [key: string]: unknown;
 }
 
+export type ATPUnitMappingImportMode = 'FULL_STRUCTURE' | 'UPDATE_BAB_TITLES_ONLY';
+
+export interface BabTitleChangePreview {
+  babOrder: number;
+  oldTitle: string;
+  newTitle: string;
+}
+
 export interface ATPUnitMappingImportStats {
   totalBabs: number;
   totalMaterials: number;
+  titleChangesCount?: number;
 }
 
 export interface ATPUnitMappingImportResult {
   success: boolean;
+  mode: ATPUnitMappingImportMode;
   units?: ATPUnitMapping[];
+  titleChanges?: BabTitleChangePreview[];
   errors?: string[];
   stats?: ATPUnitMappingImportStats;
 }
@@ -91,6 +102,7 @@ export function validateAndBuildATPUnitMappings(
   if (!rows || rows.length === 0) {
     return {
       success: false,
+      mode: 'FULL_STRUCTURE',
       errors: ['File atau sheet tidak memiliki baris data untuk diimpor.'],
     };
   }
@@ -208,6 +220,7 @@ export function validateAndBuildATPUnitMappings(
   if (errors.length > 0) {
     return {
       success: false,
+      mode: 'FULL_STRUCTURE',
       errors,
     };
   }
@@ -254,6 +267,7 @@ export function validateAndBuildATPUnitMappings(
 
   return {
     success: true,
+    mode: 'FULL_STRUCTURE',
     units,
     stats: {
       totalBabs: units.length,
@@ -263,9 +277,159 @@ export function validateAndBuildATPUnitMappings(
 }
 
 /**
- * Parses raw ArrayBuffer or Uint8Array of XLSX file containing the 'BAB_MATERI' sheet.
+ * Validates and updates ONLY the Bab titles of saved/current units matching babOrder.
+ * Does NOT alter material scope, unit IDs, order, material IDs, TP/ATP, JP, or canonical lineage.
  */
-export function parseBabMateriXlsx(data: ArrayBuffer | Uint8Array): ATPUnitMappingImportResult {
+export function validateAndUpdateBabTitlesOnly(
+  rows: RawBabMateriRow[],
+  currentUnits?: ATPUnitMapping[]
+): ATPUnitMappingImportResult {
+  if (!currentUnits || currentUnits.length === 0) {
+    return {
+      success: false,
+      mode: 'UPDATE_BAB_TITLES_ONLY',
+      errors: ['Tidak ada Bab tersimpan dalam draf untuk diperbarui nama judulnya. Buat atau impor Bab terlebih dahulu.'],
+    };
+  }
+
+  if (!rows || rows.length === 0) {
+    return {
+      success: false,
+      mode: 'UPDATE_BAB_TITLES_ONLY',
+      errors: ['File atau sheet tidak memiliki baris data untuk diimpor.'],
+    };
+  }
+
+  const errors: string[] = [];
+  const babTitleByOrder = new Map<number, string>();
+
+  for (let idx = 0; idx < rows.length; idx++) {
+    const row = rows[idx];
+    const rowNumber = idx + 2; // Assuming row 1 was header in Excel
+
+    const { rawBabOrder, rawBabTitle } = extractRowValues(row);
+
+    // Validate babOrder: must be positive integer
+    let parsedBabOrder: number | null = null;
+    if (rawBabOrder === undefined || rawBabOrder === null || String(rawBabOrder).trim() === '') {
+      errors.push(`Baris ${rowNumber}: 'babOrder' wajib diisi.`);
+    } else {
+      const num = typeof rawBabOrder === 'number' ? rawBabOrder : Number(String(rawBabOrder).trim());
+      if (!Number.isInteger(num) || num <= 0) {
+        errors.push(
+          `Baris ${rowNumber}: 'babOrder' harus berupa bilangan bulat positif (diterima: ${String(rawBabOrder)}).`
+        );
+      } else {
+        parsedBabOrder = num;
+      }
+    }
+
+    // Validate babTitle: non-empty string
+    let parsedBabTitle: string | null = null;
+    if (rawBabTitle === undefined || rawBabTitle === null || String(rawBabTitle).trim() === '') {
+      errors.push(`Baris ${rowNumber}: 'babTitle' wajib diisi.`);
+    } else {
+      parsedBabTitle = String(rawBabTitle).trim();
+    }
+
+    if (parsedBabOrder !== null && parsedBabTitle !== null) {
+      const existingTitle = babTitleByOrder.get(parsedBabOrder);
+      if (existingTitle !== undefined && existingTitle !== parsedBabTitle) {
+        errors.push(
+          `Baris ${rowNumber}: Bab dengan urutan ${parsedBabOrder} memiliki judul yang bertentangan: '${existingTitle}' vs '${parsedBabTitle}'. Satu babOrder hanya boleh memiliki satu babTitle.`
+        );
+      } else if (existingTitle === undefined) {
+        babTitleByOrder.set(parsedBabOrder, parsedBabTitle);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      mode: 'UPDATE_BAB_TITLES_ONLY',
+      errors,
+    };
+  }
+
+  const sortedCurrentUnits = [...currentUnits].sort((a, b) => a.order - b.order);
+  const currentBabOrders = sortedCurrentUnits.map((u) => u.order);
+  const excelBabOrders = Array.from(babTitleByOrder.keys()).sort((a, b) => a - b);
+
+  if (excelBabOrders.length !== sortedCurrentUnits.length) {
+    errors.push(
+      `Diagnosis: Jumlah Bab dalam file Excel (${excelBabOrders.length}) tidak cocok dengan jumlah Bab tersimpan (${sortedCurrentUnits.length}). Mode 'Perbarui Nama Bab Saja' mengharuskan jumlah Bab sama persis.`
+    );
+  } else {
+    for (let i = 0; i < excelBabOrders.length; i++) {
+      if (excelBabOrders[i] !== currentBabOrders[i]) {
+        errors.push(
+          `Diagnosis: Urutan Bab dalam file Excel ([${excelBabOrders.join(', ')}]) tidak cocok dengan urutan Bab tersimpan ([${currentBabOrders.join(', ')}]).`
+        );
+        break;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      mode: 'UPDATE_BAB_TITLES_ONLY',
+      errors,
+    };
+  }
+
+  const titleChanges: BabTitleChangePreview[] = [];
+  let titleChangesCount = 0;
+  let totalMaterialsCount = 0;
+
+  const updatedUnits: ATPUnitMapping[] = sortedCurrentUnits.map((unit) => {
+    const newTitle = babTitleByOrder.get(unit.order)!;
+    if (unit.title !== newTitle) {
+      titleChangesCount++;
+    }
+    titleChanges.push({
+      babOrder: unit.order,
+      oldTitle: unit.title,
+      newTitle,
+    });
+    totalMaterialsCount += unit.materials?.length || 0;
+
+    return {
+      ...unit,
+      title: newTitle,
+      materials: (unit.materials || []).map((m) => ({
+        ...m,
+        linkedAtpItemIds: [...(m.linkedAtpItemIds || [])],
+        linkedTpIds: [...(m.linkedTpIds || [])],
+      })),
+      linkedAtpItemIds: [...(unit.linkedAtpItemIds || [])],
+      linkedTpIds: [...(unit.linkedTpIds || [])],
+    };
+  });
+
+  return {
+    success: true,
+    mode: 'UPDATE_BAB_TITLES_ONLY',
+    units: updatedUnits,
+    titleChanges,
+    stats: {
+      totalBabs: updatedUnits.length,
+      totalMaterials: totalMaterialsCount,
+      titleChangesCount,
+    },
+  };
+}
+
+/**
+ * Parses raw ArrayBuffer or Uint8Array of XLSX file containing the 'BAB_MATERI' sheet.
+ * Supports mode 'FULL_STRUCTURE' (default) or 'UPDATE_BAB_TITLES_ONLY'.
+ */
+export function parseBabMateriXlsx(
+  data: ArrayBuffer | Uint8Array,
+  mode: ATPUnitMappingImportMode = 'FULL_STRUCTURE',
+  currentUnits?: ATPUnitMapping[]
+): ATPUnitMappingImportResult {
   try {
     const workbook = XLSX.read(data, {
       type: 'array',
@@ -276,6 +440,7 @@ export function parseBabMateriXlsx(data: ArrayBuffer | Uint8Array): ATPUnitMappi
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return {
         success: false,
+        mode,
         errors: ['File XLSX tidak memiliki sheet.'],
       };
     }
@@ -288,6 +453,7 @@ export function parseBabMateriXlsx(data: ArrayBuffer | Uint8Array): ATPUnitMappi
     if (!targetSheetName) {
       return {
         success: false,
+        mode,
         errors: [
           `Sheet 'BAB_MATERI' tidak ditemukan dalam file XLSX. Sheet yang tersedia: ${workbook.SheetNames.join(', ')}. Pastikan sheet diberi nama 'BAB_MATERI'.`,
         ],
@@ -298,6 +464,7 @@ export function parseBabMateriXlsx(data: ArrayBuffer | Uint8Array): ATPUnitMappi
     if (!worksheet) {
       return {
         success: false,
+        mode,
         errors: [`Sheet '${targetSheetName}' tidak dapat dibaca atau kosong.`],
       };
     }
@@ -310,14 +477,20 @@ export function parseBabMateriXlsx(data: ArrayBuffer | Uint8Array): ATPUnitMappi
     if (!rawRows || rawRows.length === 0) {
       return {
         success: false,
+        mode,
         errors: [`Sheet '${targetSheetName}' tidak memiliki baris data.`],
       };
+    }
+
+    if (mode === 'UPDATE_BAB_TITLES_ONLY') {
+      return validateAndUpdateBabTitlesOnly(rawRows, currentUnits);
     }
 
     return validateAndBuildATPUnitMappings(rawRows);
   } catch (err: any) {
     return {
       success: false,
+      mode,
       errors: [err?.message || 'Terjadi kesalahan saat membaca file XLSX.'],
     };
   }

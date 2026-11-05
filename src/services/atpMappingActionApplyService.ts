@@ -614,7 +614,7 @@ export function applyATPMappingActions(input: ApplyATPMappingActionsInput): Appl
       const relevant = supported.some(m => m.linkedTpIds.includes(tpId) && !checkMappingSemanticEvidence({
         label: m.title, tpItems: (tp.items || []).filter(item => item.id === tpId),
       }).hardConflict);
-      if (!relevant) issues.push(`ASSIGN_ATP_TO_UNIT: Bab '${unit.title}', TP '${tpId}': konflik domain gerak eksplisit pada materi pendukung. Tinjau substansi materi sebelum memperluas relasi Bab.`);
+      if (!relevant) issues.push(`ASSIGN_ATP_TO_UNIT: Bab '${unit.title}', TP '${tpId}': kesesuaian domain/substansi materi pendukung. Tinjau substansi materi sebelum memperluas relasi Bab.`);
     }
   }
   const affectedUnits = new Set(selectedActions.map(action => action.targetUnitId));

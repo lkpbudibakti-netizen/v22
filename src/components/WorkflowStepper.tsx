@@ -410,15 +410,29 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
       </div>
 
       {/* Stale Dependency Notification Banner */}
-      {hasStaleModules && (
+      {(hasStaleModules || validationReport.kktpState?.isStale) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between text-amber-900 text-xs">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
+            <div>
               <strong>Pemberitahuan Penyelarasan Alur:</strong> Terdapat perubahan pada data hulu (upstream). Modul bertanda <strong>Perlu Ditinjau</strong> disarankan untuk dicek atau diselaraskan ulang.
-              <ul>{steps.filter(step=>step.isStale).map(step=><li key={step.id}>{step.num} {step.title}: {validationReport.issues.find(issue=>issue.module===step.id && issue.code.startsWith('STALE_'))?.message || stepStates[step.id].reason}</li>)}{validationReport.kktpState?.isStale && <li>KKTP: referensi TP berubah atau kriteria memerlukan peninjauan.</li>}</ul>
-              <ul>{steps.filter(step=>step.isStale).map(step=><li key={step.id}>{step.num} {step.title}: {stepStates[step.id].reason || validationReport.issues.find(issue=>issue.module===step.id)?.message}</li>)}{validationReport.kktpState?.isStale && <li>KKTP: referensi TP berubah atau kriteria memerlukan peninjauan.</li>}</ul>
-            </span>
+              <ul className="list-disc list-inside mt-1 space-y-0.5">
+                {steps.filter(step => step.isStale).map((step) => {
+                  const specificReason =
+                    validationReport.issues.find(issue => issue.module === step.id && issue.code.startsWith('STALE_'))?.message ||
+                    stepStates[step.id].reason ||
+                    'Data hulu telah diperbarui';
+                  return (
+                    <li key={step.id}>
+                      {step.num} {step.title}: {specificReason}
+                    </li>
+                  );
+                })}
+                {validationReport.kktpState?.isStale && (
+                  <li>KKTP: referensi TP berubah atau kriteria memerlukan peninjauan.</li>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
       )}
