@@ -1,0 +1,1907 @@
+{
+  "schema_version": "cp046_sd_review_v1",
+  "status": "SOURCE_MATCHED: 36 SD records; exact numbered passages matched independently against supplied PDF SHA-256; visual hierarchy reviewed; two exceptions quarantined. See docs/cp046-sd-v21-audit.md.",
+  "sumber": {
+    "regulasi": "Keputusan Kepala BSKAP Nomor 046/H/KR/2025",
+    "lampiran": "Lampiran II",
+    "file": "Kumpulan CP.pdf",
+    "sha256_pdf": "f8e5f478de4dc1790bfc800104135f992c8fe6cb2d8f770f46b616932a2aec34"
+  },
+  "records": [
+    {
+      "id": "cp046-2025-sd-b-pai",
+      "kode_bagian": "I.1",
+      "mata_pelajaran": "PAI",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 27,
+        "akhir_terdeteksi": 28
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pai-e-2-1",
+          "nomor": "2.1",
+          "nama": "Al-Qur’an Hadis",
+          "teks": "Al-Qur’an Hadis\nMemahami beberapa surah pendek, ayat Al-Qur’an dan hadis tentang kewajiban salat dan menjaga hubungan baik dengan sesama.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pai-e-2-2",
+          "nomor": "2.2",
+          "nama": "Akidah",
+          "teks": "Akidah\nMemahami sifat-sifat Allah Swt., beberapa asmaulhusna, iman kepada kitab-kitab Allah Swt. dan rasul-rasul Allah Swt.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pai-e-2-3",
+          "nomor": "2.3",
+          "nama": "Akhlak",
+          "teks": "Akhlak\nMemahami akhlak terhadap Allah Swt. dengan berbaik sangka kepada-Nya, akhlak terhadap orang tua, keluarga, dan pendidik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pai-e-2-4",
+          "nomor": "2.4",
+          "nama": "Fikih",
+          "teks": "Fikih\nMemahami puasa, salat jumat dan salat sunah, balig dan tanggung jawab yang menyertainya (taklīf).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pai-e-2-5",
+          "nomor": "2.5",
+          "nama": "Sejarah Peradaban Islam",
+          "teks": "Sejarah Peradaban Islam\nMemahami kisah Nabi Muhammad saw. sebelum dan sesudah menjadi rasul periode Makkah.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut.  \n2.1.\nAl-Qur’an Hadis\nMemahami \nbeberapa \nsurah \npendek, \nayat \nAl-Qur’an dan hadis tentang kewajiban salat dan \nmenjaga hubungan baik dengan sesama.  \n2.2.\nAkidah\nMemahami \nsifat-sifat \nAllah \nSwt., \nbeberapa \nasmaulhusna, iman kepada kitab-kitab Allah \nSwt. dan rasul-rasul Allah Swt. \n2.3.\nAkhlak\nMemahami akhlak terhadap Allah Swt. dengan \nberbaik sangka kepada-Nya, akhlak terhadap \norang tua, keluarga, dan pendidik. \n \n\n \n2.4.\nFikih\nMemahami puasa, salat jumat dan salat sunah, \nbalig dan tanggung jawab yang menyertainya \n(taklīf). \n2.5.\nSejarah Peradaban Islam\nMemahami kisah Nabi Muhammad saw. sebelum \ndan sesudah menjadi rasul periode Makkah.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pai",
+      "kode_bagian": "I.1",
+      "mata_pelajaran": "PAI",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 28,
+        "akhir_terdeteksi": 28
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pai-e-3-1",
+          "nomor": "3.1",
+          "nama": "Al-Qur’an Hadis",
+          "teks": "Al-Qur’an Hadis\nMemahami beberapa surah pendek dan ayat Al-Qur’an serta hadis tentang keragaman.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pai-e-3-2",
+          "nomor": "3.2",
+          "nama": "Akidah",
+          "teks": "Akidah\nMemahami beberapa asmaulhusna, iman kepada hari akhir, qadāʾ dan qadr.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pai-e-3-3",
+          "nomor": "3.3",
+          "nama": "Akhlak",
+          "teks": "Akhlak\nMemahami akhlak terhadap Allah Swt. dengan berdoa dan bertawakal kepada-Nya, akhlak terhadap teman, tetangga, non muslim, hewan, dan tumbuhan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pai-e-3-4",
+          "nomor": "3.4",
+          "nama": "Fikih",
+          "teks": "Fikih\nMemahami puasa sunah, zakat, infak, sedekah, hadiah, makanan dan minuman yang halal dan haram.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pai-e-3-5",
+          "nomor": "3.5",
+          "nama": "Sejarah Peradaban Islam",
+          "teks": "Sejarah Peradaban Islam\nMemahami kisah Nabi Muhammad saw. periode Madinah dan khulafaurasyidin.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut.  \n3.1.\nAl-Qur’an Hadis\nMemahami beberapa surah pendek dan ayat \nAl-Qur’an serta hadis tentang keragaman.  \n3.2.\nAkidah\nMemahami beberapa asmaulhusna, iman kepada \nhari akhir, qadāʾ dan qadr. \n3.3.\nAkhlak\nMemahami akhlak terhadap Allah Swt. dengan \nberdoa dan bertawakal kepada-Nya, akhlak \nterhadap teman, tetangga, non muslim, hewan, \ndan tumbuhan. \n3.4.\nFikih\nMemahami puasa sunah, zakat, infak, sedekah, \nhadiah, makanan dan minuman yang halal dan \nharam. \n3.5.\nSejarah Peradaban Islam\nMemahami kisah Nabi Muhammad saw. periode \nMadinah dan khulafaurasyidin.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-pak",
+      "kode_bagian": "I.2",
+      "mata_pelajaran": "PAK",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 35,
+        "akhir_terdeteksi": 37
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pak-e-2-1",
+          "nomor": "2.1",
+          "nama": "Elemen Allah Berkarya",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-1-1",
+              "nomor": "2.1.1",
+              "nama": "Subelemen Allah Pencipta",
+              "teks": "Subelemen Allah Pencipta\nMemahami Allah menciptakan flora dan fauna, serta manusia (perempuan dan laki-laki).",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-1-2",
+              "nomor": "2.1.2",
+              "nama": "Subelemen Allah Pemelihara",
+              "teks": "Subelemen Allah Pemelihara\nMemahami pemeliharaan Allah pada dirinya dan melalui kehadiran orang- orang di sekitarnya.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-1-3",
+              "nomor": "2.1.3",
+              "nama": "Subelemen Allah Penyelamat",
+              "teks": "Subelemen Allah Penyelamat\nMemahami Allah sebagai penyelamat.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-1-4",
+              "nomor": "2.1.4",
+              "nama": "Subelemen Allah Pembaru",
+              "teks": "Subelemen Allah Pembaru\nMengenal Allah pembaru",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-b-pak-e-2-2",
+          "nomor": "2.2",
+          "nama": "Elemen Manusia dan Nilai- nilai Kristiani",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-2-1",
+              "nomor": "2.2.1",
+              "nama": "Subelemen Hakikat Manusia",
+              "teks": "Subelemen Hakikat Manusia\nMemahami diri sebagai makhluk individu dan sosial yang dapat bergaul dan bekerja sama dengan teman, saudara, dan orang tua.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-2-2",
+              "nomor": "2.2.2",
+              "nama": "Subelemen Nilai-nilai Kristiani",
+              "teks": "Subelemen Nilai-nilai Kristiani\nMemahami sikap disiplin di rumah dan di sekolah.",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-b-pak-e-2-3",
+          "nomor": "2.3",
+          "nama": "Elemen Gereja dan Masyarakat Majemuk",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-3-1",
+              "nomor": "2.3.1",
+              "nama": "Subelemen Tugas Panggilan Gereja",
+              "teks": "Subelemen Tugas Panggilan Gereja\nMemahami tugas panggilan gereja untuk bersekutu, bersaksi, dan melayani.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-3-2",
+              "nomor": "2.3.2",
+              "nama": "Subelemen Masyarakat Majemuk",
+              "teks": "Subelemen Masyarakat Majemuk\nMemahami keragaman budaya dan agama sebagai anugerah Allah.",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-b-pak-e-2-4",
+          "nomor": "2.4",
+          "nama": "Elemen Alam dan Lingkungan Hidup",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-4-1",
+              "nomor": "2.4.1",
+              "nama": "Subelemen Alam Ciptaan Allah",
+              "teks": "Subelemen Alam Ciptaan Allah\nMemahami Allah hadir dalam berbagai fenomena alam.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-b-pak-e-2-4-2",
+              "nomor": "2.4.2",
+              "nama": "Subelemen Tanggung Jawab Manusia Terhadap Alam",
+              "teks": "Subelemen Tanggung Jawab Manusia Terhadap Alam\nMemahami upaya memelihara alam dan lingkungan sekitarnya.",
+              "subelemen": []
+            }
+          ]
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n \n\n \n2.1.\nElemen Allah Berkarya \n2.1.1.\nSubelemen Allah Pencipta\nMemahami Allah menciptakan flora \ndan fauna, serta manusia (perempuan \ndan laki-laki). \n2.1.2.\nSubelemen Allah Pemelihara\nMemahami pemeliharaan Allah pada \ndirinya dan melalui kehadiran orang- \norang di sekitarnya. \n2.1.3.\nSubelemen Allah Penyelamat\nMemahami Allah sebagai penyelamat. \n2.1.4.\nSubelemen Allah Pembaru\nMengenal Allah pembaru \n2.2.\nElemen Manusia dan Nilai- nilai Kristiani \n2.2.1.\nSubelemen Hakikat Manusia\nMemahami \ndiri \nsebagai \nmakhluk \nindividu dan sosial yang dapat bergaul \ndan bekerja sama dengan teman, \nsaudara, dan orang tua. \n2.2.2.\nSubelemen Nilai-nilai Kristiani\nMemahami sikap disiplin di rumah \ndan di sekolah. \n2.3.\nElemen Gereja dan Masyarakat Majemuk \n2.3.1.\nSubelemen Tugas Panggilan Gereja\nMemahami \ntugas panggilan gereja \nuntuk \nbersekutu, \nbersaksi, \ndan \nmelayani. \n2.3.2.\nSubelemen Masyarakat Majemuk\nMemahami keragaman budaya dan \nagama sebagai anugerah Allah. \n2.4.\nElemen Alam dan Lingkungan Hidup \n2.4.1.\nSubelemen Alam Ciptaan Allah\nMemahami Allah hadir dalam berbagai \nfenomena alam. \n2.4.2.\nSubelemen Tanggung Jawab Manusia \nTerhadap Alam\nMemahami upaya memelihara alam \n \n\n \ndan lingkungan sekitarnya.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pak",
+      "kode_bagian": "I.2",
+      "mata_pelajaran": "PAK",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 37,
+        "akhir_terdeteksi": 38
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pak-e-3-1",
+          "nomor": "3.1",
+          "nama": "Elemen Allah Berkarya",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-1-1",
+              "nomor": "3.1.1",
+              "nama": "Subelemen Allah Pencipta",
+              "teks": "Subelemen Allah Pencipta\nMemahami Allah Pencipta berkarya melalui keluarga, sekolah, dan masyarakat.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-1-2",
+              "nomor": "3.1.2",
+              "nama": "Subelemen Allah Pemelihara",
+              "teks": "Subelemen Allah Pemelihara\nMemahami Allah memelihara seluruh umat manusia termasuk mereka yang berkebutuhan khusus.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-1-3",
+              "nomor": "3.1.3",
+              "nama": "Subelemen Allah Penyelamat",
+              "teks": "Subelemen Allah Penyelamat\nMemahami Allah menyelamatkan manusia melalui Yesus Kristus.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-1-4",
+              "nomor": "3.1.4",
+              "nama": "Subelemen Allah Pembaru",
+              "teks": "Subelemen Allah Pembaru\nMemahami Allah membarui hidup Manusia.",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-c-pak-e-3-2",
+          "nomor": "3.2",
+          "nama": "Elemen Manusia dan Nilai- nilai Kristiani",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-2-1",
+              "nomor": "3.2.1",
+              "nama": "Subelemen Hakikat Manusia",
+              "teks": "Subelemen Hakikat Manusia\nMemahami bahwa manusia adalah makhluk terbatas.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-2-2",
+              "nomor": "3.2.2",
+              "nama": "Subelemen Nilai-nilai Kristiani",
+              "teks": "Subelemen Nilai-nilai Kristiani\nMemahami buah Roh dalam interaksi antarsesama.",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-c-pak-e-3-3",
+          "nomor": "3.3",
+          "nama": "Elemen Gereja dan Masyarakat Majemuk",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-3-1",
+              "nomor": "3.3.1",
+              "nama": "Subelemen Tugas Panggilan Gereja",
+              "teks": "Subelemen Tugas Panggilan Gereja\nMemahami pelayanan terhadap sesama sebagai tanggung jawab orang beriman dalam kehidupan.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-3-2",
+              "nomor": "3.3.2",
+              "nama": "Subelemen Masyarakat Majemuk",
+              "teks": "Subelemen Masyarakat Majemuk\nMemahami hidup rukun dan toleransi dalam masyarakat majemuk.",
+              "subelemen": []
+            }
+          ]
+        },
+        {
+          "id": "cp046-2025-sd-c-pak-e-3-4",
+          "nomor": "3.4",
+          "nama": "Elemen Alam dan Lingkungan Hidup",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-4-1",
+              "nomor": "3.4.1",
+              "nama": "Subelemen Alam Ciptaan Allah",
+              "teks": "Subelemen Alam Ciptaan Allah\nMemahami Allah hadir melalui alam ciptaan.",
+              "subelemen": []
+            },
+            {
+              "id": "cp046-2025-sd-c-pak-e-3-4-2",
+              "nomor": "3.4.2",
+              "nama": "Subelemen Tanggung Jawab Manusia Terhadap Alam",
+              "teks": "Subelemen Tanggung Jawab Manusia Terhadap Alam\nMemahami tanggung jawab orang beriman dalam memelihara alam dan lingkungan hidup.",
+              "subelemen": []
+            }
+          ]
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/Program \nPaket A)\nPada akhir Fase C murid memiliki kemampuan sebagai \nberikut. \n3.1.\nElemen Allah Berkarya \n3.1.1.\nSubelemen Allah Pencipta\nMemahami Allah Pencipta berkarya \nmelalui \nkeluarga, \nsekolah, \ndan \nmasyarakat. \n3.1.2.\nSubelemen Allah Pemelihara\nMemahami Allah memelihara seluruh \numat manusia termasuk mereka yang \nberkebutuhan khusus. \n3.1.3.\nSubelemen Allah Penyelamat\nMemahami \nAllah \nmenyelamatkan \nmanusia melalui Yesus Kristus. \n3.1.4.\nSubelemen Allah Pembaru\nMemahami Allah membarui hidup \nManusia. \n3.2.\nElemen Manusia dan Nilai- nilai Kristiani \n3.2.1.\nSubelemen Hakikat Manusia\nMemahami bahwa manusia adalah \nmakhluk terbatas. \n3.2.2.\nSubelemen Nilai-nilai Kristiani\nMemahami buah Roh dalam interaksi \nantarsesama. \n3.3.\nElemen Gereja dan Masyarakat Majemuk \n3.3.1.\nSubelemen Tugas Panggilan Gereja\nMemahami \npelayanan \nterhadap \nsesama sebagai tanggung jawab orang \nberiman dalam kehidupan. \n3.3.2.\nSubelemen Masyarakat Majemuk\nMemahami hidup rukun dan toleransi \ndalam masyarakat majemuk. \n3.4.\nElemen Alam dan Lingkungan Hidup \n \n\n \n3.4.1.\nSubelemen Alam Ciptaan Allah\nMemahami Allah hadir melalui alam \nciptaan. \n3.4.2.\nSubelemen Tanggung Jawab Manusia \nTerhadap Alam\nMemahami \ntanggung \njawab \norang \nberiman dalam memelihara alam dan \nlingkungan hidup.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-pkat",
+      "kode_bagian": "I.3",
+      "mata_pelajaran": "PKAT",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 47,
+        "akhir_terdeteksi": 48
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pkat-e-2-1",
+          "nomor": "2.1",
+          "nama": "Pribadi Peserta Didik",
+          "teks": "Pribadi Peserta Didik\nMemahami dirinya sebagai pribadi yang tumbuh dan berkembang, mewujudkan iman dengan cara melakukan perbuatan baik; memahami diri sebagai pribadi yang unik, bersyukur dan bersedia mengembangkan keunikan diri bersama orang lain dan lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkat-e-2-2",
+          "nomor": "2.2",
+          "nama": "Yesus Kristus",
+          "teks": "Yesus Kristus\nMemahami karya keselamatan Allah melalui tokoh-tokoh Yusuf, Musa, dan Yosua; memahami Sepuluh Perintah Allah sebagai pedoman hidup; memahami bangsa Israel memasuki tanah terjanji, Allah memberkati pemimpin Israel (Samuel, Saul, dan Daud); memahami Yesus sebagai pemenuhan janji Allah yang mewartakan Kerajaan Allah melalui perkataan, perbuatan, dan mukjizat",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkat-e-2-3",
+          "nomor": "2.3",
+          "nama": "Gereja",
+          "teks": "Gereja\nMurid memahami sakramen baptis, sakramen ekaristi, dan sakramen tobat; mengungkapkan rasa syukur dalam doa pribadi dan doa bersama, mewujudkan makna doa melalui sikap dan tindakan dalam kehidupan sehari-hari.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkat-e-2-4",
+          "nomor": "2.4",
+          "nama": "Masyarakat",
+          "teks": "Masyarakat\nMewujudkan imannya di tengah masyarakat melalui kebiasaan menghormati pemimpin masyarakat, menghargai tradisi masyarakat, melestarikan lingkungan alam; mewujudkan rasa hormat terhadap orang tua, menghormati hidup pribadi, menghormati milik orang lain.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nPribadi Peserta Didik\nMemahami dirinya sebagai pribadi yang tumbuh \ndan berkembang, mewujudkan iman dengan \ncara melakukan perbuatan baik; memahami diri \nsebagai pribadi yang unik, bersyukur dan \nbersedia mengembangkan keunikan diri bersama \norang lain dan lingkungan sekitar. \n2.2.\nYesus Kristus\nMemahami karya keselamatan Allah melalui \ntokoh-tokoh Yusuf, Musa, dan Yosua; memahami \nSepuluh Perintah Allah sebagai pedoman hidup; \nmemahami \nbangsa \nIsrael \nmemasuki \ntanah \nterjanji, \nAllah \nmemberkati \npemimpin \nIsrael \n(Samuel, Saul, dan Daud); memahami Yesus \nsebagai pemenuhan janji Allah yang mewartakan \nKerajaan Allah melalui perkataan, perbuatan, \ndan mukjizat \n2.3.\nGereja\nMurid memahami sakramen baptis, sakramen \nekaristi, dan sakramen tobat; mengungkapkan \nrasa syukur dalam doa pribadi dan doa bersama, \n \n\n \nmewujudkan makna doa melalui sikap dan \ntindakan dalam kehidupan sehari-hari. \n2.4.\nMasyarakat\nMewujudkan imannya di tengah masyarakat \nmelalui \nkebiasaan \nmenghormati \npemimpin \nmasyarakat, menghargai tradisi masyarakat, \nmelestarikan \nlingkungan alam; mewujudkan \nrasa hormat terhadap orang tua, menghormati \nhidup pribadi, menghormati milik orang lain.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pkat",
+      "kode_bagian": "I.3",
+      "mata_pelajaran": "PKAT",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 48,
+        "akhir_terdeteksi": 49
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pkat-e-3-1",
+          "nomor": "3.1",
+          "nama": "Pribadi Peserta Didik",
+          "teks": "Pribadi Peserta Didik\nMemahami diri sebagai perempuan atau laki-laki sebagai citra Allah yang sederajat dan saling melengkapi; memahami hak dan kewajiban dirinya sebagai warga negara dan bangga sebagai bangsa Indonesia; memahami diri sebagai warga dunia.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkat-e-3-2",
+          "nomor": "3.2",
+          "nama": "Yesus Kristus",
+          "teks": "Yesus Kristus\nMemahami perjuangan tokoh-tokoh kitab suci: Daud sebagai pemimpin yang tangguh; Salomo yang bijaksana, dan Ester perempuan pemberani, serta tokoh Maria dan Elisabet yang setia dan berserah kepada Allah; meneladani Yesus yang taat kepada Allah; mengajarkan pengampunan, memanggil orang berdosa; menderita, wafat, dan bangkit; mengutus Roh Kudus untuk menguatkan para rasul, dan orang yang beriman kepada-Nya; memahami perjuangan Nabi Elia yang menobatkan bangsa Israel; Nabi Amos sebagai pejuang keadilan; dan Nabi Yesaya yang me-nubuat-kan kedatangan Juru Selamat; memahami Yesus yang mewartakan kerajaan Allah dengan perkataan dan perbuatan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkat-e-3-3",
+          "nomor": "3.3",
+          "nama": "Gereja",
+          "teks": "Gereja\nMewujudkan iman dalam kehidupan sehari-hari, melibatkan diri dalam kehidupan menggereja, sebagai wujud kehidupan bersama yang dijiwai oleh Roh Kudus; memahami gereja yang satu, kudus, katolik, dan apostolik; persekutuan para kudus; pengampunan dosa, kebangkitan badan dan kehidupan kekal.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkat-e-3-4",
+          "nomor": "3.4",
+          "nama": "Masyarakat",
+          "teks": "Masyarakat\nMemahami pentingnya terlibat aktif dalam pelestarian lingkungan, bersikap jujur, bertindak menurut hati nurani, menegakkan keadilan dalam hidup sehari-hari sebagai orang beriman kristiani, melakukan dialog antar umat beragama.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/Program \nPaket A) \nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut \n3.1.\nPribadi Peserta Didik\nMemahami diri sebagai perempuan atau laki-laki \nsebagai citra Allah yang sederajat dan saling \nmelengkapi; memahami hak dan kewajiban \ndirinya sebagai warga negara dan bangga sebagai \nbangsa Indonesia; memahami diri sebagai warga \ndunia. \n3.2.\nYesus Kristus\nMemahami perjuangan tokoh-tokoh kitab suci: \nDaud sebagai pemimpin yang tangguh; Salomo \nyang \nbijaksana, \ndan \nEster \nperempuan \npemberani, serta tokoh Maria dan Elisabet yang \nsetia dan berserah kepada Allah; meneladani \nYesus yang taat kepada Allah; mengajarkan \npengampunan, \nmemanggil \norang \nberdosa; \nmenderita, wafat, dan bangkit; mengutus Roh \nKudus untuk menguatkan para rasul, dan orang \nyang \nberiman \nkepada-Nya; \nmemahami \nperjuangan Nabi Elia yang menobatkan bangsa \nIsrael; Nabi Amos sebagai pejuang keadilan; dan \nNabi Yesaya yang me-nubuat-kan kedatangan \nJuru \nSelamat; \nmemahami \nYesus \nyang \nmewartakan kerajaan Allah dengan perkataan \n \n\n \ndan perbuatan. \n3.3.\nGereja\nMewujudkan iman dalam kehidupan sehari-hari, \nmelibatkan diri dalam kehidupan menggereja, \nsebagai wujud kehidupan bersama yang dijiwai \noleh Roh Kudus; memahami gereja yang satu, \nkudus, katolik, dan apostolik; persekutuan para \nkudus; pengampunan dosa, kebangkitan badan \ndan kehidupan kekal. \n3.4.\nMasyarakat\nMemahami \npentingnya \nterlibat \naktif \ndalam \npelestarian lingkungan, bersikap jujur, bertindak \nmenurut hati nurani, menegakkan keadilan \ndalam hidup sehari-hari sebagai orang beriman \nkristiani, \nmelakukan \ndialog \nantar \numat \nberagama.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-phindu",
+      "kode_bagian": "I.4",
+      "mata_pelajaran": "PHINDU",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 56,
+        "akhir_terdeteksi": 57
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-phindu-e-2-1",
+          "nomor": "2.1",
+          "nama": "Kitab Suci Weda",
+          "teks": "Kitab Suci Weda\nMemahami kitab Purana.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-phindu-e-2-2",
+          "nomor": "2.2",
+          "nama": "Sraddha dan Bhakti",
+          "teks": "Sraddha dan Bhakti\nMemahami Hyang Widhi Wasa sebagai Tri Murti dan Cadu Sakti.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-phindu-e-2-3",
+          "nomor": "2.3",
+          "nama": "Susila",
+          "teks": "Susila\nMemahami Tri Parartha dan Catur Paramitha.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-phindu-e-2-4",
+          "nomor": "2.4",
+          "nama": "Acara",
+          "teks": "Acara\nMemahami Hari Suci dan Tempat Suci agama Hindu sesuai kearifan lokal.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-phindu-e-2-5",
+          "nomor": "2.5",
+          "nama": "Sejarah Agama Hindu",
+          "teks": "Sejarah Agama Hindu\nMemahami tokoh-tokoh kerajaan Hindu di Indonesia.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut.  \n2.1.\nKitab Suci Weda\nMemahami kitab Purana. \n2.2.\nSraddha dan Bhakti\nMemahami Hyang Widhi Wasa sebagai Tri Murti \ndan Cadu Sakti. \n2.3.\nSusila\nMemahami Tri Parartha dan Catur Paramitha. \n \n\n \n2.4.\nAcara\nMemahami Hari Suci dan Tempat Suci agama \nHindu sesuai kearifan lokal. \n2.5.\nSejarah Agama Hindu\nMemahami \ntokoh-tokoh \nkerajaan \nHindu \ndi \nIndonesia.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-phindu",
+      "kode_bagian": "I.4",
+      "mata_pelajaran": "PHINDU",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 57,
+        "akhir_terdeteksi": 57
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-phindu-e-3-1",
+          "nomor": "3.1",
+          "nama": "Kitab Suci Weda",
+          "teks": "Kitab Suci Weda\nMemahami Weda Sruti dan Weda Smerti.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-phindu-e-3-2",
+          "nomor": "3.2",
+          "nama": "Sraddha dan Bhakti",
+          "teks": "Sraddha dan Bhakti\nMemahami Bhuana Agung dan Bhuana Alit.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-phindu-e-3-3",
+          "nomor": "3.3",
+          "nama": "Susila",
+          "teks": "Susila\nMemahami ajaran Catur Guru dan Catur Asrama.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-phindu-e-3-4",
+          "nomor": "3.4",
+          "nama": "Acara",
+          "teks": "Acara\nMemahami Panca Yadnya dan Manggalaning Yadnya.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-phindu-e-3-5",
+          "nomor": "3.5",
+          "nama": "Sejarah Agama Hindu",
+          "teks": "Sejarah Agama Hindu\nMemahami Sejarah Perkembangan Agama Hindu di Indonesia.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut.  \n3.1.\nKitab Suci Weda\nMemahami Weda Sruti dan Weda Smerti. \n3.2.\nSraddha dan Bhakti\nMemahami Bhuana Agung dan Bhuana Alit. \n3.3.\nSusila\nMemahami ajaran Catur Guru dan Catur Asrama. \n3.4.\nAcara\nMemahami Panca Yadnya dan Manggalaning \nYadnya. \n3.5.\nSejarah Agama Hindu\nMemahami Sejarah Perkembangan Agama Hindu \ndi Indonesia.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-pbuddha",
+      "kode_bagian": "I.5",
+      "mata_pelajaran": "PBUDDHA",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 63,
+        "akhir_terdeteksi": 64
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pbuddha-e-2-1",
+          "nomor": "2.1",
+          "nama": "Sejarah",
+          "teks": "Sejarah\nMemahami identitas Buddha Sakyamuni, sebagai dasar keyakinan terhadap Agama Buddha. murid memahami budaya dan bahasa dalam agama Buddha serta memiliki keterbukaan untuk menghargai perbedaan identitas dan budaya orang lain di lingkungan tempat tinggalnya. murid meneladan Buddha Sakyamuni dalam menghargai sesama manusia, menyelesaikan masalah pergaulan di lingkungan terdekatnya, lingkungan sekolah dan rumah ibadah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pbuddha-e-2-2",
+          "nomor": "2.2",
+          "nama": "Ritual",
+          "teks": "Ritual\nMemahami doa Buddhis dalam kegiatan sehari-hari berdasarkan keyakinan kepada Ketuhanan Yang Maha Esa dan Triratna. murid menghargai identitas masing-masing aliran atau tradisi dalam agama Buddha dan bersatu dalam perbedaan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pbuddha-e-2-3",
+          "nomor": "2.3",
+          "nama": "Etika",
+          "teks": "Etika\nMengamalkan nilai-nilai Pancasila Buddhis berlandaskan pada nilai-nilai Hukum Sebab Akibat yang Saling Bergantungan dalam melaksanakan aturan dan sopan santun; murid mengamalkan kesempurnaan (pāramī), sikap tolong menolong antarsesama dalam menyelesaikan masalah sosial, kebersihan, dan kelestarian lingkungan secara musyawarah mufakat di rumah, sekolah, dan rumah ibadah sebagai dasar keyakinan terhadap Agama Buddha, melalui pembelajaran ramah anak serta mencerminkan kehidupan yang moderat.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut: \n2.1.\nSejarah\nMemahami \nidentitas \nBuddha \nSakyamuni, \nsebagai \ndasar \nkeyakinan \nterhadap \nAgama \nBuddha. murid memahami budaya dan bahasa \ndalam \nagama \nBuddha \nserta \nmemiliki \nketerbukaan \nuntuk \nmenghargai \nperbedaan \nidentitas dan budaya orang lain di lingkungan \ntempat tinggalnya. murid meneladan Buddha \nSakyamuni dalam menghargai sesama manusia, \nmenyelesaikan masalah pergaulan di lingkungan \nterdekatnya, lingkungan sekolah dan rumah \nibadah. \n2.2.\nRitual\nMemahami \ndoa \nBuddhis \ndalam \nkegiatan \nsehari-hari \nberdasarkan \nkeyakinan \nkepada \nKetuhanan Yang Maha Esa dan Triratna. murid \nmenghargai identitas masing-masing aliran atau \n \n\n \ntradisi dalam agama Buddha dan bersatu dalam \nperbedaan. \n2.3.\nEtika\nMengamalkan \nnilai-nilai \nPancasila \nBuddhis \nberlandaskan pada nilai-nilai Hukum Sebab \nAkibat \nyang \nSaling \nBergantungan \ndalam \nmelaksanakan aturan dan sopan santun; murid \nmengamalkan kesempurnaan (pāramī), sikap \ntolong \nmenolong \nantarsesama \ndalam \nmenyelesaikan masalah sosial, kebersihan, dan \nkelestarian \nlingkungan \nsecara \nmusyawarah \nmufakat di rumah, sekolah, dan rumah ibadah \nsebagai \ndasar \nkeyakinan \nterhadap \nAgama \nBuddha, melalui pembelajaran ramah anak serta \nmencerminkan kehidupan yang moderat.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pbuddha",
+      "kode_bagian": "I.5",
+      "mata_pelajaran": "PBUDDHA",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 64,
+        "akhir_terdeteksi": 65
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pbuddha-e-3-1",
+          "nomor": "3.1",
+          "nama": "Sejarah",
+          "teks": "Sejarah\nMeneladani Buddha Sakyamuni dalam menghadapi hambatan untuk meraih kesuksesan; meneladan kehidupan Buddha Sakyamuni dalam menyelesaikan masalah kehidupan individu dan sosial; murid memahami konsep dasar musyawarah mufakat dalam kehidupan Buddha Sakyamuni.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pbuddha-e-3-2",
+          "nomor": "3.2",
+          "nama": "Ritual",
+          "teks": "Ritual\nMemahami keragaman upacara puja dan meditasi ketenangan dari berbagai aliran atau tradisi Agama Buddha. murid mengamalkan sikap bersatu dalam perbedaan dengan berperan serta melakukan dialog moderasi beragama.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pbuddha-e-3-3",
+          "nomor": "3.3",
+          "nama": "Etika",
+          "teks": "Etika\nMengamalkan nilai-nilai Buddhadharma, Pancasila Buddhis, dan nilai-nilai Pancasila dasar negara berlandaskan pada nilai-nilai Hukum Sebab Akibat yang Saling Bergantungan. murid memahami hak dan kewajiban, permasalahan dan solusinya di rumah, sekolah, dan rumah ibadah sebagai dasar keyakinan terhadap Agama Buddha, melalui pembelajaran ramah anak serta mencerminkan kehidupan yang moderat.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut: \n3.1.\nSejarah\nMeneladani \nBuddha \nSakyamuni \ndalam \nmenghadapi \nhambatan \nuntuk \nmeraih \nkesuksesan; \nmeneladan \nkehidupan \nBuddha \nSakyamuni \ndalam \nmenyelesaikan \nmasalah \nkehidupan individu dan sosial; murid memahami \nkonsep \ndasar \nmusyawarah \nmufakat \ndalam \nkehidupan Buddha Sakyamuni. \n3.2.\nRitual \nMemahami \nkeragaman \nupacara \npuja \ndan \nmeditasi ketenangan dari berbagai aliran atau \ntradisi Agama Buddha. murid mengamalkan \nsikap bersatu dalam perbedaan dengan berperan \nserta melakukan dialog moderasi beragama. \n3.3.\nEtika\nMengamalkan \nnilai-nilai \nBuddhadharma, \nPancasila Buddhis, dan nilai-nilai Pancasila \n \n\n \ndasar \nnegara \nberlandaskan \npada nilai-nilai \nHukum Sebab Akibat yang Saling Bergantungan. \nmurid \nmemahami \nhak \ndan \nkewajiban, \npermasalahan dan solusinya di rumah, sekolah, \ndan rumah ibadah sebagai dasar keyakinan \nterhadap Agama Buddha, melalui pembelajaran \nramah anak serta mencerminkan kehidupan \nyang moderat.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-pkhonghucu",
+      "kode_bagian": "I.6",
+      "mata_pelajaran": "PKHONGHUCU",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 72,
+        "akhir_terdeteksi": 73
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pkhonghucu-e-2-1",
+          "nomor": "2.1",
+          "nama": "Sejarah Suci",
+          "teks": "Sejarah Suci\nMemahami tentang watak sejati (xìng 性) menurut pendapat Mèngzĭ (孟子), sikap teladan dari murid-murid Nabi Kŏngzĭ (孔子), riwayat Nabi Kŏngzĭ (孔子) sebagai genta rohani Tiān (天) (Tiān Zhī Mùduó 天之木铎), tugas suci pengembaraan Nabi Kŏngzĭ (孔子), Zhū Xī (朱熹) sebagai tokoh pembaharuan agama Khonghucu (Rújiào 儒教), keteladanan ibunda Nabi Kŏngzĭ (孔 子), ibunda Mèngzĭ (孟子), ibunda Ōuyáng Xiū (欧 阳修), dan ibunda Yuè Fēi (岳飛).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkhonghucu-e-2-2",
+          "nomor": "2.2",
+          "nama": "Kitab Suci",
+          "teks": "Kitab Suci\nMemahami tiga kesukaan yang membawa faedah dan tiga kesukaan yang membawa celaka, bagian-bagian kitab suci yang pokok (Sìshū 四书) dan yang mendasari (Wŭjīng 五经), ayat dalam kitab Sìshū (四书) yang berkaitan dengan delapan kebajikan (bādé 八德).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkhonghucu-e-2-3",
+          "nomor": "2.3",
+          "nama": "Keimanan",
+          "teks": "Keimanan\nMemahami makna persembahyangan kepada Tiān (天), Nabi Kŏngzĭ (孔子), para suci (shénmíng 神明) dan leluhur, tanda-tanda khusus menjelang wafat Nabi Kŏngzĭ (孔子), nilai-nilai delapan keimanan (bāchéngzhēnguī 八诚箴规), cita-cita mulia dan semangat belajar Nabi Kŏngzĭ (孔子).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkhonghucu-e-2-4",
+          "nomor": "2.4",
+          "nama": "Tata Ibadah",
+          "teks": "Tata Ibadah\nMemahami peralatan dan perlengkapan sembahyang dan penataannya di altar leluhur, tata cara menancapkan dupa dalam bersembahyang kepada Tiān (天), Nabi Kŏngzĭ (孔 子), para suci (shénmíng 神明) dan leluhur, sikap berdoa (bào xīn bādé 抱心八德), tata cara dan pelaksanaan ibadah di lĭtáng (礼堂)/miào (庙) /klenteng/kelenteng.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pkhonghucu-e-2-5",
+          "nomor": "2.5",
+          "nama": "Perilaku Jūnzĭ (君子)",
+          "teks": "Perilaku Jūnzĭ (君子)\nMemahami sikap dan perilaku luhur Nabi Kŏngzĭ (孔子), teladan murid-murid Nabi Kŏngzĭ (孔子), menghargai waktu, berhati-hati, saling mengasihi sesama manusia, perilaku sesuai dengan delapan kebajikan (bādé八德), mudah bergaul tanpa membedakan, mau mengakui kesalahan dan memperbaiki diri.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut: \n2.1.\nSejarah Suci\nMemahami \ntentang \nwatak \nsejati \n(xìng \n性) \nmenurut pendapat Mèngzĭ (孟子), sikap teladan \ndari murid-murid Nabi Kŏngzĭ (孔子), riwayat \nNabi Kŏngzĭ (孔子) sebagai genta rohani Tiān (天) \n(Tiān \nZhī \nMùduó \n天之木铎), \ntugas \nsuci \npengembaraan Nabi Kŏngzĭ (孔子), Zhū Xī (朱熹) \nsebagai tokoh pembaharuan agama Khonghucu \n(Rújiào 儒教), keteladanan ibunda Nabi Kŏngzĭ (孔\n子), ibunda Mèngzĭ (孟子), ibunda Ōuyáng Xiū (欧\n阳修), dan ibunda Yuè Fēi (岳飛). \n2.2.\nKitab Suci\nMemahami tiga kesukaan yang membawa faedah \ndan tiga kesukaan yang membawa celaka, \nbagian-bagian kitab suci yang pokok (Sìshū 四书) \ndan yang mendasari (Wŭjīng 五经), ayat dalam \nkitab \nSìshū \n(四书) \nyang \nberkaitan \ndengan \ndelapan kebajikan (bādé 八德). \n2.3.\nKeimanan\nMemahami makna persembahyangan kepada \nTiān (天), Nabi Kŏngzĭ (孔子), para suci (shénmíng \n神明) \ndan \nleluhur, \ntanda-tanda \nkhusus \nmenjelang wafat Nabi Kŏngzĭ (孔子), nilai-nilai \ndelapan keimanan (bāchéngzhēnguī 八诚箴规), \ncita-cita mulia dan semangat belajar Nabi Kŏngzĭ \n(孔子). \n2.4.\nTata Ibadah\nMemahami \nperalatan \ndan \nperlengkapan \nsembahyang dan penataannya di altar leluhur, \ntata \ncara \nmenancapkan \ndupa \ndalam \n \n\n \nbersembahyang kepada Tiān (天), Nabi Kŏngzĭ (孔\n子), para suci (shénmíng 神明) dan leluhur, sikap \nberdoa (bào xīn bādé 抱心八德), tata cara dan \npelaksanaan ibadah di lĭtáng (礼堂)/miào (庙) \n/klenteng/kelenteng. \n2.5.\nPerilaku Jūnzĭ (君子)\nMemahami sikap dan perilaku luhur Nabi Kŏngzĭ   \n(孔子), teladan murid-murid Nabi Kŏngzĭ (孔子), \nmenghargai \nwaktu, \nberhati-hati, \nsaling \nmengasihi sesama manusia, perilaku sesuai \ndengan delapan kebajikan (bādé八德), mudah \nbergaul tanpa membedakan, mau mengakui \nkesalahan dan memperbaiki diri.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pkhonghucu",
+      "kode_bagian": "I.6",
+      "mata_pelajaran": "PKHONGHUCU",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 73,
+        "akhir_terdeteksi": 74
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pkhonghucu-e-3-1",
+          "nomor": "3.1",
+          "nama": "Sejarah Suci",
+          "teks": "Sejarah Suci\nMemahami wahyu Tiān (天) yang diterima oleh para nabi dan raja suci, tokoh-tokoh Rújiào (儒 教) serta sumbangsih pemikirannya, sejarah perkembangan agama Khonghucu di Indonesia.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkhonghucu-e-3-2",
+          "nomor": "3.2",
+          "nama": "Kitab Suci",
+          "teks": "Kitab Suci\nMemahami ayat-ayat dalam kitab Sìshū (四书) dan Wŭjīng (五经) tentang Nabi Kŏngzĭ (孔子) sebagai Tiān Zhī Mùduó (天之木铎), persaudaraan dalam pergaulan, rasa cinta tanah air, empat pantangan sìwù (四勿), dan yang berhubungan dengan konsep sāncái (三才).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkhonghucu-e-3-3",
+          "nomor": "3.3",
+          "nama": "Keimanan",
+          "teks": "Keimanan\nMemahami bahwa sembahyang adalah pokok dari agama, definisi iman, hukum yīnyáng (阴阳) sebagai dasar hukum alam semesta, konsep Tiga Dasar Kenyataan (sāncái 三才).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkhonghucu-e-3-4",
+          "nomor": "3.4",
+          "nama": "Tata Ibadah",
+          "teks": "Tata Ibadah\nMemahami hari raya/sembahyang kepada Tiān (天), Nabi Kŏngzĭ (孔子), shénmíng (神明), dan leluhur sebagai wujud kesusilaan (lĭ 礼), perlengkapan dan peralatan sembahyang sehingga menumbuhkan keimanan dan kepribadian luhur.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pkhonghucu-e-3-5",
+          "nomor": "3.5",
+          "nama": "Perilaku Jūnzĭ (君子)",
+          "teks": "Perilaku Jūnzĭ (君子)\nMemahami sikap cinta kasih kepada seluruh makhluk ciptaan Tiān (天), cinta tanah air, hidup tepa salira dan harmonis kepada sesama, bakti kepada Tiāndìrén (天地人), prinsip empat pantangan (sìwù 四勿) dan lima hubungan kemasyarakatan (wŭlún 五伦) dalam keseharian.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/Program \nPaket A\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut: \n3.1.\nSejarah Suci\nMemahami wahyu Tiān (天) yang diterima oleh \npara nabi dan raja suci, tokoh-tokoh Rújiào (儒\n教) serta sumbangsih pemikirannya, sejarah \nperkembangan agama Khonghucu di Indonesia. \n3.2.\nKitab Suci\nMemahami ayat-ayat dalam kitab Sìshū (四书) \ndan Wŭjīng (五经) tentang Nabi Kŏngzĭ (孔子) \nsebagai Tiān Zhī Mùduó (天之木铎), persaudaraan \ndalam pergaulan, rasa cinta tanah air, empat \npantangan sìwù (四勿), dan yang berhubungan \ndengan konsep sāncái (三才). \n3.3.\nKeimanan\nMemahami bahwa sembahyang adalah pokok \ndari agama, definisi iman, hukum yīnyáng (阴阳) \nsebagai dasar hukum alam semesta, konsep Tiga \nDasar Kenyataan (sāncái 三才). \n3.4.\nTata Ibadah\nMemahami hari raya/sembahyang kepada Tiān \n \n\n \n(天), Nabi Kŏngzĭ (孔子), shénmíng (神明), dan \nleluhur  \nsebagai wujud kesusilaan (lĭ 礼), \nperlengkapan \ndan \nperalatan \nsembahyang \nsehingga \nmenumbuhkan \nkeimanan \ndan \nkepribadian luhur. \n3.5.\nPerilaku Jūnzĭ (君子)\nMemahami sikap cinta kasih kepada seluruh \nmakhluk ciptaan Tiān (天), cinta tanah air, hidup \ntepa salira dan harmonis kepada sesama, bakti \nkepada \nTiāndìrén \n(天地人), \nprinsip \nempat \npantangan (sìwù 四勿) dan lima hubungan \nkemasyarakatan (wŭlún 五伦) dalam keseharian.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-pancasila",
+      "kode_bagian": "II",
+      "mata_pelajaran": "PANCASILA",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 82,
+        "akhir_terdeteksi": 83
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-pancasila-e-1-1",
+          "nomor": "1.1",
+          "nama": "Pancasila",
+          "teks": "Pancasila\nMengenal bendera negara, lagu kebangsaan, simbol dan sila-sila Pancasila dalam lambang negara Garuda Pancasila dan simbol Pancasila beserta sila-sila Pancasila; menerapkan nilai-nilai Pancasila di lingkungan keluarga.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-pancasila-e-1-2",
+          "nomor": "1.2",
+          "nama": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945",
+          "teks": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945\nMengenal aturan di lingkungan keluarga; menunjukkan dan menceritakan sikap mematuhi aturan di lingkungan keluarga.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-pancasila-e-1-3",
+          "nomor": "1.3",
+          "nama": "Bhinneka Tunggal Ika",
+          "teks": "Bhinneka Tunggal Ika\nMengenal semboyan Bhinneka Tunggal Ika; mengidentifikasi dan menghargai identitas dirinya sesuai dengan jenis kelamin, hobi, bahasa, serta agama dan kepercayaan di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-pancasila-e-1-4",
+          "nomor": "1.4",
+          "nama": "Negara Kesatuan Republik Indonesia",
+          "teks": "Negara Kesatuan Republik Indonesia\nMengenal karakteristik lingkungan tempat tinggal dan sekolah, sebagai bagian dari wilayah Negara Kesatuan Republik Indonesia; menceritakan dan mempraktikkan bekerja sama menjaga lingkungan sekitar dalam keberagaman.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut: \n1.1.\nPancasila\nMengenal bendera negara, lagu kebangsaan, \nsimbol dan sila-sila Pancasila dalam lambang \nnegara Garuda Pancasila dan simbol Pancasila \nbeserta \nsila-sila \nPancasila; \nmenerapkan \nnilai-nilai Pancasila di lingkungan keluarga. \n1.2.\nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia Tahun 1945\n \n\n \nMengenal \naturan \ndi \nlingkungan \nkeluarga; \nmenunjukkan \ndan \nmenceritakan \nsikap \nmematuhi aturan di lingkungan keluarga. \n1.3.\nBhinneka Tunggal Ika\nMengenal semboyan Bhinneka Tunggal Ika; \nmengidentifikasi \ndan \nmenghargai \nidentitas \ndirinya sesuai dengan jenis kelamin, hobi, \nbahasa, \nserta \nagama \ndan \nkepercayaan \ndi \nlingkungan sekitar. \n1.4.\nNegara Kesatuan Republik Indonesia\nMengenal \nkarakteristik \nlingkungan \ntempat \ntinggal dan sekolah, sebagai bagian dari wilayah \nNegara \nKesatuan \nRepublik \nIndonesia; \nmenceritakan dan mempraktikkan bekerja sama \nmenjaga lingkungan sekitar dalam keberagaman.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-pancasila",
+      "kode_bagian": "II",
+      "mata_pelajaran": "PANCASILA",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 83,
+        "akhir_terdeteksi": 84
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-pancasila-e-2-1",
+          "nomor": "2.1",
+          "nama": "Pancasila",
+          "teks": "Pancasila\nMengidentifikasi makna sila-sila Pancasila, dan penerapannya dalam kehidupan sehari-hari; mengenal karakter para perumus Pancasila; menunjukkan sikap bangga menjadi anak Indonesia yang memiliki bahasa Indonesia sebagai bahasa persatuan di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pancasila-e-2-2",
+          "nomor": "2.2",
+          "nama": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945",
+          "teks": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945\nMengidentifikasi dan melaksanakan aturan di sekolah dan lingkungan tempat tinggal; mengidentifikasi dan menerapkan hak yang didapat dan kewajiban sebagai anggota keluarga dan sebagai warga sekolah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pancasila-e-2-3",
+          "nomor": "2.3",
+          "nama": "Bhinneka Tunggal Ika",
+          "teks": "Bhinneka Tunggal Ika\nMembedakan dan menghargai identitas, keluarga, dan teman-temannya sesuai budaya, suku bangsa, bahasa, agama dan kepercayaannya di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-pancasila-e-2-4",
+          "nomor": "2.4",
+          "nama": "Negara Kesatuan Republik Indonesia",
+          "teks": "Negara Kesatuan Republik Indonesia\nMengidentifikasi lingkungan tempat tinggal (RT, RW, desa atau kelurahan, dan kecamatan) sebagai bagian dari wilayah Negara Kesatuan Republik Indonesia; menunjukkan perilaku bekerja sama dalam berbagai bentuk keberagaman suku bangsa, sosial, dan budaya di Indonesia yang terikat persatuan dan kesatuan di lingkungan sekitar.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut: \n2.1.\nPancasila\nMengidentifikasi makna sila-sila Pancasila, dan \npenerapannya \ndalam kehidupan sehari-hari; \nmengenal karakter para perumus Pancasila; \nmenunjukkan \nsikap \nbangga \nmenjadi \nanak \nIndonesia \nyang \nmemiliki \nbahasa \nIndonesia \nsebagai bahasa persatuan di lingkungan sekitar. \n2.2.\nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia Tahun 1945\nMengidentifikasi dan melaksanakan aturan di \nsekolah \ndan \nlingkungan \ntempat \ntinggal; \nmengidentifikasi dan menerapkan hak yang \ndidapat dan kewajiban sebagai anggota keluarga \ndan sebagai warga sekolah. \n2.3.\nBhinneka Tunggal Ika\nMembedakan \ndan \nmenghargai \nidentitas, \nkeluarga, dan teman-temannya sesuai budaya, \n \n\n \nsuku \nbangsa, \nbahasa, \nagama \ndan \nkepercayaannya di lingkungan sekitar. \n2.4.\nNegara Kesatuan Republik Indonesia\nMengidentifikasi lingkungan tempat tinggal (RT, \nRW, desa atau kelurahan, dan kecamatan) \nsebagai bagian dari wilayah Negara Kesatuan \nRepublik \nIndonesia; \nmenunjukkan \nperilaku \nbekerja \nsama \ndalam \nberbagai \nbentuk \nkeberagaman suku bangsa, sosial, dan budaya \ndi \nIndonesia \nyang \nterikat \npersatuan \ndan \nkesatuan di lingkungan sekitar.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-pancasila",
+      "kode_bagian": "II",
+      "mata_pelajaran": "PANCASILA",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 84,
+        "akhir_terdeteksi": 85
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-pancasila-e-3-1",
+          "nomor": "3.1",
+          "nama": "Pancasila",
+          "teks": "Pancasila\nMemahami kronologi sejarah kelahiran Pancasila; meneladani sikap para perumus Pancasila dan menerapkan di lingkungan masyarakat; menghubungkan sila-sila dalam Pancasila sebagai suatu kesatuan yang utuh; menguraikan makna nilai-nilai Pancasila sebagai dasar negara, dan pandangan hidup bangsa.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pancasila-e-3-2",
+          "nomor": "3.2",
+          "nama": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945",
+          "teks": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945\nMengimplementasikan bentuk-bentuk norma, hak, dan kewajiban dalam kedudukannya sebagai warga negara; mengenal Pembukaan Undang-Undang Dasar Negara Republik Indonesia tahun 1945; mempraktikkan musyawarah untuk membuat kesepakatan dan aturan bersama, serta menerapkannya dalam lingkungan keluarga dan sekolah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pancasila-e-3-3",
+          "nomor": "3.3",
+          "nama": "Bhinneka Tunggal Ika",
+          "teks": "Bhinneka Tunggal Ika\nMenyajikan hasil identifikasi sikap menghormati, menjaga, dan melestarikan keberagaman budaya sesuai semboyan dalam bingkai Bhinneka Tunggal Ika di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-pancasila-e-3-4",
+          "nomor": "3.4",
+          "nama": "Negara Kesatuan Republik Indonesia",
+          "teks": "Negara Kesatuan Republik Indonesia\nMengenal wilayahnya dalam konteks kabupaten/kota, dan provinsi sebagai bagian dari wilayah Negara Kesatuan Republik Indonesia; menunjukkan perilaku gotong royong untuk menjaga persatuan di lingkungan sekolah dan sekitar sebagai wujud bela negara.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut: \n3.1.\nPancasila\nMemahami \nkronologi \nsejarah \nkelahiran \nPancasila; \nmeneladani sikap para perumus \nPancasila \ndan \nmenerapkan \ndi \nlingkungan \nmasyarakat; menghubungkan sila-sila dalam \nPancasila sebagai suatu kesatuan yang utuh; \nmenguraikan makna nilai-nilai Pancasila sebagai \ndasar negara, dan pandangan hidup bangsa. \n3.2.\nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia Tahun 1945\nMengimplementasikan \nbentuk-bentuk \nnorma, \nhak, \ndan \nkewajiban \ndalam \nkedudukannya \nsebagai warga negara; mengenal Pembukaan \nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia \ntahun \n1945; \nmempraktikkan \nmusyawarah untuk membuat kesepakatan dan \naturan bersama, serta menerapkannya dalam \nlingkungan keluarga dan sekolah. \n3.3.\nBhinneka Tunggal Ika\nMenyajikan hasil identifikasi sikap menghormati, \nmenjaga, dan melestarikan keberagaman budaya \n \n\n \nsesuai \nsemboyan \ndalam \nbingkai \nBhinneka \nTunggal Ika di lingkungan sekitar. \n3.4.\nNegara Kesatuan Republik Indonesia\nMengenal \nwilayahnya \ndalam \nkonteks \nkabupaten/kota, dan provinsi sebagai bagian \ndari \nwilayah \nNegara \nKesatuan \nRepublik \nIndonesia; menunjukkan perilaku gotong royong \nuntuk menjaga persatuan di lingkungan sekolah \ndan sekitar sebagai wujud bela negara.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-bindo",
+      "kode_bagian": "III.1",
+      "mata_pelajaran": "BINDO",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 94,
+        "akhir_terdeteksi": 95
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-bindo-e-1-1",
+          "nomor": "1.1",
+          "nama": "Menyimak",
+          "teks": "Menyimak\nMemahami informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan) berupa percakapan yang berkaitan dengan diri, keluarga, dan/atau lingkungan sekitar; dan memahami pesan teks sastra berbentuk teks aural.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-bindo-e-1-2",
+          "nomor": "1.2",
+          "nama": "Membaca dan Memirsa",
+          "teks": "Membaca dan Memirsa\nMembaca kata-kata sederhana dengan fasih dari bacaan dan/atau tayangan yang dipirsa tentang diri, keluarga, kesehatan, dan/atau lingkungan sekitar; dan memahami isi bacaan dan/atau tayangan yang dipirsa tentang diri, keluarga, kesehatan, dan/atau lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-bindo-e-1-3",
+          "nomor": "1.3",
+          "nama": "Berbicara dan Mempresentasikan",
+          "teks": "Berbicara dan Mempresentasikan\nMerespons dengan bertanya tentang sesuatu, menjawab, dan menanggapi komentar orang lain (teman, pendidik, dan/atau orang dewasa) dengan baik dan santun dalam suatu percakapan tentang diri, keluarga, kesehatan, dan/atau lingkungan sekitar; mengungkapkan perasaan dan gagasan secara lisan dengan atau tanpa bantuan gambar; dan menceritakan kembali isi berbagai tipe teks yang dibaca, dipirsa, atau didengar tentang diri, keluarga, kesehatan, dan/atau lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-bindo-e-1-4",
+          "nomor": "1.4",
+          "nama": "Menulis",
+          "teks": "Menulis\nMenulis permulaan dengan benar di atas kertas dan/atau melalui media digital; mengembangkan tulisan tangan yang semakin baik; dan menulis berbagai tipe teks sederhana tentang diri, keluarga, dan/atau lingkungan sekitar dengan beberapa kalimat sederhana.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nMenyimak\nMemahami \ninformasi \ndari \nteks \nnonsastra \nberbentuk teks aural (teks yang dibacakan \ndan/atau didengarkan) berupa percakapan yang \nberkaitan \ndengan \ndiri, \nkeluarga, \ndan/atau \nlingkungan sekitar; dan memahami pesan teks \nsastra berbentuk teks aural. \n1.2.\nMembaca dan Memirsa\nMembaca kata-kata sederhana dengan fasih dari \nbacaan dan/atau tayangan yang dipirsa tentang \ndiri, keluarga, kesehatan, dan/atau lingkungan \nsekitar; dan memahami isi bacaan dan/atau \ntayangan yang dipirsa tentang diri, keluarga, \nkesehatan, dan/atau lingkungan sekitar. \n1.3.\nBerbicara dan Mempresentasikan\nMerespons dengan bertanya tentang sesuatu, \nmenjawab, dan menanggapi komentar orang lain \n(teman, \npendidik, \ndan/atau \norang \ndewasa) \ndengan \nbaik \ndan \nsantun \ndalam \nsuatu \npercakapan tentang diri, keluarga, kesehatan, \ndan/atau lingkungan sekitar; mengungkapkan \nperasaan dan gagasan secara lisan dengan atau \ntanpa \nbantuan \ngambar; \ndan \nmenceritakan \nkembali isi berbagai tipe teks yang dibaca, \ndipirsa, atau didengar tentang diri, keluarga, \nkesehatan, dan/atau lingkungan sekitar. \n1.4.\nMenulis\nMenulis permulaan dengan benar di atas kertas \n \n\n \ndan/atau melalui media digital; mengembangkan \ntulisan tangan yang semakin baik; dan menulis \nberbagai \ntipe \nteks sederhana tentang diri, \nkeluarga, dan/atau lingkungan sekitar dengan \nbeberapa kalimat sederhana.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-bindo",
+      "kode_bagian": "III.1",
+      "mata_pelajaran": "BINDO",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 95,
+        "akhir_terdeteksi": 95
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-bindo-e-2-1",
+          "nomor": "2.1",
+          "nama": "Menyimak",
+          "teks": "Menyimak\nMemahami ide pokok suatu informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan); dan memahami isi teks sastra berbentuk teks aural.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-bindo-e-2-2",
+          "nomor": "2.2",
+          "nama": "Membaca dan Memirsa",
+          "teks": "Membaca dan Memirsa\nMembaca kata-kata baru dengan fasih dari bacaan dan/atau tayangan yang dipirsa; dan memahami ide pokok, ide pendukung, pesan, dan informasi dalam teks sastra dan nonsastra berbentuk cetak dan/atau elektronik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-bindo-e-2-3",
+          "nomor": "2.3",
+          "nama": "Berbicara dan Mempresentasikan",
+          "teks": "Berbicara dan Mempresentasikan\nMenyajikan pendapat dengan pilihan kata dan sikap tubuh/gestur yang sesuai, menggunakan volume dan intonasi yang tepat sesuai konteks; menanggapi diskusi sesuai tata cara; dan menceritakan kembali isi dan/atau informasi dari berbagai tipe teks yang dibaca, dipirsa, atau didengar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-bindo-e-2-4",
+          "nomor": "2.4",
+          "nama": "Menulis",
+          "teks": "Menulis\nMenulis berbagai tipe teks sederhana dengan rangkaian kalimat yang beragam; dan menggunakan kaidah kebahasaan dan kosakata baru yang memiliki makna denotatif untuk menulis teks sesuai dengan konteks.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nMenyimak\nMemahami ide pokok suatu informasi dari teks \nnonsastra berbentuk teks aural (teks yang \ndibacakan \ndan/atau \ndidengarkan); \ndan \nmemahami isi teks sastra berbentuk teks aural. \n2.2.\nMembaca dan Memirsa\nMembaca kata-kata baru dengan fasih dari \nbacaan dan/atau tayangan yang dipirsa; dan \nmemahami ide pokok, ide pendukung, pesan, \ndan informasi dalam teks sastra dan nonsastra \nberbentuk cetak dan/atau elektronik.  \n2.3.\nBerbicara dan Mempresentasikan\nMenyajikan pendapat dengan pilihan kata dan \nsikap tubuh/gestur yang sesuai, menggunakan \nvolume dan intonasi yang tepat sesuai konteks; \nmenanggapi \ndiskusi sesuai tata cara; dan \nmenceritakan kembali isi dan/atau informasi \ndari berbagai tipe teks yang dibaca, dipirsa, atau \ndidengar.  \n2.4.\nMenulis\nMenulis berbagai tipe teks sederhana dengan \nrangkaian \nkalimat \nyang \nberagam;  \ndan \nmenggunakan kaidah kebahasaan dan kosakata \nbaru yang memiliki makna denotatif untuk \nmenulis teks sesuai dengan konteks.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-bindo",
+      "kode_bagian": "III.1",
+      "mata_pelajaran": "BINDO",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 95,
+        "akhir_terdeteksi": 96
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-bindo-e-3-1",
+          "nomor": "3.1",
+          "nama": "Menyimak",
+          "teks": "Menyimak\nMenganalisis informasi dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan; dan menganalisis isi teks sastra berbentuk teks aural.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-bindo-e-3-2",
+          "nomor": "3.2",
+          "nama": "Membaca dan Memirsa",
+          "teks": "Membaca dan Memirsa\nMembaca kata-kata dengan berbagai pola kombinasi huruf dengan fasih dari bacaan dan/atau tayangan yang dipirsa; dan menganalisis informasi serta nilai-nilai dalam teks sastra dan nonsastra berwujud teks visual dan/atau audiovisual.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-bindo-e-3-3",
+          "nomor": "3.3",
+          "nama": "Berbicara dan Mempresentasikan",
+          "teks": "Berbicara dan Mempresentasikan\nMempresentasikan gagasan dari berbagai tipe teks dengan efektif dan santun; dan menyampaikan perasaan berdasarkan fakta, imajinasi (dari diri sendiri dan orang lain) secara indah dan menarik dalam bentuk teks sastra dengan penggunaan kosakata secara kreatif.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-bindo-e-3-4",
+          "nomor": "3.4",
+          "nama": "Menulis",
+          "teks": "Menulis\nMenulis berbagai tipe teks sederhana berdasarkan gagasan, hasil pengamatan, pengalaman, dan/atau imajinasi dengan rangkaian kalimat kompleks secara kreatif, menarik, dan/atau indah; dan menggunakan kaidah kebahasaan dan kosakata baru yang memiliki makna denotatif dan konotatif.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \n \n\n \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n3.1.\nMenyimak\nMenganalisis \ninformasi dari teks nonsastra \nberbentuk teks aural (teks yang dibacakan \ndan/atau didengarkan; dan  \nmenganalisis isi \nteks sastra berbentuk teks aural.  \n3.2.\nMembaca dan Memirsa\nMembaca \nkata-kata \ndengan \nberbagai \npola \nkombinasi huruf dengan fasih dari bacaan \ndan/atau \ntayangan \nyang \ndipirsa; \ndan \nmenganalisis informasi serta nilai-nilai dalam \nteks sastra dan nonsastra berwujud teks visual \ndan/atau audiovisual. \n3.3.\nBerbicara dan Mempresentasikan\nMempresentasikan gagasan dari berbagai tipe \nteks \ndengan \nefektif \ndan \nsantun; \ndan \nmenyampaikan \nperasaan berdasarkan fakta, \nimajinasi (dari diri sendiri dan orang lain) secara \nindah dan menarik dalam bentuk teks sastra \ndengan penggunaan kosakata secara kreatif. \n3.4.\nMenulis\nMenulis \nberbagai \ntipe \nteks \nsederhana \nberdasarkan \ngagasan, \nhasil \npengamatan, \npengalaman, \ndan/atau \nimajinasi \ndengan \nrangkaian kalimat kompleks secara kreatif, \nmenarik, dan/atau indah; dan menggunakan \nkaidah kebahasaan dan kosakata baru yang \nmemiliki makna denotatif dan konotatif.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-mat",
+      "kode_bagian": "IV.1",
+      "mata_pelajaran": "MAT",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 112,
+        "akhir_terdeteksi": 114
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-mat-e-2-1",
+          "nomor": "2.1",
+          "nama": "Bilangan",
+          "teks": "Bilangan\nMemiliki pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 10.000; membaca, menulis, membandingkan, dan mengurutkan bilangan; menentukan dan menggunakan nilai tempat; melakukan komposisi dan dekomposisi bilangan cacah sampai 10.000. Murid dapat melakukan dan menyelesaikan masalah operasi bilangan penjumlahan dan pengurangan bilangan cacah sampai 1.000; melakukan dan menyelesaikan masalah operasi perkalian dan pembagian bilangan cacah sampai 100 dengan bantuan benda konkret, gambar dan simbol; mengenal kelipatan dan faktor. Murid dapat melakukan perbandingan dan pengurutan pecahan dengan pembilang satu dan antar pecahan dengan penyebut yang sama; mengenal dan dapat menerapkan pecahan senilai, memiliki intuisi pecahan dan desimal, serta dapat menentukan pecahan sebagai desimal dan persen.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-mat-e-2-2",
+          "nomor": "2.2",
+          "nama": "Aljabar",
+          "teks": "Aljabar\nMenemukan nilai yang tidak diketahui dalam kalimat matematika yang melibatkan penjumlahan dan pengurangan pada bilangan cacah sampai 100, dengan menggunakan sifat-sifat bilangan dan operasinya. Murid dapat mengidentifikasi, meniru, dan mengembangkan pola gambar atau objek sederhana dan pola bilangan membesar dan mengecil yang dapat melibatkan penjumlahan dan pengurangan pada bilangan cacah sampai 100.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-mat-e-2-3",
+          "nomor": "2.3",
+          "nama": "Pengukuran",
+          "teks": "Pengukuran\nMengukur panjang dan berat benda menggunakan satuan baku; menentukan hubungan antar-satuan baku panjang (cm, m) dan antar-satuan berat (g, kg); serta mengukur dan mengestimasi luas dan volume menggunakan satuan tidak baku dan satuan baku berupa bilangan cacah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-mat-e-2-4",
+          "nomor": "2.4",
+          "nama": "Geometri",
+          "teks": "Geometri\nMendeskripsikan ciri berbagai bentuk bangun datar (segiempat, segitiga, segi banyak); menyusun (komposisi) dan mengurai (dekomposisi) berbagai bangun datar dengan lebih dari satu cara jika memungkinkan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-mat-e-2-5",
+          "nomor": "2.5",
+          "nama": "Analisis Data dan Peluang",
+          "teks": "Analisis Data dan Peluang\nMengurutkan, membandingkan, menyajikan, menganalisis dan menginterpretasi data dalam bentuk tabel, diagram gambar, piktogram, dan diagram batang (skala satu satuan).",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nBilangan\nMemiliki \npemahaman \ndan \nintuisi \nbilangan \n(number sense) pada bilangan cacah sampai \n \n\n \n10.000; membaca, menulis, membandingkan, \ndan mengurutkan bilangan; menentukan dan \nmenggunakan \nnilai \ntempat; \nmelakukan \nkomposisi dan dekomposisi  \nbilangan cacah \nsampai 10.000. \nMurid dapat melakukan dan menyelesaikan \nmasalah operasi bilangan penjumlahan dan \npengurangan bilangan cacah sampai 1.000; \nmelakukan dan menyelesaikan masalah operasi \nperkalian dan pembagian bilangan cacah sampai \n100 dengan bantuan benda konkret, gambar dan \nsimbol; mengenal kelipatan dan faktor.\nMurid \ndapat \nmelakukan perbandingan dan \npengurutan pecahan dengan pembilang satu dan \nantar pecahan dengan penyebut yang sama; \nmengenal \ndan \ndapat \nmenerapkan \npecahan \nsenilai, memiliki intuisi pecahan dan desimal, \nserta \ndapat \nmenentukan \npecahan \nsebagai \ndesimal dan persen. \n2.2.\nAljabar\nMenemukan nilai yang tidak diketahui dalam \nkalimat \nmatematika \nyang \nmelibatkan \npenjumlahan dan pengurangan pada bilangan \ncacah \nsampai \n100, \ndengan \nmenggunakan \nsifat-sifat bilangan dan operasinya.\nMurid \ndapat \nmengidentifikasi, meniru, dan \nmengembangkan \npola \ngambar \natau \nobjek \nsederhana dan pola bilangan membesar dan \nmengecil yang dapat melibatkan penjumlahan \ndan pengurangan pada bilangan cacah sampai \n100. \n2.3.\nPengukuran\nMengukur \npanjang \ndan \nberat \nbenda \nmenggunakan \nsatuan \nbaku; \nmenentukan \nhubungan antar-satuan baku panjang (cm, m) \ndan antar-satuan berat (g, kg); serta mengukur \ndan \nmengestimasi \nluas \ndan \nvolume \n \n\n \nmenggunakan satuan tidak baku dan satuan \nbaku berupa bilangan cacah. \n2.4.\nGeometri\nMendeskripsikan ciri berbagai bentuk bangun \ndatar \n(segiempat, \nsegitiga, \nsegi \nbanyak); \nmenyusun \n(komposisi) \ndan \nmengurai \n(dekomposisi) berbagai bangun datar dengan \nlebih dari satu cara jika memungkinkan. \n2.5.\nAnalisis Data dan Peluang\nMengurutkan, \nmembandingkan, \nmenyajikan, \nmenganalisis dan menginterpretasi data dalam \nbentuk tabel, diagram gambar, piktogram, dan \ndiagram batang (skala satu satuan).",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-mat",
+      "kode_bagian": "IV.1",
+      "mata_pelajaran": "MAT",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 114,
+        "akhir_terdeteksi": 116
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-mat-e-3-1",
+          "nomor": "3.1",
+          "nama": "Bilangan",
+          "teks": "Bilangan\nMenunjukkan pemahaman dan intuisi bilangan (number sense) pada bilangan cacah sampai 1.000.000; membaca, menulis, menentukan nilai tempat, membandingkan, mengurutkan, melakukan komposisi dan dekomposisi bilangan; menyelesaikan masalah yang berkaitan dengan uang; melakukan operasi penjumlahan, pengurangan, perkalian, dan pembagian bilangan cacah sampai 100.000; serta menyelesaikan masalah yang berkaitan dengan KPK dan FPB. Murid dapat membandingkan dan mengurutkan berbagai pecahan termasuk pecahan campuran, melakukan operasi penjumlahan dan pengurangan pecahan, serta melakukan operasi perkalian dan pembagian pecahan dengan bilangan asli; mengubah pecahan menjadi berbagai bentuk pecahan lain, serta membandingkan dan mengurutkan bilangan desimal (satu angka di belakang koma).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-mat-e-3-2",
+          "nomor": "3.2",
+          "nama": "Aljabar",
+          "teks": "Aljabar\nMenemukan nilai yang belum diketahui dalam kalimat matematika yang melibatkan penjumlahan, pengurangan, perkalian, dan pembagian pada bilangan cacah sampai 1000 dengan menggunakan sifat-sifat bilangan dan operasinya. Murid dapat mengidentifikasi, meniru, dan mengembangkan pola bilangan membesar dan mengecil yang melibatkan perkalian dan pembagian; bernalar secara proporsional untuk menyelesaikan masalah sehari-hari dengan rasio satuan; menggunakan operasi perkalian dan pembagian dalam menyelesaikan masalah sehari- hari yang terkait dengan proporsi.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-mat-e-3-3",
+          "nomor": "3.3",
+          "nama": "Pengukuran",
+          "teks": "Pengukuran\nMenentukan keliling dan luas berbagai bentuk bangun datar (segitiga, segiempat, dan segi banyak) serta gabungannya; menghitung durasi waktu dan mengukur besar sudut pada bangun datar atau yang dibentuk dari dua garis berpotongan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-mat-e-3-4",
+          "nomor": "3.4",
+          "nama": "Geometri",
+          "teks": "Geometri\nMengkonstruksi dan mengurai bangun ruang (kubus, balok, dan gabungannya) dan mengenali visualisasi spasial (bagian depan, atas, dan samping); membandingkan karakteristik antar bangun datar dan antar bangun ruang; serta menentukan lokasi pada peta yang menggunakan sistem berpetak.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-mat-e-3-5",
+          "nomor": "3.5",
+          "nama": "Analisis Data dan Peluang",
+          "teks": "Analisis Data dan Peluang\nMengurutkan, membandingkan, menyajikan, dan menganalisis data banyak benda dan data hasil pengukuran dalam bentuk gambar, piktogram, diagram batang, dan tabel frekuensi untuk mendapatkan informasi; menentukan kejadian dengan kemungkinan yang lebih besar atau lebih kecil dalam suatu percobaan acak.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n3.1.\nBilangan\nMenunjukkan pemahaman dan intuisi bilangan \n(number sense) pada bilangan cacah sampai \n1.000.000; membaca, menulis, menentukan nilai \ntempat, \nmembandingkan, \nmengurutkan, \nmelakukan komposisi dan dekomposisi bilangan; \nmenyelesaikan masalah yang berkaitan dengan \nuang; \nmelakukan \noperasi \npenjumlahan, \npengurangan, \nperkalian, \ndan \npembagian \nbilangan \ncacah \nsampai \n100.000; \nserta \nmenyelesaikan masalah yang berkaitan dengan \nKPK dan FPB.\nMurid dapat membandingkan dan mengurutkan \nberbagai pecahan termasuk pecahan campuran, \nmelakukan \noperasi \npenjumlahan \ndan \npengurangan pecahan, serta melakukan operasi \nperkalian \ndan \npembagian \npecahan \ndengan \nbilangan \nasli; \nmengubah \npecahan \nmenjadi \nberbagai \nbentuk \npecahan \nlain, \nserta \n \n\n \nmembandingkan \ndan mengurutkan bilangan \ndesimal (satu angka di belakang koma). \n3.2.\nAljabar\nMenemukan nilai yang belum diketahui dalam \nkalimat \nmatematika \nyang \nmelibatkan \npenjumlahan, \npengurangan, \nperkalian, \ndan \npembagian pada bilangan cacah sampai 1000 \ndengan menggunakan sifat-sifat bilangan dan \noperasinya.\nMurid \ndapat \nmengidentifikasi, meniru, dan \nmengembangkan pola bilangan membesar dan \nmengecil \nyang \nmelibatkan \nperkalian \ndan \npembagian; bernalar secara proporsional untuk \nmenyelesaikan masalah sehari-hari dengan rasio \nsatuan; menggunakan operasi perkalian dan \npembagian \ndalam \nmenyelesaikan \nmasalah \nsehari- hari yang terkait dengan proporsi. \n3.3.\nPengukuran\nMenentukan keliling dan luas berbagai bentuk \nbangun datar (segitiga, segiempat, dan segi \nbanyak) serta gabungannya; menghitung durasi \nwaktu dan mengukur besar sudut pada bangun \ndatar \natau \nyang dibentuk dari dua garis \nberpotongan. \n3.4.\nGeometri\nMengkonstruksi dan mengurai bangun ruang \n(kubus, balok, dan gabungannya) dan mengenali \nvisualisasi spasial (bagian depan, atas, dan \nsamping); membandingkan karakteristik antar \nbangun datar dan antar bangun ruang; serta \nmenentukan \nlokasi \npada \npeta \nyang \nmenggunakan sistem berpetak. \n3.5.\nAnalisis Data dan Peluang\nMengurutkan, \nmembandingkan, \nmenyajikan, \ndan menganalisis data banyak benda dan data \nhasil \npengukuran \ndalam \nbentuk \ngambar, \npiktogram, diagram batang, dan tabel frekuensi \n \n\n \nuntuk \nmendapatkan \ninformasi; menentukan \nkejadian dengan kemungkinan yang lebih besar \natau lebih kecil dalam suatu percobaan acak.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-bing",
+      "kode_bagian": "V.1",
+      "mata_pelajaran": "BING",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 133,
+        "akhir_terdeteksi": 134
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-bing-e-1-1",
+          "nomor": "1.1",
+          "nama": "Menyimak - Berbicara (Listening - Speaking)",
+          "teks": "Menyimak - Berbicara (Listening - Speaking)\nMemahami dan merespon teks lisan atau teks multimodal sederhana tentang kehidupan sehari-hari baik secara verbal atau non-verbal sesuai konteks. (understand and respond to simple oral or multimodal texts about everyday life verbally or non-verbally in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-bing-e-1-2",
+          "nomor": "1.2",
+          "nama": "Membaca - Memirsa (Reading - Viewing)",
+          "teks": "Membaca - Memirsa (Reading - Viewing)\nMemahami teks tulis pendek sederhana atau teks multimodal tentang kehidupan sehari-hari dan meresponsnya secara verbal atau non-verbal sesuai konteks. (Understand simple short texts or multimodal texts about everyday life and respond to them verbally or non-verbally in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-bing-e-1-3",
+          "nomor": "1.3",
+          "nama": "Menulis - Mempresentasikan (Writing - Presenting)",
+          "teks": "Menulis - Mempresentasikan (Writing - Presenting)\nMengomunikasikan gagasan tentang topik sehari-hari dalam teks tulis pendek atau teks multimodal sesuai konteks. (Communicate their ideas on everyday life topics in simple written or multimodal texts in line with its context)",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir fase B, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nMenyimak - Berbicara (Listening - Speaking)\nMemahami dan merespon teks lisan atau teks \nmultimodal \nsederhana \ntentang \nkehidupan \nsehari-hari baik secara verbal atau non-verbal \nsesuai konteks.\n(understand and respond to simple oral or \nmultimodal texts about everyday life verbally or \nnon-verbally in line with its context) \n1.2.\nMembaca - Memirsa (Reading - Viewing)\n \n\n \nMemahami teks tulis pendek sederhana atau \nteks multimodal tentang kehidupan sehari-hari \ndan meresponsnya secara verbal atau non-verbal \nsesuai konteks.\n(Understand simple short texts or multimodal texts \nabout everyday life and respond to them verbally \nor non-verbally in line with its context) \n1.3.\nMenulis \n- \nMempresentasikan \n(Writing \n- \nPresenting)\nMengomunikasikan \ngagasan \ntentang \ntopik \nsehari-hari dalam teks tulis pendek atau teks \nmultimodal sesuai konteks. \n(Communicate their ideas on everyday life topics \nin simple written or multimodal texts in line with \nits context)",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-ipas",
+      "kode_bagian": "VI",
+      "mata_pelajaran": "IPAS",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 149,
+        "akhir_terdeteksi": 151
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-ipas-e-1-1",
+          "nomor": "1.1",
+          "nama": "Pemahaman IPAS",
+          "teks": "Pemahaman IPAS\nMenjelaskan bentuk dan fungsi pancaindra; menganalisis siklus hidup makhluk hidup dan upaya pelestariannya; menghasilkan solusi untuk masalah yang berkaitan dengan pelestarian sumber daya alam sebagai upaya mitigasi perubahan iklim; menyimpulkan proses perubahan wujud zat; menjelaskan sumber dan bentuk energi, serta proses perubahan bentuk energi dalam kehidupan sehari-hari; membedakan jenis gaya dan pengaruhnya terhadap arah, gerak, dan bentuk benda; menjelaskan peran, tugas, dan tanggung jawab serta interaksi sosial yang terjadi di sekitar tempat tinggal dan sekolah; mengenali letak kabupaten/kota dan provinsi tempat tinggalnya dengan menggunakan peta konvensional/digital; mengklasifikasikan ragam bentang alam dan keterkaitannya dengan profesi masyarakat, ragam budaya serta upaya untuk melestarikannya; menganalisis sejarah masyarakat di lingkungan tempat tinggal; menjelaskan nilai mata uang dan fungsinya, serta cara mengelola keuangan secara bijak.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-ipas-e-1-2",
+          "nomor": "1.2",
+          "nama": "Keterampilan Proses",
+          "teks": "Keterampilan Proses\nMampu menerapkan keterampilan proses yang meliputi: ● Mengamati Murid mengamati fenomena dan peristiwa secara sederhana dan dapat mencatat hasil pengamatannya. ● Mempertanyakan dan Memprediksi Secara mandiri, murid mengajukan pertanyaan tentang hal-hal yang ingin diketahui saat melakukan pengamatan dan membuat prediksi berdasarkan pengetahuan yang dimiliki sebelumnya. ● Merencanakan dan Melakukan Penyelidikan Dengan panduan pendidik, murid membuat rencana dan melakukan langkah-langkah operasional untuk menjawab pertanyaan yang diajukan. Murid melakukan observasi menggunakan alat bantu pengukuran sederhana. ● Memproses, Menganalisis Data dan Informasi Dengan panduan pendidik, murid mengorganisasikan data dalam bentuk turus dan diagram gambar untuk menyajikan dan mengidentifikasi pola. Murid membandingkan antara hasil pengamatan dengan prediksi dan memberikan penjelasan. ● Mengevaluasi dan Refleksi Murid melakukan refleksi terhadap penyelidikan yang sudah dilakukan. ● Mengomunikasikan Hasil Murid mengomunikasikan hasil penyelidikan secara lisan dan tertulis dalam berbagai media.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nPemahaman IPAS\n \n\n \nMenjelaskan bentuk dan fungsi pancaindra; \nmenganalisis siklus hidup makhluk hidup dan \nupaya \npelestariannya; \nmenghasilkan \nsolusi \nuntuk \nmasalah \nyang \nberkaitan \ndengan \npelestarian sumber daya alam sebagai upaya \nmitigasi perubahan iklim; menyimpulkan proses \nperubahan wujud zat; menjelaskan sumber dan \nbentuk energi, serta proses perubahan bentuk \nenergi \ndalam \nkehidupan \nsehari-hari; \nmembedakan \njenis \ngaya \ndan \npengaruhnya \nterhadap \narah, \ngerak, \ndan \nbentuk \nbenda; \nmenjelaskan peran, tugas, dan tanggung jawab \nserta interaksi sosial yang terjadi di sekitar \ntempat tinggal dan sekolah; mengenali letak \nkabupaten/kota dan provinsi tempat tinggalnya \ndengan menggunakan peta konvensional/digital; \nmengklasifikasikan ragam bentang alam dan \nketerkaitannya \ndengan \nprofesi \nmasyarakat, \nragam \nbudaya \nserta \nupaya \nuntuk \nmelestarikannya; \nmenganalisis \nsejarah \nmasyarakat \ndi \nlingkungan \ntempat \ntinggal; \nmenjelaskan nilai mata uang dan fungsinya, \nserta cara mengelola keuangan secara bijak. \n1.2.\nKeterampilan Proses\nMampu menerapkan keterampilan proses yang \nmeliputi: \n●\nMengamati\nMurid mengamati fenomena dan peristiwa \nsecara sederhana dan dapat mencatat hasil \npengamatannya. \n●\nMempertanyakan dan Memprediksi\nSecara \nmandiri, \nmurid \nmengajukan \npertanyaan \ntentang hal-hal yang ingin \ndiketahui saat melakukan pengamatan dan \nmembuat \nprediksi \nberdasarkan \npengetahuan yang dimiliki sebelumnya. \n●\nMerencanakan dan Melakukan Penyelidikan\n \n\n \nDengan panduan pendidik, murid membuat \nrencana dan melakukan langkah-langkah \noperasional untuk menjawab pertanyaan \nyang diajukan. Murid melakukan observasi \nmenggunakan \nalat \nbantu \npengukuran \nsederhana. \n●\nMemproses, \nMenganalisis \nData \ndan \nInformasi\nDengan \npanduan \npendidik, \nmurid \nmengorganisasikan \ndata \ndalam \nbentuk \nturus \ndan \ndiagram \ngambar \nuntuk \nmenyajikan \ndan \nmengidentifikasi \npola. \nMurid \nmembandingkan \nantara \nhasil \npengamatan \ndengan \nprediksi \ndan \nmemberikan penjelasan. \n●\nMengevaluasi dan Refleksi\nMurid \nmelakukan \nrefleksi \nterhadap \npenyelidikan yang sudah dilakukan. \n●\nMengomunikasikan Hasil\nMurid \nmengomunikasikan \nhasil \npenyelidikan secara lisan dan tertulis dalam \nberbagai media.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-ipas",
+      "kode_bagian": "VI",
+      "mata_pelajaran": "IPAS",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 151,
+        "akhir_terdeteksi": 153
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-ipas-e-2-1",
+          "nomor": "2.1",
+          "nama": "Pemahaman IPAS",
+          "teks": "Pemahaman IPAS\nMerefleksikan sistem organ tubuh manusia yang dikaitkan dengan cara menjaga kesehatan tubuhnya; menganalisis hubungan antar komponen biotik dan abiotik, serta pengaruhnya terhadap ekosistem; menjelaskan fenomena gelombang bunyi dan cahaya dalam kehidupan sehari-hari; menghasilkan upaya penghematan energi, serta pemanfaatan sumber energi alternatif dari sumber daya yang ada di sekitarnya sebagai upaya mitigasi perubahan iklim; menjelaskan sistem tata surya, serta kaitannya dengan rotasi dan revolusi bumi; menjelaskan letak dan kondisi geografis negara Indonesia dengan menggunakan peta konvensional/digital; meninjau sejarah perjuangan para pahlawan di lingkungan sekitar tempat tinggalnya; menemukan keragaman budaya nasional dalam konteks kebhinekaan berdasarkan pemahaman terhadap nilai-nilai kearifan lokal yang berlaku di wilayah tempat tinggal; serta menerapkan kegiatan ekonomi masyarakat di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-ipas-e-2-2",
+          "nomor": "2.2",
+          "nama": "Keterampilan Proses",
+          "teks": "Keterampilan Proses\nMampu menerapkan keterampilan proses yang meliputi: ● Mengamati Murid mengamati fenomena dan peristiwa secara sederhana, mencatat hasil pengamatannya, serta mencari persamaan dan perbedaannya. ● Mempertanyakan dan Memprediksi Dengan panduan pendidik, murid mengidentifikasi pertanyaan yang dapat diselidiki secara ilmiah dan membuat prediksinya. ● Merencanakan dan Melakukan Penyelidikan Secara mandiri, murid merencanakan dan melakukan langkah-langkah operasional untuk menjawab pertanyaan yang diajukan. Murid melakukan observasi menggunakan alat bantu pengukuran sederhana. ● Memproses serta Menganalisis Data dan Informasi Murid mengolah data dalam bentuk tabel dan grafik, serta menjelaskan hasil pengamatan dan pola atau hubungan pada data. Murid membandingkan data dengan prediksi dan memberikan alasan berdasarkan bukti. ● Mengevaluasi dan Refleksi Melakukan refleksi dan memberikan saran perbaikan terhadap penyelidikan yang sudah dilakukan. ● Mengomunikasikan Hasil Murid mengomunikasikan hasil penyelidikan secara utuh yang ditunjang dengan argumen dalam berbagai media.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nPemahaman IPAS\nMerefleksikan sistem organ tubuh manusia yang \ndikaitkan \ndengan \ncara \nmenjaga \nkesehatan \ntubuhnya; \nmenganalisis \nhubungan \nantar \nkomponen biotik dan abiotik, serta pengaruhnya \nterhadap \nekosistem; \nmenjelaskan \nfenomena \ngelombang bunyi dan cahaya dalam kehidupan \nsehari-hari; menghasilkan upaya penghematan \nenergi, \nserta \npemanfaatan \nsumber \nenergi \nalternatif \ndari \nsumber \ndaya \nyang \nada \ndi \n \n\n \nsekitarnya sebagai upaya mitigasi perubahan \niklim; menjelaskan sistem tata surya, serta \nkaitannya dengan rotasi dan revolusi bumi; \nmenjelaskan letak dan kondisi geografis negara \nIndonesia \ndengan \nmenggunakan \npeta \nkonvensional/digital; \nmeninjau \nsejarah \nperjuangan para pahlawan di lingkungan sekitar \ntempat \ntinggalnya; \nmenemukan \nkeragaman \nbudaya nasional dalam konteks kebhinekaan \nberdasarkan pemahaman terhadap nilai-nilai \nkearifan lokal yang berlaku di wilayah tempat \ntinggal; serta menerapkan kegiatan ekonomi \nmasyarakat di lingkungan sekitar. \n2.2.\nKeterampilan Proses\nMampu menerapkan keterampilan proses yang \nmeliputi: \n●\nMengamati\nMurid mengamati fenomena dan peristiwa \nsecara \nsederhana, \nmencatat \nhasil \npengamatannya, serta mencari persamaan \ndan perbedaannya. \n●\nMempertanyakan dan Memprediksi\nDengan \npanduan \npendidik, \nmurid \nmengidentifikasi pertanyaan yang dapat \ndiselidiki \nsecara \nilmiah \ndan \nmembuat \nprediksinya. \n●\nMerencanakan dan Melakukan Penyelidikan\nSecara mandiri, murid merencanakan dan \nmelakukan \nlangkah-langkah \noperasional \nuntuk menjawab pertanyaan yang diajukan. \nMurid melakukan observasi menggunakan \nalat bantu pengukuran sederhana. \n●\nMemproses serta Menganalisis Data dan \nInformasi\nMurid mengolah data dalam bentuk tabel \ndan \ngrafik, \nserta \nmenjelaskan \nhasil \npengamatan dan pola atau hubungan pada \n \n\n \ndata. Murid membandingkan data dengan \nprediksi \ndan \nmemberikan \nalasan \nberdasarkan bukti. \n●\nMengevaluasi dan Refleksi\nMelakukan refleksi dan memberikan saran \nperbaikan \nterhadap \npenyelidikan \nyang \nsudah dilakukan. \n●\nMengomunikasikan Hasil\nMurid \nmengomunikasikan \nhasil \npenyelidikan secara utuh yang ditunjang \ndengan argumen dalam berbagai media.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-seni_musik",
+      "kode_bagian": "XVIII.1",
+      "mata_pelajaran": "SENI_MUSIK",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 238,
+        "akhir_terdeteksi": 239
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-seni_musik-e-1-1",
+          "nomor": "1.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenali unsur-unsur musik (nada dan irama) menggunakan anggota tubuh maupun alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_musik-e-1-2",
+          "nomor": "1.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMelakukan umpan balik mengenai praktik bermain musik diri sendiri atau orang lain menggunakan bahasa sehari-hari.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_musik-e-1-3",
+          "nomor": "1.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMenirukan pola irama dan nada menggunakan alat musik ritmis atau melodis; mengenali ragam alat musik dan bunyi yang dihasilkan; mengenali cara memainkan dan membersihkan instrumen/alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_musik-e-1-4",
+          "nomor": "1.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMembuat pola irama menggunakan anggota    tubuh atau alat musik ritmis yang tersedia di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_musik-e-1-5",
+          "nomor": "1.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenunjukkan ekspresi senang dalam kegiatan bermusik.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\n \n\n \nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut: \n1.1.\nMengalami (Experiencing)\nMengenali unsur-unsur musik (nada dan irama) \nmenggunakan anggota tubuh maupun alat musik. \n1.2.\nMerefleksikan (Reflecting)\nMelakukan umpan balik mengenai praktik bermain \nmusik diri sendiri atau orang lain menggunakan \nbahasa sehari-hari. \n1.3.\nBerpikir dan Bekerja Artistik (Thinking and Working \nArtistically)\nMenirukan pola irama dan nada menggunakan alat \nmusik ritmis atau melodis; mengenali ragam alat \nmusik dan bunyi yang dihasilkan; mengenali cara \nmemainkan dan membersihkan instrumen/alat musik. \n1.4.\nMenciptakan (Creating) \nMembuat pola irama menggunakan anggota    tubuh  \natau alat musik ritmis yang tersedia di lingkungan \nsekitar. \n1.5.\nBerdampak (Impacting)\nMenunjukkan \nekspresi \nsenang \ndalam \nkegiatan \nbermusik.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-seni_musik",
+      "kode_bagian": "XVIII.1",
+      "mata_pelajaran": "SENI_MUSIK",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 239,
+        "akhir_terdeteksi": 240
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-seni_musik-e-2-1",
+          "nomor": "2.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenali nada dan pola irama menggunakan anggota tubuh maupun alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_musik-e-2-2",
+          "nomor": "2.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMelakukan umpan balik mengenai praktik bermusik diri sendiri atau orang lain menggunakan istilah musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_musik-e-2-3",
+          "nomor": "2.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMenirukan  pola irama dan melodi menggunakan alat musik ritmis atau melodis; menyebutkan karakteristik ragam alat musik dan bunyi yang dihasilkan; mengetahui cara memainkan dan merawat alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_musik-e-2-4",
+          "nomor": "2.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMembuat bunyi menggunakan anggota tubuh atau alat musik ritmis dan melodis yang tersedia di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_musik-e-2-5",
+          "nomor": "2.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenunjukkan minat dalam kegiatan bermusik.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase B (Umumnya untuk Kelas III dan IV SD/MI/Program \nPaket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut: \n2.1.\nMengalami (Experiencing)\nMengenali nada dan pola  \nirama menggunakan \nanggota tubuh maupun alat musik. \n2.2.\nMerefleksikan (Reflecting)\nMelakukan umpan balik mengenai praktik bermusik \ndiri sendiri atau orang lain menggunakan istilah \nmusik.  \n2.3.\nBerpikir dan Bekerja Artistik (Thinking and Working \nArtistically)\nMenirukan  pola irama dan melodi menggunakan alat \nmusik ritmis atau melodis; menyebutkan karakteristik \n \n\n \nragam \nalat \nmusik \ndan \nbunyi \nyang dihasilkan; \nmengetahui cara memainkan dan merawat alat musik.  \n2.4.\nMenciptakan (Creating)\nMembuat bunyi menggunakan anggota tubuh atau \nalat musik ritmis dan melodis yang tersedia di \nlingkungan sekitar. \n2.5.\nBerdampak (Impacting)\nMenunjukkan minat dalam kegiatan bermusik.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-seni_musik",
+      "kode_bagian": "XVIII.1",
+      "mata_pelajaran": "SENI_MUSIK",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 240,
+        "akhir_terdeteksi": 241
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-seni_musik-e-3-1",
+          "nomor": "3.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenali dan menerapkan unsur-unsur musik (nada, irama dan melodi) menggunakan alat musik ritmis dan melodis serta menunjukkan tingkat kepekaan akan unsur-unsur musik dengan menggunakan alat musik ritmis dan melodis.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_musik-e-3-2",
+          "nomor": "3.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMelakukan umpan balik mengenai karya dan kemampuan bermusik diri sendiri atau orang lain menggunakan istilah musik yang tepat.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_musik-e-3-3",
+          "nomor": "3.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengeksplorasi  variasi pola irama, tempo dan melodi dengan alat musik ritmis dan melodis  menggunakan notasi musik dan teknik dasar yang telah dipelajari; menemukan alternatif untuk menghasilkan bunyi musik sederhana melalui eksplorasi material yang tersedia di lingkungan sekitar dan menerapkan cara memainkan dan merawat alat musik dengan teknik yang tepat sesuai dengan spesifikasi bahan alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_musik-e-3-4",
+          "nomor": "3.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMembuat dan mengembangkan pola irama menggunakan anggota tubuh atau alat musik ritmis yang tersedia berdasarkan nilai kearifan lokal daerahnya.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_musik-e-3-5",
+          "nomor": "3.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenunjukkan minat dan rasa ingin tahu dalam kegiatan bermusik.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut: \n3.1.\nMengalami (Experiencing)\nMengenali dan menerapkan unsur-unsur musik (nada, \nirama dan melodi) menggunakan alat musik ritmis dan \nmelodis serta menunjukkan tingkat kepekaan akan \nunsur-unsur musik dengan menggunakan alat musik \nritmis dan melodis. \n3.2.\nMerefleksikan (Reflecting)\nMelakukan \numpan \nbalik \nmengenai \nkarya \ndan \nkemampuan bermusik diri sendiri atau orang lain \nmenggunakan istilah musik yang tepat. \n3.3.\nBerpikir dan Bekerja Artistik (Thinking and Working \nArtistically)\nMengeksplorasi  variasi pola irama, tempo dan melodi \ndengan alat musik ritmis dan melodis  menggunakan \nnotasi musik dan teknik dasar yang telah dipelajari; \nmenemukan alternatif untuk menghasilkan bunyi \nmusik sederhana melalui eksplorasi material yang \ntersedia di lingkungan sekitar dan menerapkan cara \nmemainkan dan merawat alat musik dengan teknik \nyang tepat sesuai dengan spesifikasi bahan alat musik. \n3.4.\nMenciptakan (Creating)\nMembuat \ndan  \nmengembangkan  \npola \nirama \nmenggunakan anggota tubuh atau alat musik ritmis \nyang \ntersedia \nberdasarkan \nnilai \nkearifan \nlokal \ndaerahnya. \n \n\n \n3.5.\nBerdampak (Impacting)\nMenunjukkan  \nminat dan rasa ingin tahu dalam \nkegiatan bermusik.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-seni_rupa",
+      "kode_bagian": "XVIII.2",
+      "mata_pelajaran": "SENI_RUPA",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 246,
+        "akhir_terdeteksi": 247
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-seni_rupa-e-1-1",
+          "nomor": "1.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenali dan menyebutkan unsur-unsur rupa dalam benda-benda di sekitar/karya seni rupa.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_rupa-e-1-2",
+          "nomor": "1.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMerefleksikan dan mengapresiasi karya diri sendiri.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_rupa-e-1-3",
+          "nomor": "1.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengenali dan menguji coba alat dan/atau bahan yang dimiliki.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_rupa-e-1-4",
+          "nomor": "1.4",
+          "nama": "Menciptakan (Making/Creating)",
+          "teks": "Menciptakan (Making/Creating)\nMembuat karya seni rupa berdasarkan pengalaman dan hasil pengamatan terhadap lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_rupa-e-1-5",
+          "nomor": "1.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenghasilkan karya seni rupa yang berdampak pada perasaan dirinya.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nMengalami (Experiencing)\nMengenali dan menyebutkan unsur-unsur rupa \ndalam benda-benda di sekitar/karya seni rupa. \n1.2.\nMerefleksikan (Reflecting)\n \n\n \nMerefleksikan dan mengapresiasi karya diri \nsendiri. \n1.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMengenali  \ndan menguji coba alat dan/atau \nbahan yang dimiliki. \n1.4.\nMenciptakan (Making/Creating)\nMembuat \nkarya \nseni \nrupa \nberdasarkan \npengalaman dan hasil pengamatan terhadap \nlingkungan sekitar. \n1.5.\nBerdampak (Impacting)\nMenghasilkan karya seni rupa yang berdampak \npada perasaan dirinya.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-seni_rupa",
+      "kode_bagian": "XVIII.2",
+      "mata_pelajaran": "SENI_RUPA",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 247,
+        "akhir_terdeteksi": 247
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-seni_rupa-e-2-1",
+          "nomor": "2.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengidentifikasi unsur rupa dan prinsip desain dalam benda-benda di sekitar/karya seni rupa.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_rupa-e-2-2",
+          "nomor": "2.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMerefleksikan dan mengapresiasi karya diri sendiri dan teman sekelas menggunakan kosa kata seni rupa yang sesuai.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_rupa-e-2-3",
+          "nomor": "2.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengenali dan menguji coba alat dan/atau bahan yang dimiliki serta prosedur penggunaannya.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_rupa-e-2-4",
+          "nomor": "2.4",
+          "nama": "Menciptakan (Making/Creating)",
+          "teks": "Menciptakan (Making/Creating)\nMembuat karya seni rupa berdasarkan pengalaman dan hasil pengamatan terhadap lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_rupa-e-2-5",
+          "nomor": "2.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenghasilkan karya seni rupa yang berdampak pada perasaan atau mewakili harapannya.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nMengalami (Experiencing)\nMengidentifikasi unsur rupa dan prinsip desain \ndalam benda-benda di sekitar/karya seni rupa. \n2.2.\nMerefleksikan (Reflecting)\nMerefleksikan dan mengapresiasi karya diri \nsendiri dan teman sekelas menggunakan kosa \nkata seni rupa yang sesuai. \n2.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMengenali  \ndan menguji coba alat dan/atau \nbahan \nyang \ndimiliki \nserta \nprosedur \npenggunaannya. \n2.4.\nMenciptakan (Making/Creating)\nMembuat \nkarya \nseni \nrupa \nberdasarkan \npengalaman dan hasil pengamatan terhadap \nlingkungan sekitar. \n2.5.\nBerdampak (Impacting)\nMenghasilkan karya seni rupa yang berdampak \npada perasaan atau mewakili harapannya.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-seni_rupa",
+      "kode_bagian": "XVIII.2",
+      "mata_pelajaran": "SENI_RUPA",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 247,
+        "akhir_terdeteksi": 248
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-seni_rupa-e-3-1",
+          "nomor": "3.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMenjelaskan unsur rupa dan prinsip desain dalam benda-benda di sekitar/karya seni rupa.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_rupa-e-3-2",
+          "nomor": "3.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMerefleksikan dan mengapresiasi karya diri sendiri dan teman sekelas menggunakan kosa kata seni rupa yang sesuai.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_rupa-e-3-3",
+          "nomor": "3.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengenali dan menguji coba variasi teknik penggunaan alat dan/atau bahan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_rupa-e-3-4",
+          "nomor": "3.4",
+          "nama": "Menciptakan (Making/Creating)",
+          "teks": "Menciptakan (Making/Creating)\nMembuat karya seni rupa berdasarkan pengalaman dan/atau hasil pengamatan terhadap lingkungan sekitar melalui pengembangan imajinasi.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_rupa-e-3-5",
+          "nomor": "3.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenghasilkan karya seni rupa yang mewakili minatnya.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \n \n\n \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n3.1.\nMengalami (Experiencing)\nMenjelaskan unsur rupa dan prinsip desain \ndalam benda-benda di sekitar/karya seni rupa. \n3.2.\nMerefleksikan (Reflecting)\nMerefleksikan dan mengapresiasi karya diri \nsendiri dan teman sekelas menggunakan kosa \nkata seni rupa yang sesuai. \n3.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMengenali dan menguji coba variasi teknik \npenggunaan alat dan/atau bahan. \n3.4.\nMenciptakan (Making/Creating)\nMembuat \nkarya \nseni \nrupa \nberdasarkan \npengalaman \ndan/atau \nhasil \npengamatan \nterhadap \nlingkungan \nsekitar \nmelalui \npengembangan imajinasi. \n3.5.\nBerdampak (Impacting)\nMenghasilkan karya seni rupa yang mewakili  \nminatnya.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-seni_tari",
+      "kode_bagian": "XVIII.3",
+      "mata_pelajaran": "SENI_TARI",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 256,
+        "akhir_terdeteksi": 257
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-seni_tari-e-1-1",
+          "nomor": "1.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenal bentuk tari sebagai media komunikasi serta mengembangkan kesadaran diri dalam bereksplorasi unsur utama tari meliputi gerak, ruang, tenaga, waktu, gerak di tempat dan gerak berpindah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_tari-e-1-2",
+          "nomor": "1.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMengidentifikasi unsur utama tari meliputi gerak, ruang, tenaga, waktu, gerak di tempat dan gerak berpindah, serta mengemukakan pencapaian diri secara lisan, tulisan, dan kinestetik.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_tari-e-1-3",
+          "nomor": "1.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMeragakan hasil gerak berdasarkan etika sebagai penampil dan penonton dengan keyakinan dan percaya diri saat mengekspresikan ide, perasaan kepada penonton atau lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_tari-e-1-4",
+          "nomor": "1.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMengembangkan unsur utama tari (gerak, ruang, waktu, dan tenaga), gerak di tempat, dan gerak berpindah untuk membuat gerak sederhana yang memiliki kesatuan gerak yang indah.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_tari-e-1-5",
+          "nomor": "1.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenerima proses pembelajaran sehingga tumbuh rasa ingin tahu dan dapat menunjukkan antusiasme yang berdampak pada kemampuan diri dalam menyelesaikan aktivitas pembelajaran tari.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nMengalami (Experiencing)\nMengenal bentuk tari sebagai media komunikasi \nserta mengembangkan kesadaran diri dalam \nbereksplorasi unsur utama tari meliputi gerak, \nruang, tenaga, waktu, gerak di tempat dan gerak \nberpindah. \n1.2.\nMerefleksikan (Reflecting)\nMengidentifikasi \nunsur utama tari meliputi \ngerak, ruang, tenaga, waktu, gerak di tempat \ndan gerak berpindah, serta mengemukakan \npencapaian \ndiri \nsecara \nlisan, tulisan, dan \nkinestetik. \n1.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMeragakan \nhasil \ngerak \nberdasarkan \netika \nsebagai \npenampil \ndan \npenonton \ndengan \nkeyakinan \ndan \npercaya \ndiri \nsaat \nmengekspresikan ide, perasaan kepada penonton \natau lingkungan sekitar. \n1.4.\nMenciptakan (Creating)\nMengembangkan \nunsur \nutama \ntari \n(gerak, \nruang, waktu, dan tenaga), gerak di tempat, dan \n \n\n \ngerak \nberpindah \nuntuk \nmembuat \ngerak \nsederhana yang memiliki kesatuan gerak yang \nindah. \n1.5.\nBerdampak (Impacting)\nMenerima proses pembelajaran sehingga tumbuh \nrasa \ningin \ntahu \ndan \ndapat \nmenunjukkan \nantusiasme yang berdampak pada kemampuan \ndiri dalam menyelesaikan aktivitas pembelajaran \ntari.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-seni_tari",
+      "kode_bagian": "XVIII.3",
+      "mata_pelajaran": "SENI_TARI",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 257,
+        "akhir_terdeteksi": 257
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-seni_tari-e-2-1",
+          "nomor": "2.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengamati bentuk penyajian tari berdasarkan latar belakang serta mengeksplorasi unsur utama tari sesuai level gerak, dan perubahan arah hadap.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_tari-e-2-2",
+          "nomor": "2.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMengidentifikasi unsur utama tari sesuai level gerak, dan perubahan arah hadap, serta menilai pencapaian diri saat melakukan aktivitas pembelajaran tari.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_tari-e-2-3",
+          "nomor": "2.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMeragakan hasil tari dengan bekerja secara kooperatif untuk mengembangkan kemampuan bekerja sama dan saling menghargai demi tercapainya tujuan bersama.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_tari-e-2-4",
+          "nomor": "2.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMengembangkan gerak dengan unsur utama tari, level, dan perubahan arah hadap.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_tari-e-2-5",
+          "nomor": "2.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenerima proses pembelajaran sehingga tumbuh rasa ingin tahu dan dapat menunjukkan usaha yang berdampak pada kemampuan diri dalam menyelesaikan aktivitas pembelajaran tari.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir Fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nMengalami (Experiencing)\nMengamati bentuk penyajian tari berdasarkan \nlatar \nbelakang \nserta \nmengeksplorasi \nunsur \nutama tari sesuai level gerak, dan perubahan \narah hadap. \n2.2.\nMerefleksikan (Reflecting)\nMengidentifikasi unsur utama tari sesuai level \ngerak, dan perubahan arah hadap, serta menilai \npencapaian \ndiri \nsaat \nmelakukan \naktivitas \npembelajaran tari. \n2.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMeragakan hasil tari dengan bekerja secara \nkooperatif untuk mengembangkan kemampuan \nbekerja sama dan saling menghargai demi \ntercapainya tujuan bersama. \n2.4.\nMenciptakan (Creating)\nMengembangkan gerak dengan unsur utama \ntari, level, dan perubahan arah hadap.  \n2.5.\nBerdampak (Impacting)\nMenerima proses pembelajaran sehingga tumbuh \nrasa ingin tahu dan dapat menunjukkan usaha \nyang berdampak pada kemampuan diri dalam \nmenyelesaikan aktivitas pembelajaran tari.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-seni_tari",
+      "kode_bagian": "XVIII.3",
+      "mata_pelajaran": "SENI_TARI",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 257,
+        "akhir_terdeteksi": 258
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-seni_tari-e-3-1",
+          "nomor": "3.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengamati berbagai bentuk tari tradisi yang dapat digunakan untuk mengekspresikan diri melalui unsur pendukung tari.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_tari-e-3-2",
+          "nomor": "3.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan (Reflecting)\nMengidentifikasi unsur pendukung tari dalam tari tradisi serta menghargai hasil pencapaian diri dengan mempertimbangkan pendapat orang lain.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_tari-e-3-3",
+          "nomor": "3.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMeragakan hasil rangkaian gerak tari menggunakan unsur pendukung tari dengan menunjukan kerja sama dan berperan aktif dalam kelompok.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_tari-e-3-4",
+          "nomor": "3.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMerangkai gerak tari yang berpijak pada tradisi/ kreasi dengan menerapkan desain kelompok.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_tari-e-3-5",
+          "nomor": "3.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMenanggapi kejadian-kejadian di lingkungan sekitar melalui tari yang disajikan kepada penonton atau masyarakat sekitar.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n3.1.\nMengalami (Experiencing)\nMengamati berbagai bentuk tari tradisi yang \ndapat digunakan untuk mengekspresikan diri \nmelalui unsur pendukung tari. \n3.2.\nMerefleksikan (Reflecting)\nMengidentifikasi unsur pendukung tari dalam \ntari tradisi serta menghargai hasil pencapaian \ndiri dengan mempertimbangkan pendapat orang \nlain. \n3.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMeragakan \nhasil \nrangkaian \ngerak \ntari \nmenggunakan unsur pendukung tari dengan \nmenunjukan kerja sama dan berperan aktif \ndalam kelompok. \n3.4.\nMenciptakan (Creating)\nMerangkai gerak tari yang berpijak pada tradisi/ \nkreasi dengan menerapkan desain kelompok. \n3.5.\nBerdampak (Impacting)\nMenanggapi kejadian-kejadian di lingkungan \nsekitar melalui tari yang disajikan kepada \npenonton atau masyarakat sekitar.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-a-seni_teater",
+      "kode_bagian": "XVIII.4",
+      "mata_pelajaran": "SENI_TEATER",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 264,
+        "akhir_terdeteksi": 264
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-seni_teater-e-1-1",
+          "nomor": "1.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengamati, merespons, meniru gerak tubuh dan suara sebagai media untuk mengomunikasikan emosi.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_teater-e-1-2",
+          "nomor": "1.2",
+          "nama": "Merefleksikan (Reflection)",
+          "teks": "Merefleksikan (Reflection)\nMengenali pengalaman dan emosi selama proses berseni teater serta menceritakan sebuah karya dengan kosakata sehari-hari.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_teater-e-1-3",
+          "nomor": "1.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengenal jenis-jenis properti/alat bantu yang dapat mendukung cerita/permainan peran.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_teater-e-1-4",
+          "nomor": "1.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMengeksplorasi beragam peran mengenai tokoh di sekitar atau rekaan, dan memainkan sebuah lakon pertunjukan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-seni_teater-e-1-5",
+          "nomor": "1.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMemainkan gerak dan lagu sesuai arahan dari pendidik.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nMengalami (Experiencing)\nMengamati, merespons, meniru gerak tubuh dan \nsuara sebagai media untuk mengomunikasikan \nemosi. \n1.2.\nMerefleksikan (Reflection)\nMengenali pengalaman dan emosi selama proses \nberseni teater serta menceritakan sebuah karya \ndengan kosakata sehari-hari. \n1.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMengenal jenis-jenis properti/alat bantu yang \ndapat mendukung cerita/permainan peran. \n1.4.\nMenciptakan (Creating)\nMengeksplorasi beragam peran mengenai tokoh \ndi sekitar atau rekaan, dan memainkan sebuah \nlakon pertunjukan.  \n1.5.\nBerdampak (Impacting)\nMemainkan gerak dan lagu sesuai arahan dari \npendidik.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-b-seni_teater",
+      "kode_bagian": "XVIII.4",
+      "mata_pelajaran": "SENI_TEATER",
+      "fase": "B",
+      "kelas": [
+        3,
+        4
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 264,
+        "akhir_terdeteksi": 265
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-b-seni_teater-e-2-1",
+          "nomor": "2.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMengenal teknik dasar akting (pemeranan) melalui proses meniru (mimesis), mengenal gerak tubuh, suara/vokal sesuai tokoh/peran atau perilaku objek sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_teater-e-2-2",
+          "nomor": "2.2",
+          "nama": "Merefleksikan (Reflection)",
+          "teks": "Merefleksikan (Reflection)\nMengenali lingkungan sekitarnya dan pengalaman dalam bermain teater.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_teater-e-2-3",
+          "nomor": "2.3",
+          "nama": "Bekerja Secara Artistik (Thinking and Working Artistically)",
+          "teks": "Bekerja Secara Artistik (Thinking and Working Artistically)\nMenggunakan properti yang sesuai dengan tokoh yang diperankan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_teater-e-2-4",
+          "nomor": "2.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMengamati berbagai peran, mengenal tokoh di sekitar, dan memainkan sebuah lakon dalam cerita.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-b-seni_teater-e-2-5",
+          "nomor": "2.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMengenal bentuk lakon dalam bermain teater.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nB \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A) \nPada akhir fase B, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nMengalami (Experiencing)\nMengenal \nteknik \ndasar \nakting \n(pemeranan) \nmelalui proses meniru (mimesis), mengenal \n \n\n \ngerak tubuh, suara/vokal sesuai tokoh/peran \natau perilaku objek sekitar. \n2.2.\nMerefleksikan (Reflection)\nMengenali \nlingkungan \nsekitarnya \ndan \npengalaman dalam bermain teater. \n2.3.\nBekerja Secara Artistik (Thinking and Working \nArtistically)\nMenggunakan properti yang sesuai dengan tokoh \nyang diperankan.  \n2.4.\nMenciptakan (Creating)\nMengamati berbagai peran, mengenal tokoh di \nsekitar, dan memainkan sebuah lakon dalam \ncerita.  \n2.5.\nBerdampak (Impacting)\nMengenal bentuk lakon dalam bermain teater.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-seni_teater",
+      "kode_bagian": "XVIII.4",
+      "mata_pelajaran": "SENI_TEATER",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 265,
+        "akhir_terdeteksi": 266
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-seni_teater-e-3-1",
+          "nomor": "3.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengalami (Experiencing)\nMelakukan permainan peran berkelompok, seperti improvisasi untuk melatih aksi dan reaksi dalam mengelaborasi cerita atau tokoh dan melakukan pengenalan karakter melalui pengamatan kebiasaan tokoh yang diperankan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_teater-e-3-2",
+          "nomor": "3.2",
+          "nama": "Merefleksikan (Reflection)",
+          "teks": "Merefleksikan (Reflection)\nMenceritakan pendapatnya tentang sebuah cerita sederhana (penokohan, perwatakan).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_teater-e-3-3",
+          "nomor": "3.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)\nMengidentifikasi properti sederhana berdasarkan cerita yang akan dimainkan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_teater-e-3-4",
+          "nomor": "3.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Menciptakan (Creating)\nMengenal dan memainkan ragam peran dari cerita sederhana berdasarkan hasil pengamatan.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-seni_teater-e-3-5",
+          "nomor": "3.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Berdampak (Impacting)\nMemerankan lakon secara individu maupun berkelompok berdasarkan minat, pengamatan, dan pengalaman.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "3.\nFase C (Umumnya untuk Kelas V dan VI SD/MI/Program \nPaket A) \nPada akhir fase C, murid memiliki kemampuan sebagai \nberikut. \n3.1.\nMengalami (Experiencing)\nMelakukan \npermainan \nperan \nberkelompok, \nseperti improvisasi untuk melatih aksi dan \nreaksi dalam mengelaborasi cerita atau tokoh \ndan melakukan pengenalan karakter melalui \npengamatan kebiasaan tokoh yang diperankan.  \n3.2.\nMerefleksikan (Reflection)\nMenceritakan \npendapatnya \ntentang \nsebuah \ncerita sederhana (penokohan, perwatakan).  \n3.3.\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)\nMengidentifikasi properti sederhana berdasarkan \ncerita yang akan dimainkan. \n3.4.\nMenciptakan (Creating)\nMengenal dan memainkan ragam peran dari \ncerita sederhana berdasarkan hasil pengamatan. \n3.5.\nBerdampak (Impacting)\nMemerankan lakon secara individu maupun \n \n\n \nberkelompok berdasarkan minat, pengamatan, \ndan pengalaman.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    },
+    {
+      "id": "cp046-2025-sd-c-coding_ai",
+      "kode_bagian": "XXVIII",
+      "mata_pelajaran": "CODING_AI",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 342,
+        "akhir_terdeteksi": 343
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-coding_ai-e-1-1",
+          "nomor": "1.1",
+          "nama": "Berpikir Komputasional",
+          "teks": "Berpikir Komputasional\nMemahami permasalahan sederhana dalam kehidupan sehari-hari, menerapkan pemecahan masalah secara sistematis, serta menuliskan instruksi logis dan terstruktur menggunakan sekumpulan kosakata atau simbol.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-coding_ai-e-1-2",
+          "nomor": "1.2",
+          "nama": "Literasi Digital",
+          "teks": "Literasi Digital\nMemahami konsep dasar, manfaat, dan dampak teknologi digital, memahami sistem komputer tingkat pradasar, menerapkan pengamanan informasi pribadi dalam komunikasi daring, memanfaatkan internet, dan memproduksi serta mendiseminasi konten digital dalam bentuk teks dan gambar.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-coding_ai-e-1-3",
+          "nomor": "1.3",
+          "nama": "Literasi dan Etika Kecerdasan Artifisial",
+          "teks": "Literasi dan Etika Kecerdasan Artifisial\nMemahami konsep KA sederhana, manfaat dan dampak KA pada kehidupan sehari-hari, prinsip bahwa KA dikembangkan untuk meningkatkan kesejahteraan manusia dan tidak boleh merugikan manusia, mengetahui perbedaan manusia dan komputer dalam melakukan penginderaan, dan mengetahui perbedaan antara mesin cerdas dan mesin non-cerdas. Memahami etika dasar penggunaan KA seperti empati dan tidak menyakiti orang lain.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-coding_ai-e-1-4",
+          "nomor": "1.4",
+          "nama": "Pemanfaatan dan Pengembangan Kecerdasan Artifisial",
+          "teks": "Pemanfaatan dan Pengembangan Kecerdasan Artifisial\nMenyimulasikan secara sederhana kerja KA saat mengenali pola, mengklasifikasi benda konkret berdasarkan sifatnya, dan mengetahui bagaimana prediksi sistem KA dipengaruhi input benda konkret.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase C (Umumnya untuk Kelas V dan VI SD/MI)\nPada akhir Fase C, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nBerpikir Komputasional\nMemahami \npermasalahan \nsederhana \ndalam \nkehidupan sehari-hari, menerapkan pemecahan \nmasalah secara sistematis, serta menuliskan \ninstruksi logis dan terstruktur menggunakan \nsekumpulan kosakata atau simbol. \n1.2.\nLiterasi Digital\nMemahami konsep dasar, manfaat, dan dampak \nteknologi digital, memahami sistem komputer \ntingkat \npradasar, \nmenerapkan \npengamanan \ninformasi pribadi dalam komunikasi daring, \nmemanfaatkan internet, dan memproduksi serta \nmendiseminasi konten digital dalam bentuk teks \ndan gambar. \n1.3.\nLiterasi dan Etika Kecerdasan Artifisial\nMemahami konsep KA sederhana, manfaat dan \ndampak KA pada kehidupan sehari-hari, prinsip \nbahwa KA dikembangkan untuk meningkatkan \nkesejahteraan \nmanusia \ndan \ntidak \nboleh \nmerugikan \nmanusia, \nmengetahui \nperbedaan \nmanusia \ndan \nkomputer \ndalam \nmelakukan \npenginderaan, \ndan \nmengetahui \nperbedaan \nantara mesin cerdas dan mesin non-cerdas. \nMemahami etika dasar penggunaan KA seperti \nempati dan tidak menyakiti orang lain. \n1.4.\nPemanfaatan dan Pengembangan Kecerdasan \nArtifisial\nMenyimulasikan secara sederhana kerja KA saat \nmengenali pola, mengklasifikasi benda konkret \nberdasarkan \nsifatnya, \ndan \nmengetahui \nbagaimana prediksi sistem KA dipengaruhi input \nbenda konkret.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH"
+    }
+  ]
+}

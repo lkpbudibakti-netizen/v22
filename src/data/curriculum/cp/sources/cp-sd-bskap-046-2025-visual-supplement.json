@@ -1,0 +1,79 @@
+{
+  "schema_version": "cp046_sd_visual_source_v1",
+  "status": "SOURCE_MATCHED: MAT/A text and original embedded X196 image from PDF 111-112; content includes separately documented visual transcription, not new CP wording.",
+  "sumber": {
+    "regulasi": "Keputusan Kepala BSKAP Nomor 046/H/KR/2025",
+    "lampiran": "Lampiran II",
+    "file": "Kumpulan CP.pdf",
+    "sha256_pdf": "f8e5f478de4dc1790bfc800104135f992c8fe6cb2d8f770f46b616932a2aec34"
+  },
+  "records": [
+    {
+      "id": "cp046-2025-sd-a-mat",
+      "kode_bagian": "IV.1",
+      "mata_pelajaran": "MAT",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 111,
+        "akhir_terdeteksi": 112
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-1",
+          "nomor": "1.1",
+          "nama": "Bilangan",
+          "teks": "Bilangan\nMenunjukkan pemahaman dan memiliki intuisi bilangan (number sense) pada bilangan cacah sampai 100; membaca, menulis, menentukan nilai tempat, membandingkan, mengurutkan, serta melakukan komposisi (menyusun) dan dekomposisi (mengurai) bilangan; melakukan operasi penjumlahan dan pengurangan menggunakan benda-benda konkret yang banyaknya sampai 20; dan menunjukkan pemahaman pecahan sebagai bagian dari keseluruhan melalui konteks membagi sebuah benda atau kumpulan benda sama banyak (pecahan yang diperkenalkan adalah setengah dan seperempat).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-2",
+          "nomor": "1.2",
+          "nama": "Aljabar",
+          "teks": "Aljabar\nMenunjukan pemahaman makna simbol matematika \"=\" dalam suatu kalimat matematika yang terkait dengan penjumlahan dan pengurangan bilangan cacah sampai 20 menggunakan gambar. Contoh: Murid dapat mengenali, meniru, dan melanjutkan pola bukan bilangan (misalnya, gambar, warna, bunyi/suara).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-3",
+          "nomor": "1.3",
+          "nama": "Pengukuran",
+          "teks": "Pengukuran\nMembandingkan panjang dan berat benda secara langsung, dan membandingkan durasi waktu; mengukur dan mengestimasi panjang dan berat benda menggunakan satuan tidak baku.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-4",
+          "nomor": "1.4",
+          "nama": "Geometri",
+          "teks": "Geometri\nMengenal berbagai bangun datar (segitiga, segiempat, segi banyak, lingkaran) dan bangun ruang (balok, kubus, kerucut, dan bola); melakukan komposisi (penyusunan) dan dekomposisi (penguraian) suatu bangun datar (segitiga, segiempat, dan segi banyak); dan menentukan posisi benda terhadap benda lain (kanan, kiri, depan belakang, bawah, atas).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-5",
+          "nomor": "1.5",
+          "nama": "Analisis Data dan Peluang",
+          "teks": "Analisis Data dan Peluang\nMengurutkan, menyortir, mengelompokkan, membandingkan, dan menyajikan data dari banyak benda dengan menggunakan turus dan piktogram paling banyak 4 kategori.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nBilangan \nMenunjukkan pemahaman dan memiliki intuisi \nbilangan (number sense) pada bilangan cacah \nsampai 100; membaca, menulis, menentukan \nnilai tempat, membandingkan, mengurutkan, \nserta melakukan komposisi (menyusun) dan \ndekomposisi (mengurai) bilangan; melakukan \noperasi \npenjumlahan \ndan \npengurangan \nmenggunakan \nbenda-benda \nkonkret \nyang \nbanyaknya \nsampai \n20; \ndan \nmenunjukkan \npemahaman \npecahan \nsebagai \nbagian \ndari \nkeseluruhan melalui konteks membagi sebuah \nbenda atau kumpulan benda sama banyak \n(pecahan yang diperkenalkan adalah setengah \ndan seperempat). \n1.2.\nAljabar\nMenunjukan \npemahaman \nmakna \nsimbol \n \n\n \nmatematika \"=\" dalam suatu kalimat matematika \nyang \nterkait \ndengan \npenjumlahan \ndan \npengurangan \nbilangan \ncacah \nsampai \n20 \nmenggunakan gambar. Contoh:\n\nMurid \ndapat \nmengenali, \nmeniru, \ndan \nmelanjutkan pola bukan bilangan (misalnya, \ngambar, warna, bunyi/suara). \n1.3.\nPengukuran\nMembandingkan \npanjang \ndan \nberat \nbenda \nsecara langsung, dan membandingkan durasi \nwaktu; mengukur dan mengestimasi panjang \ndan berat benda menggunakan satuan tidak \nbaku. \n1.4.\nGeometri\nMengenal \nberbagai \nbangun \ndatar \n(segitiga, \nsegiempat, segi banyak, lingkaran) dan bangun \nruang \n(balok, \nkubus, \nkerucut, \ndan \nbola); \nmelakukan \nkomposisi \n(penyusunan) \ndan \ndekomposisi (penguraian) suatu bangun datar \n(segitiga, segiempat, dan segi banyak); dan \nmenentukan posisi benda terhadap benda lain \n(kanan, kiri, depan belakang, bawah, atas). \n1.5.\nAnalisis Data dan Peluang\nMengurutkan, \nmenyortir, \nmengelompokkan, \nmembandingkan, dan menyajikan data dari \nbanyak benda dengan menggunakan turus dan \npiktogram paling banyak 4 kategori.",
+      "status_verifikasi": "VERIFIED_SOURCE_MATCH",
+      "sourceFigures": [
+        {
+          "id": "cp046-sd-a-mat-aljabar-figure",
+          "elementNumber": "1.2",
+          "pdfPage": 112,
+          "assetPath": "/curriculum/cp046/sd-a-mat-aljabar-p112.png",
+          "sha256": "6c658c03cae7f2bb84391c2a45fe1f432edf19842bd63e7e46760fb47ed40cbc",
+          "pdfImageName": "X196",
+          "width": 229,
+          "height": 78,
+          "transcription": "(●●● | ●●●●) = (●● | ●●●●●) = (● | ●●●●●●)",
+          "alt": "Tiga lingkaran berisi tujuh titik masing-masing, dipisahkan tanda sama dengan; kelompok titik di dalamnya tersusun 3 dan 4, 2 dan 5, serta 1 dan 6."
+        }
+      ]
+    }
+  ]
+}

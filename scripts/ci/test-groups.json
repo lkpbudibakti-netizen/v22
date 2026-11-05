@@ -1,0 +1,50 @@
+{
+  "storage": [
+    "scripts/testStorageV5MasterDataCrud.ts",
+    "scripts/testStorageV5HierarchyCrud.ts",
+    "scripts/testStorageV5HierarchyDelete.ts",
+    "scripts/testStorageV5HierarchyDuplicate.ts",
+    "scripts/testStorageV5AnnualCrud.ts",
+    "scripts/testStorageV5SemesterCrud.ts",
+    "scripts/testStorageV5Persistence.ts",
+    "scripts/testStorageV5RelationalIntegrity.ts",
+    "scripts/testRuntimeV5.ts",
+    "scripts/testStorageV5Contract.ts",
+    "scripts/testF1AnnualSemesterScopeContract.ts",
+    "scripts/testMerdekaV5AppShellContract.ts",
+    "scripts/testMerdekaV5AnnualCPRuntime.ts",
+    "scripts/testMerdekaCPAnalysisIntegrity.ts",
+    "scripts/testMerdekaV5CPAnalysisRuntime.ts",
+    "scripts/testCP046SDIntegration.ts",
+    "scripts/testCPGapFollowup.tsx",
+    "scripts/testMerdekaV5TPRuntime.ts",
+    "scripts/testMerdekaV5ATPRuntime.ts",
+    "scripts/testMerdekaV5SemesterNavigation.ts",
+    "scripts/testWorkflowDependencyRegression.ts",
+    "scripts/testMerdekaCanonicalWorkflowRegression.ts"
+  ],
+  "planning": [
+    "scripts/testCalendarBackendSearchProvider.ts",
+    "scripts/testCalendarEndpointContract.ts",
+    "scripts/testMerdekaV5CalendarRuntime.ts",
+    "scripts/testCalendarJpIntegrationRegression.ts",
+    "scripts/testSemesterTimeAllocationEditor.ts",
+    "scripts/testAutoSemesterTimeAllocation.ts"
+  ],
+  "documents": [
+    "scripts/testCanonicalPromesProjection.ts",
+    "scripts/testCanonicalAlokasiWaktuDocument.ts",
+    "scripts/testCanonicalProtaProjection.ts",
+    "scripts/testAuditNo8LearningPlanRegression.ts",
+    "scripts/testRecoveryM1ModulAjarPrintPrivacyRegression.ts",
+    "scripts/testProfileSchoolBindingV5.ts",
+    "scripts/testMerdekaATPAnnualizationIntegrity.ts"
+  ],
+  "transport": [
+    "scripts/testAITransportHardening.ts",
+    "scripts/testDevelopmentServerSmoke.ts",
+    "scripts/testPreviewRouteProbe.ts",
+    "scripts/testB13SelfPeerFoundationRegression.ts",
+    "scripts/testCIGroupRunner.mjs"
+  ]
+}

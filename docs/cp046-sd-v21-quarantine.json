@@ -1,0 +1,104 @@
+{
+  "source": {
+    "regulasi": "Keputusan Kepala BSKAP Nomor 046/H/KR/2025",
+    "lampiran": "Lampiran II",
+    "file": "Kumpulan CP.pdf",
+    "sha256_pdf": "f8e5f478de4dc1790bfc800104135f992c8fe6cb2d8f770f46b616932a2aec34"
+  },
+  "records": [
+    {
+      "id": "cp046-2025-sd-a-mat",
+      "kode_bagian": "IV.1",
+      "mata_pelajaran": "MAT",
+      "fase": "A",
+      "kelas": [
+        1,
+        2
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 111,
+        "akhir_terdeteksi": 112
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-1",
+          "nomor": "1.1",
+          "nama": "Bilangan",
+          "teks": "Menunjukkan pemahaman dan memiliki intuisi bilangan (number sense) pada bilangan cacah sampai 100; membaca, menulis, menentukan nilai tempat, membandingkan, mengurutkan, serta melakukan komposisi (menyusun) dan dekomposisi (mengurai) bilangan; melakukan operasi penjumlahan dan pengurangan menggunakan benda-benda konkret yang banyaknya sampai 20; dan menunjukkan pemahaman pecahan sebagai bagian dari keseluruhan melalui konteks membagi sebuah benda atau kumpulan benda sama banyak (pecahan yang diperkenalkan adalah setengah dan seperempat).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-2",
+          "nomor": "1.2",
+          "nama": "Aljabar",
+          "teks": "Menunjukan pemahaman makna simbol matematika \"=\" dalam suatu kalimat matematika yang terkait dengan penjumlahan dan pengurangan bilangan cacah sampai 20 menggunakan gambar. Contoh: Murid dapat mengenali, meniru, dan melanjutkan pola bukan bilangan (misalnya, gambar, warna, bunyi/suara).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-3",
+          "nomor": "1.3",
+          "nama": "Pengukuran",
+          "teks": "Membandingkan panjang dan berat benda secara langsung, dan membandingkan durasi waktu; mengukur dan mengestimasi panjang dan berat benda menggunakan satuan tidak baku.",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-4",
+          "nomor": "1.4",
+          "nama": "Geometri",
+          "teks": "Mengenal berbagai bangun datar (segitiga, segiempat, segi banyak, lingkaran) dan bangun ruang (balok, kubus, kerucut, dan bola); melakukan komposisi (penyusunan) dan dekomposisi (penguraian) suatu bangun datar (segitiga, segiempat, dan segi banyak); dan menentukan posisi benda terhadap benda lain (kanan, kiri, depan belakang, bawah, atas).",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-a-mat-e-1-5",
+          "nomor": "1.5",
+          "nama": "Analisis Data dan Peluang",
+          "teks": "Mengurutkan, menyortir, mengelompokkan, membandingkan, dan menyajikan data dari banyak benda dengan menggunakan turus dan piktogram paling banyak 4 kategori.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "1.\nFase A (Umumnya untuk Kelas I dan II SD/MI/Program \nPaket A)\nPada akhir Fase A, murid memiliki kemampuan sebagai \nberikut. \n1.1.\nBilangan \nMenunjukkan pemahaman dan memiliki intuisi \nbilangan (number sense) pada bilangan cacah \nsampai 100; membaca, menulis, menentukan \nnilai tempat, membandingkan, mengurutkan, \nserta melakukan komposisi (menyusun) dan \ndekomposisi (mengurai) bilangan; melakukan \noperasi \npenjumlahan \ndan \npengurangan \nmenggunakan \nbenda-benda \nkonkret \nyang \nbanyaknya \nsampai \n20; \ndan \nmenunjukkan \npemahaman \npecahan \nsebagai \nbagian \ndari \nkeseluruhan melalui konteks membagi sebuah \nbenda atau kumpulan benda sama banyak \n(pecahan yang diperkenalkan adalah setengah \ndan seperempat). \n1.2.\nAljabar\nMenunjukan \npemahaman \nmakna \nsimbol \n \n\n \nmatematika \"=\" dalam suatu kalimat matematika \nyang \nterkait \ndengan \npenjumlahan \ndan \npengurangan \nbilangan \ncacah \nsampai \n20 \nmenggunakan gambar. Contoh:\n\nMurid \ndapat \nmengenali, \nmeniru, \ndan \nmelanjutkan pola bukan bilangan (misalnya, \ngambar, warna, bunyi/suara). \n1.3.\nPengukuran\nMembandingkan \npanjang \ndan \nberat \nbenda \nsecara langsung, dan membandingkan durasi \nwaktu; mengukur dan mengestimasi panjang \ndan berat benda menggunakan satuan tidak \nbaku. \n1.4.\nGeometri\nMengenal \nberbagai \nbangun \ndatar \n(segitiga, \nsegiempat, segi banyak, lingkaran) dan bangun \nruang \n(balok, \nkubus, \nkerucut, \ndan \nbola); \nmelakukan \nkomposisi \n(penyusunan) \ndan \ndekomposisi (penguraian) suatu bangun datar \n(segitiga, segiempat, dan segi banyak); dan \nmenentukan posisi benda terhadap benda lain \n(kanan, kiri, depan belakang, bawah, atas). \n1.5.\nAnalisis Data dan Peluang\nMengurutkan, \nmenyortir, \nmengelompokkan, \nmembandingkan, dan menyajikan data dari \nbanyak benda dengan menggunakan turus dan \npiktogram paling banyak 4 kategori.",
+      "status_verifikasi": "UNVERIFIED",
+      "reason": "Contoh bergambar pada PDF 112 hilang dari ekstraksi; jangan menyajikan teks ini sebagai CP resmi utuh."
+    },
+    {
+      "id": "cp046-2025-sd-c-bing",
+      "kode_bagian": "V.1",
+      "mata_pelajaran": "BING",
+      "fase": "C",
+      "kelas": [
+        5,
+        6
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 134,
+        "akhir_terdeteksi": 135
+      },
+      "elemen": [
+        {
+          "id": "cp046-2025-sd-c-bing-e-2-1",
+          "nomor": "2.1",
+          "nama": "Menyimak - Berbicara (Listening - Writing)",
+          "teks": "Memahami alur informasi teks secara keseluruhan dan merespon teks lisan atau teks multimodal sederhana tentang topik sehari-hari secara lisan dengan kalimat pendek dan sederhana sesuai konteks. (Understand the entire flow of information  and respond to simple oral or multimodal texts about everyday topics using short and simple sentences verbally in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-bing-e-2-2",
+          "nomor": "2.2",
+          "nama": "Membaca - Memirsa (Reading - Viewing)",
+          "teks": "Memahami  alur informasi secara keseluruhan, gagasan utama dan informasi rinci dari beragam teks pendek atau teks multimodal tentang topik sehari-hari dan meresponnya sesuai konteks. (Understand the entire flow of information, main ideas and details from a variety of short texts or multimodal texts about everyday topics and respond in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "cp046-2025-sd-c-bing-e-2-3",
+          "nomor": "2.3",
+          "nama": "Menulis -",
+          "teks": "Mempresentasikan (Writing - Presenting) Mengomunikasikan ide dan pengalamannya melalui berbagai jenis teks tulis sederhana atau teks multimodal tentang topik sehari-hari sesuai konteks. (Communicate their ideas and experiences through various types of simple written texts or multimodal texts about everyday topics in line with its context)",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "2.\nFase \nC \n(Umumnya \nuntuk \nKelas \nIII \ndan \nIV \nSD/MI/Program Paket A)\nPada akhir fase C, murid memiliki kemampuan sebagai \nberikut. \n2.1.\nMenyimak - Berbicara (Listening - Writing)\nMemahami \nalur \ninformasi \nteks \nsecara \nkeseluruhan dan merespon teks lisan atau teks \nmultimodal sederhana tentang topik sehari-hari \nsecara \nlisan \ndengan \nkalimat \npendek \ndan \nsederhana sesuai konteks.\n(Understand the entire flow of information  and \nrespond to simple oral or multimodal texts about \neveryday topics using short and simple sentences \nverbally in line with its context) \n2.2.\nMembaca - Memirsa (Reading - Viewing)\nMemahami  alur informasi secara keseluruhan, \ngagasan utama dan informasi rinci dari beragam \nteks pendek atau teks multimodal tentang topik \nsehari-hari dan meresponnya sesuai konteks.\n(Understand the entire flow of information, main \nideas and details from a variety of short texts or \n \n\n \nmultimodal texts about everyday topics and \nrespond in line with its context) \n2.3.\nMenulis \n- \nMempresentasikan \n(Writing \n- \nPresenting)\nMengomunikasikan \nide \ndan \npengalamannya \nmelalui berbagai jenis teks tulis sederhana atau \nteks multimodal tentang topik sehari-hari sesuai \nkonteks. \n(Communicate their ideas and experiences through \nvarious types of simple written texts or multimodal \ntexts about everyday topics in line with its context)",
+      "status_verifikasi": "UNVERIFIED",
+      "reason": "PDF 134 menyebut Fase C tetapi kelas III/IV serta Listening - Writing; identitas kelas memerlukan klarifikasi sumber, tidak diperbaiki diam-diam."
+    }
+  ]
+}

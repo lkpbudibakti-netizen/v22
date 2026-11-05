@@ -1,0 +1,48 @@
+subjectCode,phase,before,after,pdfPages,dropdownBefore2025,dropdownAfter,2024/2025,2025/2026,2026/2027
+PAI,A,046 existing,046 existing unchanged,26-27,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PAI,B,No SD record,046 VERIFIED (explicit source choice),27-28,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PAI,C,No SD record,046 VERIFIED (explicit source choice),28-28,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PAK,A,046 existing,046 existing unchanged,34-35,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PAK,B,No SD record,046 VERIFIED (explicit source choice),35-37,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PAK,C,No SD record,046 VERIFIED (explicit source choice),37-38,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PKAT,A,046 existing,046 existing unchanged,46-47,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PKAT,B,No SD record,046 VERIFIED (explicit source choice),47-48,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PKAT,C,No SD record,046 VERIFIED (explicit source choice),48-49,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PHINDU,A,046 existing,046 existing unchanged,56-56,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PHINDU,B,No SD record,046 VERIFIED (explicit source choice),56-57,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PHINDU,C,No SD record,046 VERIFIED (explicit source choice),57-57,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PBUDDHA,A,046 existing,046 existing unchanged,62-63,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PBUDDHA,B,No SD record,046 VERIFIED (explicit source choice),63-64,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PBUDDHA,C,No SD record,046 VERIFIED (explicit source choice),64-65,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PKHONGHUCU,A,046 existing,046 existing unchanged,71-72,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PKHONGHUCU,B,No SD record,046 VERIFIED (explicit source choice),72-73,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PKHONGHUCU,C,No SD record,046 VERIFIED (explicit source choice),73-74,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,046 UNRESOLVED (020/2026); manual/other source
+PANCASILA,A,032/2024 only,046 VERIFIED (explicit source choice),82-83,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+PANCASILA,B,032/2024 only,046 VERIFIED (explicit source choice),83-84,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+PANCASILA,C,No SD record,046 VERIFIED (explicit source choice),84-85,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+BINDO,A,032/2024 only,046 VERIFIED (explicit source choice),94-95,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+BINDO,B,032/2024 only,046 VERIFIED (explicit source choice),95-95,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+BINDO,C,032/2024 only,046 VERIFIED (explicit source choice),95-96,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+MAT,A,032/2024 only,UNVERIFIED / quarantined; historical retained,111-112,Visible,Visible; CP status separate; manual available,Historical unchanged,046 UNRESOLVED; manual/historical,046 UNRESOLVED; manual/historical
+MAT,B,032/2024 only,046 VERIFIED (explicit source choice),112-114,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+MAT,C,032/2024 only,046 VERIFIED (explicit source choice),114-116,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+BING,B,No SD record,046 VERIFIED (explicit source choice),133-134,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+BING,C,No SD record,UNVERIFIED / quarantined; historical retained,134-135,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,046 UNRESOLVED; manual/historical,046 UNRESOLVED; manual/historical
+IPAS,B,032/2024 only,046 VERIFIED (explicit source choice),149-151,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+IPAS,C,032/2024 only,046 VERIFIED (explicit source choice),151-153,Visible,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_MUSIK,A,No SD record,046 VERIFIED (explicit source choice),238-239,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_MUSIK,B,No SD record,046 VERIFIED (explicit source choice),239-240,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_MUSIK,C,No SD record,046 VERIFIED (explicit source choice),240-241,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_RUPA,A,No SD record,046 VERIFIED (explicit source choice),246-247,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_RUPA,B,No SD record,046 VERIFIED (explicit source choice),247-247,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_RUPA,C,No SD record,046 VERIFIED (explicit source choice),247-248,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TARI,A,No SD record,046 VERIFIED (explicit source choice),256-257,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TARI,B,No SD record,046 VERIFIED (explicit source choice),257-257,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TARI,C,No SD record,046 VERIFIED (explicit source choice),257-258,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TEATER,A,No SD record,046 VERIFIED (explicit source choice),264-264,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TEATER,B,No SD record,046 VERIFIED (explicit source choice),264-265,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+SENI_TEATER,C,No SD record,046 VERIFIED (explicit source choice),265-266,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
+PJOK,A,046 existing,046 existing unchanged,310-311,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PJOK,B,046 existing,046 existing unchanged,311-312,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+PJOK,C,046 existing,046 existing unchanged,312-313,Visible,Visible; CP status separate; manual available,Historical unchanged,Existing unchanged,Existing unchanged
+CODING_AI,C,No SD record,046 VERIFIED (explicit source choice),342-343,Hidden by CP availability filter,Visible; CP status separate; manual available,Historical unchanged,RESOLVED / VERIFIED,RESOLVED / VERIFIED
