@@ -42,6 +42,7 @@ import {
   suggestSemesterBoundaryByMeetingSlots,
   resolveUnitSemesterPlacement,
 } from '../services/unitSemesterPlanningService';
+import { proposeMeetingAlignment, applyMeetingAlignment, MeetingAlignmentProposal } from '../services/meetingAlignmentService';
 import { allocateUnitMeetings } from '../services/unitMeetingAllocationService';
 import {
   buildUnitExecutionPlanAIDiagnosticReport,
@@ -130,6 +131,20 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   const [lastAIGenerationError, setLastAIGenerationError] = useState<string | null>(null);
   const [copyNotice, setCopyNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const [alignmentPreview, setAlignmentPreview] = useState<MeetingAlignmentProposal | null>(null);
+  const alignment = useMemo(() => meetingCapacity ? proposeMeetingAlignment(draft, mapping, meetingCapacity) : null, [draft, mapping, meetingCapacity]);
+  const applyAlignment = () => {
+    if (!alignmentPreview || !meetingCapacity) return;
+    try {
+      const next = applyMeetingAlignment(draft, mapping, meetingCapacity, alignmentPreview, generateStableId);
+      const checked = validateUnitExecutionPlan(next, mapping, atp, tp);
+      if (!checked.isValid || checked.isStale) throw new Error(checked.errors.join(' ') || 'Pemetaan berubah.');
+      if (!onSave(next)) throw new Error('Penyesuaian belum tersimpan. Coba kembali.');
+      setDraft(next); setAlignmentPreview(null); setGenerationError(null);
+      setSaveNotice({type: checked.isComplete ? 'success' : 'warning', message: checked.isComplete ? 'Alokasi sesuai kapasitas kalender dan tersimpan.' : 'Alokasi tersimpan. Lengkapi konten dan coverage pertemuan.'});
+    } catch (error) { setSaveNotice({type:'error', message: error instanceof Error ? error.message : String(error)}); }
+  };
+
   const totalMeetingsCount = useMemo(() => {
     return draft.units.reduce((sum, u) => sum + (u.meetings || []).length, 0);
   }, [draft]);
@@ -196,7 +211,8 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       });
 
       if (!allocationResult.isValid) {
-        throw new Error(allocationResult.errors.join(' '));
+        setGenerationError('Konflik kapasitas: ' + allocationResult.errors.join(' ') + ' Gunakan Tinjau Penyesuaian.');
+        return;
       }
 
       const additionalS1 = allocationResult.semester1.newTarget;
@@ -490,7 +506,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     });
 
     const isCoverageComplete = validation.isComplete && !isStale;
-    return s1Existing <= targetS1 && s2Existing <= targetS2 && isCoverageComplete;
+    return s1Existing === targetS1 && s2Existing === targetS2 && isCoverageComplete;
   }, [isCapacityReady, meetingCapacity, draft, mapping, validation.isComplete, isStale]);
 
   const capacityOverflow = useMemo(() => {
@@ -1009,6 +1025,19 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
         </div>
       )}
 
+      {alignment && <div className="m-6 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+        {alignment.totals.map(t => <p key={t.semester}>Semester {t.semester}: Kapasitas kalender <strong>{t.target}</strong> · Jumlah alokasi <strong>{t.allocated}</strong> · Selisih {t.allocated-t.target} · {alignment.errors.length ? 'Konflik' : t.allocated === t.target ? 'Selaras' : 'Perlu penyesuaian'}
+          {t.allocated > t.target && <span className="block text-amber-800">Alokasi {t.allocated} pertemuan melebihi kapasitas Semester {t.semester} sebanyak {t.allocated-t.target} pertemuan.</span>}</p>)}
+        {alignment.errors.map(e => <p key={e} className="text-red-700">{e}</p>)}
+        <button type="button" disabled={isGeneratingMeetings} onClick={() => setAlignmentPreview(alignment)} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">Tinjau Penyesuaian</button>
+        {alignmentPreview && <div role="dialog" aria-label="Preview penyesuaian pertemuan" className="space-y-3">
+          <p>Hanya slot kosong dapat dikurangi. Konten terisi tetap dilindungi.</p>
+          <table className="w-full text-sm"><thead><tr><th>Bab</th><th>Sebelum</th><th>Usulan</th><th>Selisih</th></tr></thead><tbody>{alignmentPreview.rows.map(r => <tr key={r.unitId}><td>{r.title} (S{r.semester})</td><td>{r.before}</td><td>{r.proposed}</td><td>{r.proposed-r.before}</td></tr>)}</tbody></table>
+          {alignmentPreview.fingerprint !== alignment.fingerprint && <p className="text-red-700">Kapasitas atau data berubah. Batal dan tinjau usulan terbaru.</p>}
+          <button type="button" onClick={applyAlignment} disabled={isGeneratingMeetings || alignment.errors.length > 0 || alignmentPreview.fingerprint !== alignment.fingerprint} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">Setujui &amp; Terapkan</button>
+          <button type="button" onClick={() => setAlignmentPreview(null)} className="px-4 py-2">Batal</button>
+        </div>}
+      </div>}
       {/* Overflow Warning if capacity decreased without auto-deletion */}
       {capacityOverflow && (
         <div className="mx-5 mt-3 p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs">

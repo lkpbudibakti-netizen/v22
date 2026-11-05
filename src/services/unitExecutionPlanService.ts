@@ -1,3 +1,4 @@
+import { isEmptyAlignmentMeeting } from './meetingContentService';
 import {
   UnitExecutionPlanData,
   UnitExecutionPlan,
@@ -238,7 +239,7 @@ export function validateUnitExecutionPlan(
       }
 
       // meeting.title empty / whitespace
-      if (!m.title || !m.title.trim()) {
+      if ((!m.title || !m.title.trim()) && !isEmptyAlignmentMeeting(m)) {
         errors.push(`Meeting '${m.id}' memiliki title kosong`);
       }
 

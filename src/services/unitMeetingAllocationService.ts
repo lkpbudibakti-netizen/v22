@@ -111,8 +111,8 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
       const hasMissingCoverage =
         missingMaterialCount > 0 || missingAtpCount > 0 || missingTpCount > 0;
 
-      // Weight is strictly based on missing coverage
-      const weight = Math.max(1, missingMaterialCount, missingAtpCount, missingTpCount);
+      // Preserve the current unit allocation proportions; coverage still sets mandatory slots.
+      const weight = Math.max(1, existingCount);
 
       return {
         unit,
@@ -126,6 +126,10 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
       };
     });
 
+    if (!Number.isSafeInteger(targetCount) || targetCount < 0) {
+      errors.push(`Kapasitas Semester ${semester} harus bilangan bulat valid >= 0.`);
+      return { existingCount: existingTotal, newTargetTotal: 0, targets: [] };
+    }
     const remainingSlots = targetCount - existingTotal;
 
     if (remainingSlots < 0) {
