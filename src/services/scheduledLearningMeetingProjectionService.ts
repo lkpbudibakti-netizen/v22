@@ -124,6 +124,13 @@ export function resolveScheduledLearningMeetings(params: {
     if (schedule.semesterPlanId !== semesterPlanId) {
       errors.push(`LearningMeetingScheduleData semesterPlanId "${schedule.semesterPlanId}" tidak cocok dengan input "${semesterPlanId}".`);
     }
+    // Legacy projections without revision metadata retain structural validation.
+    // Newly invalidated V5 schedules are explicitly DRAFT and cannot pass below.
+    if ((schedule.basedOnMappingUpdatedAt && mapping.updatedAt && schedule.basedOnMappingUpdatedAt !== mapping.updatedAt) ||
+        (schedule.basedOnUnitExecutionPlanUpdatedAt && unitExecutionPlan.updatedAt && schedule.basedOnUnitExecutionPlanUpdatedAt !== unitExecutionPlan.updatedAt)) {
+      errors.push(`Jadwal semester ${semester} stale setelah perubahan pemetaan/pertemuan. Tinjau dan simpan ulang jadwal.`);
+      continue;
+    }
     if (schedule.status !== 'COMPLETE') {
       errors.push(`Schedule semester ${semester} belum COMPLETE.`);
     }

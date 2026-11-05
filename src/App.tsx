@@ -1,3 +1,4 @@
+import type { MeetingAlignmentApproval } from './services/meetingAlignmentService';
 import { SubjectSelect } from './components/SubjectSelect';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -925,7 +926,8 @@ export function App() {
   };
 
   const handleSaveUnitExecutionPlan = (
-    plan: UnitExecutionPlanData
+    plan: UnitExecutionPlanData,
+    alignmentApproval?: MeetingAlignmentApproval
   ): boolean => {
     if (!activeYearPlan) {
       setAppNotice({
@@ -936,7 +938,7 @@ export function App() {
     }
 
     try {
-      saveUnitExecutionPlanV5(activeYearPlan.id, plan);
+      saveUnitExecutionPlanV5(activeYearPlan.id, plan, alignmentApproval);
       refreshV5();
       return true;
     } catch (err: any) {

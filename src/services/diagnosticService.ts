@@ -26,6 +26,7 @@ import {
 
 import { AIMeetingDiagnostic, MappingAnalysisResult } from './aiService';
 import { ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
+import { allocateUnitMeetings } from './unitMeetingAllocationService';
 
 export type DiagnosticScope =
   | 'TP'
@@ -657,16 +658,20 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
 
   const capS1Existing = s1UnitIds.flatMap(id => (plan?.units?.find(u => u.unitId === id)?.meetings || [])).length;
   const capS2Existing = s2UnitIds.flatMap(id => (plan?.units?.find(u => u.unitId === id)?.meetings || [])).length;
+  const plannedAllocation = mapping && plan ? allocateUnitMeetings({
+    mapping, currentPlan: plan, semester1UnitIds: s1UnitIds, semester2UnitIds: s2UnitIds,
+    targetS1: capS1Target, targetS2: capS2Target,
+  }) : null;
 
   const capS1 = diag?.capacity?.semester1 || {
     target: capS1Target,
     existing: capS1Existing,
-    requestedNew: Math.max(0, capS1Target - capS1Existing),
+    requestedNew: plannedAllocation?.semester1.newTarget ?? Math.max(0, capS1Target - capS1Existing),
   };
   const capS2 = diag?.capacity?.semester2 || {
     target: capS2Target,
     existing: capS2Existing,
-    requestedNew: Math.max(0, capS2Target - capS2Existing),
+    requestedNew: plannedAllocation?.semester2.newTarget ?? Math.max(0, capS2Target - capS2Existing),
   };
 
   // Current plan meeting count per unit

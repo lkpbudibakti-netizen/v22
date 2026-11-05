@@ -1,3 +1,4 @@
+import type { MeetingAlignmentApproval } from '../services/meetingAlignmentService';
 import { assessAnnualJP, sumSemesterAllocatedJP, compareAnnualJPReference } from '../services/annualJPAssessment';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
@@ -64,7 +65,7 @@ export interface AnnualPlanningManagerProps {
   onSaveCalendar: (calendar: AcademicCalendar, days: CalendarDay[], explicitSemesterPlanId?: string) => boolean;
   onSaveSemesterJPSetting?: (actualWeeklyJP: number | null, explicitSemesterPlanId?: string) => boolean;
   onSaveTimeAllocations: (allocations: TimeAllocation[], explicitSemesterPlanId?: string) => boolean;
-  onSaveUnitExecutionPlan?: (plan: UnitExecutionPlanData) => boolean;
+  onSaveUnitExecutionPlan?: (plan: UnitExecutionPlanData, alignmentApproval?: MeetingAlignmentApproval) => boolean;
   onSaveSubjectWeeklySchedule?: (schedule: SubjectWeeklySchedule, explicitSemesterPlanId?: string) => boolean;
   onSaveLearningMeetingSchedule?: (schedule: LearningMeetingScheduleData, explicitSemesterPlanId?: string) => boolean;
   onNextStep: () => void;

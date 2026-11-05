@@ -278,6 +278,8 @@ export function isLearningMeetingScheduleStale(params: {
   if (!schedule) return true;
 
   return (
+    (params.mappingUpdatedAt !== undefined && schedule.basedOnMappingUpdatedAt !== params.mappingUpdatedAt) ||
+    (params.unitExecutionPlanUpdatedAt !== undefined && schedule.basedOnUnitExecutionPlanUpdatedAt !== params.unitExecutionPlanUpdatedAt) ||
     schedule.basedOnSubjectWeeklyScheduleUpdatedAt !== subjectWeeklyScheduleUpdatedAt ||
     schedule.basedOnCalendarUpdatedAt !== calendarUpdatedAt ||
     schedule.basedOnWeeklyJP !== expectedWeeklyJP

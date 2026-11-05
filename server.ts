@@ -5,6 +5,7 @@ import { assignGeneratedTPCodes, TP_CODE_FORMAT_DESCRIPTION } from './src/servic
 import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets } from './src/services/learningPlanActivityMeetingService';
 import express from 'express';
 import { validateATPUnitMappingCanonical } from './src/services/atpUnitMappingValidationService';
+import { validateUnitExecutionPlan } from './src/services/unitExecutionPlanService';
 import { assertMeetingSourceLineage, MeetingCoverageError, repairUnitMeetingCoverage } from './server/unitMeetingCoverageRepair';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -2012,8 +2013,12 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
   const targetS1 = capacityContext?.semester1?.targetMeetingCount ?? 0;
   const targetS2 = capacityContext?.semester2?.targetMeetingCount ?? 0;
 
-  const additionalS1 = targetS1 - s1ExistingMeetingCount;
-  const additionalS2 = targetS2 - s2ExistingMeetingCount;
+  if (![targetS1, targetS2].every(n => Number.isSafeInteger(n) && n >= 0)) {
+    return res.status(400).json({ success: false, code: 'CAPACITY_INVALID', error: 'Kapasitas semester harus bilangan bulat valid >= 0.' });
+  }
+
+  let additionalS1 = targetS1 - s1ExistingMeetingCount;
+  let additionalS2 = targetS2 - s2ExistingMeetingCount;
 
   const buildDiagnostic = (opts: {
     stage: string;
@@ -2188,13 +2193,22 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
     }
   }
 
-  if (sumS1Target !== additionalS1 || sumS2Target !== additionalS2) {
+  if (sumS1Target > additionalS1 || sumS2Target > additionalS2) {
     return res.status(400).json({
       success: false,
       code: 'UNIT_TARGET_INVALID',
       error: `Total newTargetCount (${sumS1Target} S1, ${sumS2Target} S2) tidak sesuai dengan kapasitas slot semester (${additionalS1} S1, ${additionalS2} S2).`,
       diagnostic: buildDiagnostic({ stage: 'TARGET_VALIDATION', code: 'UNIT_TARGET_INVALID' }),
     });
+  }
+
+  // The teacher's unit targets may leave calendar capacity unused.
+  additionalS1 = sumS1Target;
+  additionalS2 = sumS2Target;
+  if (additionalS1 === 0 && additionalS2 === 0) {
+    const validation = currentPlan && validateUnitExecutionPlan(currentPlan, mapping, atpData, tpData);
+    if (!validation?.isComplete) return res.status(400).json({ success: false, code: 'AI_COVERAGE_MISSING', error: 'Tidak ada slot baru yang diminta; lengkapi konten/coverage pertemuan yang ada.' });
+    return res.json({ success: true, data: { units: [] }, engine: 'no_work' });
   }
 
   const unitsContext = sortedMappingUnits.map((unit: any) => {

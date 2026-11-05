@@ -7,6 +7,16 @@ import {
 } from '../types';
 import { validateUnitExecutionPlan } from './unitExecutionPlanService';
 
+/** Shared canonical union for schedule reconciliation and Step 08 alignment. */
+export function mergeReconciliationContent(target: LearningMeeting, source: LearningMeeting): LearningMeeting {
+  if (target.unitId !== source.unitId || target.id === source.id) throw new Error('Penggabungan harus memakai dua pertemuan berbeda dalam Bab yang sama.');
+  return { ...target,
+    materialIds: [...new Set([...(target.materialIds || []), ...(source.materialIds || [])])],
+    linkedAtpItemIds: [...new Set([...(target.linkedAtpItemIds || []), ...(source.linkedAtpItemIds || [])])],
+    linkedTpIds: [...new Set([...(target.linkedTpIds || []), ...(source.linkedTpIds || [])])],
+  };
+}
+
 export type MeetingReconciliationAction = 'RESCHEDULE' | 'MERGE' | 'REDUCE';
 
 export interface MeetingReconciliationSafeOption {
@@ -145,16 +155,7 @@ export function analyzeMeetingReconciliation(params: {
     if (simUnit) {
       const simTarget = simUnit.meetings.find((m) => m.id === targetM.id);
       if (simTarget) {
-        // Union refs
-        simTarget.materialIds = Array.from(
-          new Set([...(simTarget.materialIds || []), ...(sourceMeeting.materialIds || [])])
-        );
-        simTarget.linkedAtpItemIds = Array.from(
-          new Set([...(simTarget.linkedAtpItemIds || []), ...(sourceMeeting.linkedAtpItemIds || [])])
-        );
-        simTarget.linkedTpIds = Array.from(
-          new Set([...(simTarget.linkedTpIds || []), ...(sourceMeeting.linkedTpIds || [])])
-        );
+        Object.assign(simTarget, mergeReconciliationContent(simTarget, sourceMeeting));
 
         // Remove source meeting
         simUnit.meetings = simUnit.meetings.filter((m) => m.id !== unresolvedMeetingId);
@@ -341,16 +342,7 @@ export function applyReconciliationAction(params: {
       return { success: false, error: 'Pertemuan target atau asal penggabungan tidak ditemukan.' };
     }
 
-    // UNION refs
-    targetMeeting.materialIds = Array.from(
-      new Set([...(targetMeeting.materialIds || []), ...(sourceMeeting.materialIds || [])])
-    );
-    targetMeeting.linkedAtpItemIds = Array.from(
-      new Set([...(targetMeeting.linkedAtpItemIds || []), ...(sourceMeeting.linkedAtpItemIds || [])])
-    );
-    targetMeeting.linkedTpIds = Array.from(
-      new Set([...(targetMeeting.linkedTpIds || []), ...(sourceMeeting.linkedTpIds || [])])
-    );
+    Object.assign(targetMeeting, mergeReconciliationContent(targetMeeting, sourceMeeting));
 
     if (suggestedTitle && suggestedTitle.trim()) {
       targetMeeting.title = suggestedTitle.trim();

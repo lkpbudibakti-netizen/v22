@@ -152,6 +152,19 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
       };
     }
 
+    // Capacity is a ceiling. Complete units do not request spare calendar slots.
+    if (unitStats.every(st => !st.hasMissingCoverage && st.existingCount > 0)) {
+      return {
+        existingCount: existingTotal,
+        newTargetTotal: 0,
+        targets: unitStats.map(st => ({
+          unitId: st.unit.id, semester, existingCount: st.existingCount,
+          newTargetCount: 0, finalTargetCount: st.existingCount,
+          missingMaterialCount: 0, missingAtpCount: 0, missingTpCount: 0,
+        })),
+      };
+    }
+
     // Units that still have missing coverage must get at least 1 mandatory slot
     const mandatoryCount = unitStats.filter((st) => st.hasMissingCoverage).length;
 

@@ -559,6 +559,12 @@ export interface LearningMeeting {
   materialIds: string[];
   linkedAtpItemIds: string[];
   linkedTpIds: string[];
+
+  /** Teacher-approved alignment provenance; source content is retained verbatim. */
+  alignmentMerge?: {
+    sources: LearningMeeting[];
+    requiredJP: number;
+  };
 }
 
 export interface UnitExecutionPlan {
