@@ -93,6 +93,14 @@ const preview=resolvePlannedMeetingCapacity({schedule:noDays,expectedWeeklyJP:3,
 assert.equal(preview.isReady,true);assert.equal(preview.capacitySource,'ESTIMATE');assert.equal(isActualPlannedCapacityReady(preview),false);
 assert.equal(workflow().stepStates['annual-planning'].isComplete,false);
 assert.equal(workflow().stepStates.semester.isBlocked,true,'Step 09 cannot bypass unresolved final slots');
+const railForDays=view().nodes().find(n=>n.type==='task-rail')!;
+assert.equal(railForDays.props.tasks.find((item:any)=>item.id==='time-allocation').isLocked,false,'teaching-day settings must remain accessible with estimated slots');
+const beforeOverflow=loadStorageV5(),overflow=structuredClone(beforeOverflow);
+const overflowUnit=overflow.annualData.unitExecutionPlans![0].value.units[0];
+overflowUnit.meetings.push(...Array.from({length:50},(_,i)=>({...structuredClone(overflowUnit.meetings[0]),id:`overflow-${i}`,order:overflowUnit.meetings.length+i+1})));
+saveStorageV5(overflow);
+assert.equal(view().nodes().find(n=>n.type==='task-rail')!.props.tasks.find((item:any)=>item.id==='time-allocation').isLocked,false,'overcapacity must not lock the teaching-day settings needed to regenerate');
+saveStorageV5(beforeOverflow);
 h=view(()=>advances++);button=finalButton(h);assert.equal(button.props.disabled,true);button.props.onClick();assert.equal(advances,1,'programmatic click cannot bypass gate');
 assert(renderToStaticMarkup(h.nodes()[0]).includes('Kapasitas JP aktual: UNRESOLVED'));
 assert.deepEqual(loadStorageV5().semesterData.learningMeetingSchedules,actual.semesterData.learningMeetingSchedules,'draft saves do not erase saved schedules');

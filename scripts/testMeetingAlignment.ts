@@ -330,6 +330,21 @@ function finalReview(state:AppStorageStateV5,mode:'COMPLETE'|'REGENERATE'='COMPL
   const result=allocation.buildCalendarMeetingCandidate(r.draft,r.source.mapping,r.source.capacity,r.source.context,mode,calendarContent(request,r.source.mapping),newId);
   return {...r,request,result};
 }
+test('S1 estimate 42 without teaching days reports calendar only; actual S1 42 and S2 48 to 41 regenerate',()=>{
+  const state=fixture([42,48],[42,41]);
+  state.semesterData.subjectWeeklySchedules![0].value.sessions.forEach(s=>delete s.dayOfWeek);
+  const r=review(state),before=memory.get(storage.STORAGE_KEY_V5);
+  assert.equal(r.source.capacity.semester1.capacitySource,'ESTIMATE');
+  assert.equal(r.source.context.slotDetails!.semester1.length,0);
+  assert.equal(r.source.context.slotDetails!.semester2.length,41);
+  assert.ok(r.source.context.calendarErrors!.some(e=>e.includes('Semester 1') && e.includes('Hari mengajar') && e.includes('Alokasi Waktu')));
+  assert.throws(()=>allocation.prepareCalendarMeetingGeneration(r.draft,r.source.mapping,r.source.capacity,r.source.context,'REGENERATE'),(e:Error)=>e.message.includes('Kalender Semester 1') && !e.message.includes('coverage') && !e.message.includes('Semester 2:'));
+  assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+  state.semesterData.subjectWeeklySchedules![0].value.sessions.forEach(s=>s.dayOfWeek=1);
+  const actual=finalReview(state,'REGENERATE');
+  assert.deepEqual(actual.result.candidate.units.map(u=>u.meetings.length),[42,41]);
+  assert.ok(actual.result.candidate.units.every(u=>u.meetings.every(m=>m.plannedJP===4)));
+});
 test('final generation fills 10 confirmed slots exactly, including already complete curriculum coverage',()=>{
   const r=finalReview(fixture([1,1],[10,1])),next=r.result.candidate;
   assert.equal(next.units[0].meetings.length,10);assert.ok(next.units[0].meetings.every(m=>m.plannedJP===4));

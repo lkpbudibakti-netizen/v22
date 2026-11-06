@@ -10,6 +10,7 @@ export interface AlignmentCapacity {
   semester2: { isReady: boolean; targetMeetingCount: number; totalJP?: number; capacitySource?: string };
 }
 export interface MeetingAlignmentContext {
+  calendarErrors?: string[];
   atp?: ATPData;
   tp?: TPData;
   sourceFingerprint: string;

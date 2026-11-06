@@ -1410,6 +1410,10 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
     const planned=resolvePlannedMeetingCapacity({schedule:weekly,expectedWeeklyJP:canonical.actualScheduledWeeklyJP,calendarConfirmed:canonical.isCalendarConfirmed,effectiveWeekSlots:canonical.effectiveWeekSlots || 0,calendar:calendar?.calendar,calendarDays:calendar?.days || [],semesterPlanId:sp.id,schoolDaysPerWeek:calendar?.calendar.schoolDaysPerWeek});
     capacity[key]={isReady:planned.isReady,targetMeetingCount:planned.totalMeetingCapacity,totalJP:planned.totalJP,capacitySource:planned.capacitySource};
     const slots=resolveEffectiveSubjectSlots({semesterPlanId:sp.id,schedule:weekly,expectedWeeklyJP:canonical.actualScheduledWeeklyJP,calendar:calendar?.calendar,calendarDays:calendar?.days || [],schoolDaysPerWeek:calendar?.calendar.schoolDaysPerWeek});
+    if (!canonical.isCalendarConfirmed || !slots.isReady || !planned.isReady || planned.capacitySource !== 'ACTUAL_SLOTS') {
+      const reasons = !canonical.isCalendarConfirmed ? ['Kalender Pendidikan belum dikonfirmasi.'] : slots.errors.length ? slots.errors : planned.errors.length ? planned.errors : ['Slot aktual belum tersedia.'];
+      (context.calendarErrors ||= []).push(...reasons.map(reason => `Kalender Semester ${semester}: ${reason} Buka Step 08 → Alokasi Waktu Semester ${semester}; tentukan hari setiap sesi pada Alokasi Hari Mengajar Sesi → Simpan Hari Mengajar, lalu periksa Kalender Pendidikan.`));
+    }
     if(slots.isReady) {
       const ordered=[...slots.slots].sort((a,b) => a.date.localeCompare(b.date) || (a.sessionOrder || 0)-(b.sessionOrder || 0));
       context.slotJP[key]=ordered.map(slot => slot.jp);

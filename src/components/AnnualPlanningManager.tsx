@@ -381,7 +381,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
       !(t1Complete && t2Complete && t3Complete);
 
     const t5Locked =
-      !(t1Complete && t2Complete && t3Complete && t4Complete);
+      !(t1Complete && t2Complete && t3Complete);
 
     return [
       {
@@ -431,7 +431,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
         title: 'Alokasi Waktu',
         status: t5Complete ? 'COMPLETE' : 'PENDING',
         isLocked: t5Locked,
-        lockReason: 'Lengkapi Struktur Pertemuan terlebih dahulu',
+        lockReason: 'Lengkapi Waktu Semester dan Pembagian Bab terlebih dahulu',
       },
     ];
   }, [
@@ -552,7 +552,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
         };
       case 'meetings':
         return {
-          isReady: meetingExactReady,
+          isReady: placementReady,
           label: 'Lanjut ke Alokasi Waktu',
           targetId: 'time-allocation',
         };

@@ -319,7 +319,10 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   const isCapacityReady = Boolean(
     meetingCapacity &&
     meetingCapacity.semester1.isReady &&
-    meetingCapacity.semester2.isReady
+    meetingCapacity.semester2.isReady &&
+    meetingCapacity.semester1.capacitySource === 'ACTUAL_SLOTS' &&
+    meetingCapacity.semester2.capacitySource === 'ACTUAL_SLOTS' &&
+    !alignmentSource.source?.context.calendarErrors?.length
   );
 
   const buttonAILabel = useMemo(() => {
@@ -774,7 +777,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       {!isCapacityReady && (
         <div className="px-5 py-3 text-xs font-medium bg-amber-50 text-amber-900 border-b border-amber-200 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Lengkapi Kalender Pendidikan dan Pola Pertemuan Mingguan Semester 1 &amp; 2 agar AI dapat menyusun jumlah Pertemuan sesuai kapasitas waktu.</span>
+          <span>{alignmentSource.source?.context.calendarErrors?.join(' ') || 'Generate final memerlukan slot aktual kedua semester. Buka Step 08 → Alokasi Waktu; tentukan hari setiap sesi pada Alokasi Hari Mengajar Sesi → Simpan Hari Mengajar dan konfirmasi Kalender Pendidikan. Kapasitas estimasi hanya untuk draf.'}</span>
         </div>
       )}
 

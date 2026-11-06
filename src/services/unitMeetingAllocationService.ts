@@ -301,10 +301,12 @@ export function calendarGenerationFingerprint(plan:UnitExecutionPlanData,mapping
 export function prepareCalendarMeetingGeneration(plan:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,context:MeetingAlignmentContext,mode:'COMPLETE'|'REGENERATE') {
   const placement=resolveUnitSemesterPlacement(plan,mapping);
   const slots:CalendarMeetingSlots={confirmed:true,semester1:context.slotDetails?.semester1 || [],semester2:context.slotDetails?.semester2 || []};
-  const errors=[...context.errors,...validateCalendarMeetingSlots(slots)];
+  const errors=[...context.errors,...(context.calendarErrors || []),...validateCalendarMeetingSlots(slots)];
   if(!plan.semesterPlacement || !placement.isValid || !placement.isComplete || placement.isStale)errors.push('Tetapkan pembagian Bab Semester 1/2 yang valid pada Langkah 3.');
-  for(const key of ['semester1','semester2'] as const)if(!capacity[key].isReady || capacity[key].capacitySource!=='ACTUAL_SLOTS' || capacity[key].targetMeetingCount!==slots[key].length || capacity[key].totalJP!==slots[key].reduce((s,slot)=>s+slot.jp,0))errors.push('Generate final memerlukan slot aktual terkonfirmasi; estimasi/jumlah/JP yang stale ditolak.');
+  for(const [i,key] of (['semester1','semester2'] as const).entries())if(!capacity[key].isReady || capacity[key].capacitySource!=='ACTUAL_SLOTS' || capacity[key].targetMeetingCount!==slots[key].length || capacity[key].totalJP!==slots[key].reduce((s,slot)=>s+slot.jp,0))errors.push(`Kalender Semester ${i+1}: generate final memerlukan slot aktual terkonfirmasi; kapasitas estimasi (${capacity[key].targetMeetingCount}) bukan slot tanggal aktual (${slots[key].length}). Buka Step 08 → Alokasi Waktu Semester ${i+1}, lengkapi Alokasi Hari Mengajar Sesi → Simpan Hari Mengajar dan konfirmasi Kalender Pendidikan.`);
   if(mode==='REGENERATE' && Object.keys(context.protectedMeetings).length)errors.push('Regenerate ditolak: pertemuan memiliki jurnal/absensi/realisasi/rencana pembelajaran atau referensi terlindungi: '+Object.keys(context.protectedMeetings).join(', '));
+  // A missing calendar is not a coverage failure in the intentionally empty regenerate basis.
+  if(errors.length)throw new Error([...new Set(errors)].join(' '));
   const basis=structuredClone(plan);
   if(mode==='REGENERATE')basis.units.forEach(u=>u.meetings=[]);
   const allocation=allocateUnitMeetings({mapping,currentPlan:basis,semester1UnitIds:placement.semester1UnitIds,semester2UnitIds:placement.semester2UnitIds,targetS1:slots.semester1.length,targetS2:slots.semester2.length,exactSlots:true});
