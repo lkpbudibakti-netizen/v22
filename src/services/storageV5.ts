@@ -2,6 +2,7 @@ import { applyMeetingAlignment, type AlignmentCapacity, type MeetingAlignmentCon
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
 import { resolveSemesterCapacityV5 } from './jpEngine';
 import { resolvePlannedMeetingCapacity, resolveEffectiveSubjectSlots } from './subjectScheduleService';
+import { resolveLearningPlanMeetingBudgets } from './learningPlanActivityMeetingService';
 import {
   AppStorageStateV5,
   StorageBackupV5,
@@ -1388,7 +1389,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
   const workspaceIds=new Set(state.workspaces.filter(w => w.yearPlanId===yearPlanId).map(w => w.id));
   const scopedDocuments=state.documents.filter(d => d.academicSettingId===yearPlanId || semesterIds.has(d.academicSettingId || '') || (!d.academicSettingId && workspaceIds.has(d.workspaceId || '')));
   const scopedData=Object.fromEntries(Object.entries(state.semesterData).map(([key,entries]) => [key, entries.filter(e => semesterIds.has(e.semesterPlanId))]));
-  const context: MeetingAlignmentContext={atp,tp,protectedMeetings:Object.create(null),protectedContent:Object.create(null),slotJP:{semester1:[],semester2:[]},impacts:[],errors:[],sourceFingerprint:JSON.stringify([
+  const context: MeetingAlignmentContext={atp,tp,protectedMeetings:Object.create(null),protectedContent:Object.create(null),slotJP:{semester1:[],semester2:[]},slotDetails:{semester1:[],semester2:[]},protectedSlots:Object.create(null),impacts:[],errors:[],sourceFingerprint:JSON.stringify([
     state.yearPlans.find(y => y.id===yearPlanId),semesters,
     Object.fromEntries(Object.entries(state.annualData).map(([key,entries]) => [key,entries.filter(e => e.yearPlanId===yearPlanId)])),
     state.annualJPReferences.filter(e => e.yearPlanId===yearPlanId),state.semesterJPSettings.filter(e => semesterIds.has(e.semesterPlanId)),scopedData,scopedDocuments,
@@ -1408,7 +1409,14 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
     const planned=resolvePlannedMeetingCapacity({schedule:weekly,expectedWeeklyJP:canonical.actualScheduledWeeklyJP,calendarConfirmed:canonical.isCalendarConfirmed,effectiveWeekSlots:canonical.effectiveWeekSlots || 0,calendar:calendar?.calendar,calendarDays:calendar?.days || [],semesterPlanId:sp.id,schoolDaysPerWeek:calendar?.calendar.schoolDaysPerWeek});
     capacity[key]={isReady:planned.isReady,targetMeetingCount:planned.totalMeetingCapacity,totalJP:planned.totalJP,capacitySource:planned.capacitySource};
     const slots=resolveEffectiveSubjectSlots({semesterPlanId:sp.id,schedule:weekly,expectedWeeklyJP:canonical.actualScheduledWeeklyJP,calendar:calendar?.calendar,calendarDays:calendar?.days || [],schoolDaysPerWeek:calendar?.calendar.schoolDaysPerWeek});
-    if(slots.isReady) context.slotJP[key]=[...slots.slots].sort((a,b) => a.date.localeCompare(b.date) || (a.sessionOrder || 0)-(b.sessionOrder || 0)).map(slot => slot.jp);
+    if(slots.isReady) {
+      const ordered=[...slots.slots].sort((a,b) => a.date.localeCompare(b.date) || (a.sessionOrder || 0)-(b.sessionOrder || 0));
+      context.slotJP[key]=ordered.map(slot => slot.jp);
+      context.slotDetails![key]=ordered.map(({id,date,sessionId,jp})=>({id,date,sessionId,jp}));
+      const year=state.yearPlans.find(y=>y.id===yearPlanId)!;
+      const budgets=resolveLearningPlanMeetingBudgets(ordered.map(s=>({meetingId:s.id,jp:s.jp})),{...year,curriculum:year.curriculumType==='KURIKULUM_MERDEKA'?'Kurikulum Merdeka':'Kurikulum 2013'});
+      if(budgets.isValid && budgets.meetings.length)context.minutesPerJP=budgets.meetings[0].minutesPerJP;
+    }
     const unitIds=new Set(semester===1 ? placement?.semester1UnitIds : placement?.semester2UnitIds);
     const meetings=[...(plan?.units || [])].filter(u => unitIds.has(u.unitId)).sort((a,b) => mapping.units.find(u => u.id===a.unitId)!.order-mapping.units.find(u => u.id===b.unitId)!.order).flatMap(u => [...u.meetings].sort((a,b) => a.order-b.order));
     const schedule=state.semesterData.learningMeetingSchedules?.find(e => e.semesterPlanId===sp.id)?.value;
@@ -1436,11 +1444,25 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
       scoped.forEach(m => ids.add(m.id));
       ids.forEach(id => protect(id,'rujukan rencana pembelajaran/asesmen; tinjau manual'));
     }
+    const protectReferences = (node: unknown): void => {
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node)) {
+        if (['meetingId', 'learningMeetingId'].includes(key) && typeof value === 'string') protect(value, 'rujukan asesmen/nilai/realisasi');
+        else if (['meetingIds', 'learningMeetingIds'].includes(key) && Array.isArray(value)) value.filter((id): id is string => typeof id === 'string').forEach(id => protect(id, 'rujukan asesmen/nilai/realisasi'));
+        else if (typeof value === 'object') protectReferences(value);
+      }
+    };
+    for (const collection of [state.semesterData.assessmentPlan, state.semesterData.assessmentPackage, state.semesterData.grade]) {
+      for (const entry of collection.filter(e => e.semesterPlanId === sp.id)) protectReferences(entry.value);
+    }
   }
   for (const id of Object.keys(context.protectedMeetings)) {
     const matches = plan?.units.flatMap(u => u.meetings).filter(m => m.id === id) || [];
     if (matches.length === 1) context.protectedContent[id] = matches[0];
     else context.errors.push('Rujukan data turunan '+id+' tidak ditemukan atau ganda pada struktur tersimpan. Pulihkan keterkaitannya sebelum menyesuaikan.');
+    const dated=state.semesterData.learningMeetingSchedules?.filter(e=>semesterIds.has(e.semesterPlanId)).flatMap(e=>e.value.entries.filter(row=>row.meetingId===id)) || [];
+    if(dated.length===1)context.protectedSlots![id]={date:dated[0].date,sessionId:dated[0].sessionId,jp:dated[0].jp};
+    else if(dated.length>1)context.errors.push('Jadwal pertemuan terlindungi '+id+' ganda; tinjau manual.');
   }
   const schedules=state.semesterData.learningMeetingSchedules?.filter(e => semesterIds.has(e.semesterPlanId)) || [];
   if(schedules.length) context.impacts.push('Jadwal tersimpan ditandai DRAFT/stale. Entry ID yang dipertahankan beserta tanggalnya tetap disimpan; ID yang dikurangi dilepas. Tinjau dan simpan ulang Langkah 5.');
@@ -1485,6 +1507,14 @@ export function saveUnitExecutionPlanV5(
     }
   }
 
+  // Factual/manual references are protected for ordinary edits too, not only alignment approvals.
+  if (state.annualData.unitExecutionPlans?.some(e => e.yearPlanId === yearPlanId)) {
+    const protection = getMeetingAlignmentSourceV5(yearPlanId, state).context;
+    for (const [id, original] of Object.entries(protection.protectedContent)) {
+      const updated = value.units.flatMap(u => u.meetings).find(m => m.id === id);
+      if (JSON.stringify(updated) !== JSON.stringify(original)) throw new Error(`Pertemuan terlindungi ${id} memiliki jurnal/absensi/realisasi/rujukan manual; perubahan ditolak.`);
+    }
+  }
   if (alignmentApproval) {
     const live = getMeetingAlignmentSourceV5(yearPlanId, state);
     const existingIds = new Set(alignmentApproval.draft.units.flatMap(u => u.meetings.map(m => m.id)));

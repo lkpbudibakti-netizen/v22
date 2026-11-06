@@ -111,6 +111,8 @@ export interface LearningPlanScopeUnit {
     title: string;
     date?: string;
     jp: number;
+    plannedJP?: number;
+    activities?: import('../types').LearningActivity[];
     materials?: { id: string; title: string }[];
     linkedTpIds?: string[];
     linkedAtpItemIds?: string[];
@@ -473,6 +475,8 @@ export function buildLearningPlanScopeUnits(
         title: r.meetingTitle,
         date: r.date || undefined,
         jp: r.jp,
+        ...(r.plannedJP !== undefined ? { plannedJP: r.plannedJP } : {}),
+        ...(r.activities ? { activities: structuredClone(r.activities) } : {}),
         materials: r.materials,
         linkedTpIds: r.linkedTpIds,
         linkedAtpItemIds: r.linkedAtpItemIds,

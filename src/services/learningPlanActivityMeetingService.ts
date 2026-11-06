@@ -1,15 +1,16 @@
-import type { AcademicSetting, LearningPlan } from '../types';
+import type { AcademicSetting, LearningPlan, LearningActivity } from '../types';
 import { resolveCurriculumContext } from '../data/curriculum/resolver';
 import { getCurriculumTypeFromSetting } from './curriculumRouter';
 
-export interface ActivityMeetingScope { meetingId: string; jp: number }
+export interface ActivityMeetingScope { meetingId: string; jp: number; plannedJP?: number; activities?: LearningActivity[] }
 
 /** Transient budgets only: JP comes from actual slots, minutes/JP from the curriculum master. */
 export function resolveLearningPlanMeetingBudgets<T extends ActivityMeetingScope>(
   meetings: readonly T[], academicSetting?: Partial<AcademicSetting> | null,
 ): { isValid: boolean; reason?: string; meetings: (T & { minutesPerJP: number; durationMinutes: number })[] } {
   const invalid = (reason: string) => ({ isValid: false, reason, meetings: [] as (T & { minutesPerJP: number; durationMinutes: number })[] });
-  if (!Array.isArray(meetings) || meetings.some(m => !m || typeof m.meetingId !== 'string' || !m.meetingId.trim() || !Number.isInteger(m.jp) || m.jp <= 0) ||
+  if (!Array.isArray(meetings) || meetings.some(m => !m || typeof m.meetingId !== 'string' || !m.meetingId.trim() || !Number.isInteger(m.jp) || m.jp <= 0 ||
+      (m.plannedJP !== undefined && (!Number.isFinite(m.plannedJP) || m.plannedJP <= 0 || m.plannedJP > m.jp))) ||
       new Set(meetings.map(m => m.meetingId)).size !== meetings.length) return invalid('JP/ID slot aktual pertemuan tidak valid; durasi tidak boleh ditebak.');
   if (!meetings.length) return { isValid: true, meetings: [] as (T & { minutesPerJP: number; durationMinutes: number })[] };
   const level = typeof academicSetting?.level === 'string' ? academicSetting.level.trim().toUpperCase() : '';
@@ -77,6 +78,17 @@ export function validateLearningPlanActivityMeetings(
     }
     const expected = scope[0].durationMinutes;
     if (total !== expected) return invalid("Durasi meeting '" + id + "' harus " + expected + ' menit (' + scope[0].jp + ' JP × ' + scope[0].minutesPerJP + '), diterima ' + total + ' menit. Perlu ditinjau.');
+    const steps = phases.flatMap(phase => draft.learningSteps?.[phase] || []).filter(a => a.learningMeetingId === id);
+    const descriptions = steps.map(a => a.description.trim().replace(/\s+/g, ' ').toLowerCase());
+    const remaining = steps.map(a => a.durationMinutes || 0);
+    for (const activity of scope[0].activities || []) {
+      if (activity.essential === false && !/\b(asesmen|assessment|ujian|sumatif|evaluasi|tes)\b/i.test(`${activity.activityType || ''} ${activity.description}`)) continue;
+      if (!Number.isFinite(activity.durationMinutes) || !(activity.durationMinutes! > 0)) return invalid(`Durasi kegiatan esensial pertemuan '${id}' belum diketahui; perlu ditinjau.`);
+      const text = activity.description.trim().replace(/\s+/g, ' ').toLowerCase();
+      const candidate = descriptions.findIndex((description, index) => description.includes(text) && remaining[index] >= (activity.durationMinutes || 0));
+      if (candidate < 0) return invalid(`Substansi/durasi kegiatan esensial pertemuan '${id}' hilang dari rencana pembelajaran: ${activity.description}`);
+      remaining[candidate] -= activity.durationMinutes || 0;
+    }
   }
   // UNDERSTAND/APPLY/REFLECT describe the core approach; their durations are not an extra budget.
   return { isValid: true };

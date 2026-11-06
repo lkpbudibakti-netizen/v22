@@ -3,6 +3,7 @@ import {
   ATPUnitMappingData,
   LearningMeetingScheduleData,
   LearningMeetingScheduleEntryMode,
+  LearningActivity,
   TPData,
   UnitExecutionPlanData,
 } from '../types';
@@ -15,6 +16,8 @@ export interface ScheduledLearningMeetingProjection {
   unitOrder: number;
   meetingTitle: string;
   meetingOrder: number;
+  plannedJP?: number;
+  activities?: LearningActivity[];
   linkedAtpItemIds: string[];
   linkedTpIds: string[];
   materials: { id: string; title: string }[];
@@ -168,6 +171,11 @@ export function resolveScheduledLearningMeetings(params: {
         continue;
       }
 
+      const originalMeeting = unitExecutionPlan.units.find(u => u.unitId === meeting.unitId)?.meetings.find(m => m.id === entry.meetingId);
+      if (originalMeeting?.plannedJP !== undefined && originalMeeting.plannedJP > entry.jp) {
+        errors.push(`Pertemuan ${entry.meetingId} membutuhkan ${originalMeeting.plannedJP} JP, melebihi slot ${entry.jp} JP; dokumen tidak dapat memakai jadwal ini.`);
+        continue;
+      }
       const mappingUnit = mappingUnitMap.get(meeting.unitId);
       if (!mappingUnit) {
         errors.push(`Meeting "${entry.meetingId}" mengarah ke unit "${meeting.unitId}" yang tidak ada pada ATPUnitMapping.`);
@@ -203,6 +211,8 @@ export function resolveScheduledLearningMeetings(params: {
         unitOrder: mappingUnit.order,
         meetingTitle: meeting.meetingTitle,
         meetingOrder: meeting.meetingOrder,
+        ...(originalMeeting?.plannedJP !== undefined ? { plannedJP: originalMeeting.plannedJP } : {}),
+        ...(originalMeeting?.activities ? { activities: structuredClone(originalMeeting.activities) } : {}),
         linkedAtpItemIds: meeting.linkedAtpItemIds,
         linkedTpIds: meeting.linkedTpIds,
         materials,

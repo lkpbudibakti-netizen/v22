@@ -560,10 +560,16 @@ export interface LearningMeeting {
   linkedAtpItemIds: string[];
   linkedTpIds: string[];
 
+  /** Explicit meeting demand, never inferred by repeating the ATP allocation. */
+  plannedJP?: number;
+  /** Optional meeting-level substance; existing LearningPlan references stay protected. */
+  activities?: LearningActivity[];
+
   /** Teacher-approved alignment provenance; source content is retained verbatim. */
   alignmentMerge?: {
     sources: LearningMeeting[];
     requiredJP: number;
+    strategy?: 'MERGE' | 'REDUCE_REDUNDANT' | 'COMPACT' | 'REDISTRIBUTE';
   };
 }
 
@@ -929,6 +935,7 @@ export interface LearningActivity {
   description: string;
   durationMinutes?: number;
   activityType?: 'opening' | 'core' | 'closing' | string;
+  essential?: boolean;
 }
 
 export interface AssessmentPlanItem {

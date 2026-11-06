@@ -1,3 +1,8 @@
+import { validateLearningPlanActivityMeetings } from '../src/services/learningPlanActivityMeetingService';
+import { resolveEffectiveSubjectSlots } from '../src/services/subjectScheduleService';
+import { resolveLearningMeetingSchedule, buildLearningMeetingScheduleData, validateLearningMeetingScheduleData } from '../src/services/learningMeetingScheduleService';
+import { createCompleteProjectZip, readCompleteProjectZip } from '../src/services/completeProjectZipService';
+import { importCompleteAdministrationProject } from '../src/services/administrationProjectImportService';
 import { buildUnitExecutionPlanAIDiagnosticReport } from '../src/services/diagnosticService';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -33,9 +38,10 @@ function fixture(counts=[3,1],targets=[1,1],slotJP=4) {
   atp.items=[0,1].map(i=>({...atpBase,id:`a${i}`,stepNumber:i+1,linkedTpIds:[`t${i}`],allocatedJP:1,jp:1}));
   tp.workflowStatus='SIAP';atp.workflowStatus='SIAP';tp.needsReview=false;atp.needsReview=false;
   mapping.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(atp);mapping.basedOnTpFingerprint=computeTpSubstantiveFingerprint(tp);
-  plan.units=mapping.units.map((u,i)=>({unitId:u.id,meetings:Array.from({length:counts[i]},(_,j)=>({id:`m${i}-${j}`,unitId:u.id,order:j+1,title:`Kegiatan ${j+1}`,materialIds:[`mat${i}`],linkedAtpItemIds:[`a${i}`],linkedTpIds:[`t${i}`]}))}));
+  plan.units=mapping.units.map((u,i)=>({unitId:u.id,meetings:Array.from({length:counts[i]},(_,j)=>({id:`m${i}-${j}`,unitId:u.id,order:j+1,plannedJP:1,title:`Kegiatan ${j+1}`,materialIds:[`mat${i}`],linkedAtpItemIds:[`a${i}`],linkedTpIds:[`t${i}`]}))}));
   plan.semesterPlacement={mode:'CONTIGUOUS_BOUNDARY',semester1LastUnitId:'u0',updatedAt:plan.updatedAt};
   state.semesterData.learningPlan=[];state.semesterData.assessmentPlan=[];state.semesterData.assessmentPackage=[];
+  state.semesterData.timeAllocation=[];state.semesterData.assessmentCriteria=[];state.semesterData.grade=[];state.semesterData.remedial=[];state.semesterData.enrichment=[];
   state.semesterData.attendance=[];state.semesterData.journalRealizations=[];state.semesterData.learningMeetingSchedules=[];
   state.semesterJPSettings=[];state.semesterData.academicCalendar=[];state.semesterData.subjectWeeklySchedules=[];
   for(const i of [0,1]) {
@@ -93,17 +99,18 @@ test('original S1 42/42 and S2 48/41 empty-slot case remains exact and ordered',
   const state=fixture([42,1],[1,1]);const source=storage.getMeetingAlignmentSourceV5('y',state),mapping=structuredClone(source.mapping),plan=structuredClone(source.persistedPlan!);
   const unit=structuredClone(mapping.units[1]);mapping.units=[mapping.units[0],...[15,12,9,12].map((_,i)=>({...structuredClone(unit),id:'b'+i,title:'Bab '+(i+5),order:i+2,materials:unit.materials.map(m=>({...m,id:m.id+'-'+i}))}))];
   plan.units=[plan.units[0],...[15,12,9,12].map((count,i)=>({unitId:'b'+i,meetings:Array.from({length:count},(_,j)=>({id:'b'+i+'m'+j,unitId:'b'+i,order:j+1,title:'',materialIds:[],linkedAtpItemIds:[],linkedTpIds:[]}))}))];plan.units[0].meetings.forEach(empty);
-  const capacity={semester1:{isReady:true,targetMeetingCount:42},semester2:{isReady:true,targetMeetingCount:41}};
+  const capacity={semester1:{isReady:true,targetMeetingCount:42,capacitySource:'ACTUAL_SLOTS'},semester2:{isReady:true,targetMeetingCount:41,capacitySource:'ACTUAL_SLOTS'}};
+  source.context.slotJP={semester1:Array(42).fill(2),semester2:Array(41).fill(2)};
   const proposal=alignment.proposeMeetingAlignment(plan,mapping,capacity,source.context);
-  assert.deepEqual(proposal.errors,[]);assert.deepEqual(proposal.rows.map(r=>r.proposed),[42,13,10,8,10]);
+  assert.deepEqual(proposal.errors,[]);assert.equal(proposal.rows[0].proposed,42);assert.equal(proposal.rows.slice(1).reduce((s,r)=>s+r.proposed,0),41);
   const next=alignment.applyMeetingAlignment(plan,mapping,capacity,proposal,newId,source.context);
   assert.deepEqual(next.units.map(u=>u.unitId),plan.units.map(u=>u.unitId));assert.deepEqual(next.units[0],plan.units[0]);
 });
 test('unknown or excessive JP, incompatible scope, assessments and unknown content block merging',()=>{
   for(const mode of ['unknown','null','jp','scope','assessment','legacy']) {
     const state=fixture([2,1],[1,1],mode==='jp'?1:4), m=state.annualData.unitExecutionPlans![0].value.units[0].meetings[1];
-    if(mode==='unknown') {delete state.annualData.atp[0].value.items[0].allocatedJP;delete state.annualData.atp[0].value.items[0].jp;state.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(state.annualData.atp[0].value);}
-    if(mode==='null') {state.annualData.atp[0].value.items[0].allocatedJP=null;state.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(state.annualData.atp[0].value);}
+    if(mode==='unknown') {delete m.plannedJP;delete state.annualData.atp[0].value.items[0].allocatedJP;delete state.annualData.atp[0].value.items[0].jp;state.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(state.annualData.atp[0].value);}
+    if(mode==='null') {(m as any).plannedJP=null;state.annualData.atp[0].value.items[0].allocatedJP=null;state.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(state.annualData.atp[0].value);}
     if(mode==='scope') m.linkedTpIds=['t1'];if(mode==='assessment') m.title='Asesmen sumatif';if(mode==='legacy') (m as any).manualNotes='Keep';
     const r=review(state);assert.ok(r.proposal.errors.length,mode);assert.throws(r.apply);assert.deepEqual(storage.getUnitExecutionPlanV5('y'),r.draft);
   }
@@ -111,7 +118,7 @@ test('unknown or excessive JP, incompatible scope, assessments and unknown conte
 test('accumulated merge workload is retained for future alignment',()=>{
   const r=review(fixture([3,1],[1,1],4));assert.deepEqual(r.proposal.errors,[]);const next=r.apply();
   assert.equal(next.units[0].meetings[0].alignmentMerge!.requiredJP,3);
-  assert.equal(next.units[0].meetings[0].alignmentMerge!.sources[0].alignmentMerge!.requiredJP,2);
+  assert.equal(next.units[0].meetings[0].alignmentMerge!.sources.length,3);
 });
 test('journal, attendance, realization, legacy attendance and learning-plan references are protected',()=>{
   for(const mode of ['journal','attendance','legacy','legacy-ambiguous','learning']) {
@@ -182,13 +189,144 @@ test('single Bab, unchanged semester and invalid minimum/capacity',()=>{
   assert.ok(alignment.proposeMeetingAlignment(plan,source.mapping,{...invalid,semester1:{isReady:true,targetMeetingCount:NaN}},source.context).errors.length);
 });
 
+
+function mixedPattern(state:AppStorageStateV5) {
+  const weekly=state.semesterData.subjectWeeklySchedules![0].value;
+  weekly.sessions=[{id:'mon',dayOfWeek:1,jp:2,order:1},{id:'wed',dayOfWeek:3,jp:4,order:2}];weekly.basedOnWeeklyJP=6;
+  state.semesterJPSettings[0].value.actualScheduledWeeklyJP=6;
+}
+function activities(m:LearningMeeting, demands:number[], essential=true) {
+  m.plannedJP=demands.reduce((s,n)=>s+n,0);
+  m.activities=demands.map((jp,i)=>({id:m.id+'-activity-'+i,learningMeetingId:m.id,description:'Substansi '+m.id+' bagian '+i,durationMinutes:jp*35,essential,activityType:'learning'}));
+}
+test('48 to 41 uses empty, proven redundancy and merges on actual mixed 2/4 JP slots',()=>{
+  const state=fixture([48,1],[21,1]);mixedPattern(state);
+  const cal=state.semesterData.academicCalendar[0].value;
+  cal.days.filter(d=>new Date(d.date).getUTCDay()===3).at(-1)!.status='HOLIDAY';
+  const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  [45,46,47].forEach(i=>empty(meetings[i]));
+  activities(meetings[0],[1],false);activities(meetings[1],[1],false);
+  meetings[0].title=meetings[1].title='Pengulangan identik yang ditinjau';
+  meetings[1].activities![0].description=meetings[0].activities![0].description;
+  const sourceBefore=JSON.stringify([state.annualData.cp,state.annualData.tp,state.annualData.atp,state.annualData.atpUnitMappings,state.semesterData.academicCalendar]);
+  const r=review(state);assert.equal(r.source.capacity.semester1.targetMeetingCount,41);assert.deepEqual(r.proposal.errors,[]);
+  const strategies=new Set(r.proposal.operations.map(o=>o.type));assert.ok(strategies.has('REMOVE_EMPTY'));assert.ok(strategies.has('REDUCE_REDUNDANT'));assert.ok(strategies.has('MERGE'));
+  const next=r.apply();assert.equal(next.units[0].meetings.length,41);assert.ok(r.proposal.simulation.every(row=>row.plannedJP===null || row.plannedJP<=row.slotJP!));
+  assert.equal(r.proposal.curriculumJPStatus,'SEPARATE_REVIEW');assert.equal(r.proposal.slotStatus,'VALID');
+  assert.equal(execution.validateUnitExecutionPlan(next,r.source.mapping,r.source.context.atp,r.source.context.tp).isComplete,true);
+  storage.saveUnitExecutionPlanV5('y',next,{draft:r.draft,proposal:r.proposal});const saved=storage.loadStorageV5();
+  assert.equal(JSON.stringify([saved.annualData.cp,saved.annualData.tp,saved.annualData.atp,saved.annualData.atpUnitMappings,saved.semesterData.academicCalendar]),sourceBefore);
+});
+test('actual mixed slots permit a 4 JP merge in the second slot, without doubling ATP JP',()=>{
+  const state=fixture([3,1]);mixedPattern(state);
+  state.annualData.unitExecutionPlans![0].value.units[0].meetings.forEach(m=>m.plannedJP=2);
+  state.annualData.atp[0].value.items[0].allocatedJP=100;
+  state.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(state.annualData.atp[0].value);
+  const r=review(state);assert.deepEqual(r.proposal.errors,[]);const next=r.apply();
+  assert.deepEqual(next.units[0].meetings.map(m=>m.plannedJP),[2,4]);assert.equal(next.units[0].meetings[1].id,'m0-1');
+  assert.deepEqual(r.proposal.simulation.filter(row=>row.semester===1).map(row=>row.slotJP),[2,4]);
+});
+test('redundancy requires reviewed identical activities; essential/assessment content is retained',()=>{
+  const state=fixture([2,1],[1,1],2),meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  meetings.forEach(m=>{m.title='Judul sama';activities(m,[2],false);m.activities![0].description='Latihan identik';});
+  let r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.equal(r.proposal.operations[0].type,'REDUCE_REDUNDANT');assert.equal(r.apply().units[0].meetings[0].plannedJP,2);
+  meetings[1].activities![0].essential=true;r=review(state);assert.ok(r.proposal.errors.length);assert.throws(r.apply);
+  meetings[1].activities![0].essential=false;meetings[1].activities![0].activityType='assessment';r=review(state);assert.ok(r.proposal.errors.length);
+  meetings[1].activities![0].activityType='learning';meetings[1].activities![0].description='Kegiatan unik esensial';r=review(state);assert.ok(r.proposal.errors.length);
+});
+test('COMPACT preserves every activity, essential flag, duration and source order',()=>{
+  const state=fixture([3,1]);mixedPattern(state);const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  activities(meetings[0],[2,1]);activities(meetings[1],[1]);activities(meetings[2],[2]);
+  const r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.proposal.operations.some(o=>o.type==='COMPACT'));
+  const next=r.apply();assert.deepEqual(next.units[0].meetings.map(m=>m.plannedJP),[2,4]);
+  assert.deepEqual(next.units[0].meetings.flatMap(m=>m.activities!.map(a=>[a.id,a.description,a.durationMinutes,a.essential])),meetings.flatMap(m=>m.activities!.map(a=>[a.id,a.description,a.durationMinutes,a.essential])));
+});
+test('REDISTRIBUTE fits 4+2 JP demand to 2/4 slots without reducing activities',()=>{
+  const state=fixture([2,1]);mixedPattern(state);const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  activities(meetings[0],[2,2]);activities(meetings[1],[2]);
+  const r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.proposal.operations.some(o=>o.type==='REDISTRIBUTE'));
+  assert.deepEqual(r.apply().units[0].meetings.map(m=>m.plannedJP),[2,4]);
+});
+test('unique TP/material and prerequisite sequence cannot be reduced away or reversed',()=>{
+  const state=fixture([2,1],[1,1],2),atp=state.annualData.atp[0].value,tp=state.annualData.tp[0].value,map=state.annualData.atpUnitMappings![0].value;
+  tp.items.push({...tp.items[0],id:'unique-tp',order:3});atp.items[1].stepNumber=3;atp.items.push({...atp.items[0],id:'unique-atp',stepNumber:2,linkedTpIds:['unique-tp']});
+  map.units[0].linkedTpIds.push('unique-tp');map.units[0].linkedAtpItemIds.push('unique-atp');map.units[0].materials.push({id:'unique-mat',title:'Substansi unik',order:2,linkedTpIds:['unique-tp'],linkedAtpItemIds:['unique-atp']});
+  map.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(atp);map.basedOnTpFingerprint=computeTpSubstantiveFingerprint(tp);
+  const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  activities(meetings[0],[2]);activities(meetings[1],[2]);meetings[1].linkedTpIds=['unique-tp'];meetings[1].linkedAtpItemIds=['unique-atp'];meetings[1].materialIds=['unique-mat'];
+  let r=review(state);assert.ok(r.proposal.errors.length);assert.throws(r.apply);
+  const slots=state.semesterData.subjectWeeklySchedules![0].value;slots.sessions[0].jp=4;slots.basedOnWeeklyJP=4;state.semesterJPSettings[0].value.actualScheduledWeeklyJP=4;
+  r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.apply().units[0].meetings[0].linkedTpIds.includes('unique-tp'));
+  [meetings[0],meetings[1]]=[meetings[1],meetings[0]];meetings.forEach((m,i)=>m.order=i+1);
+  r=review(state);assert.ok(r.proposal.errors.some(e=>e.includes('prasyarat')));assert.throws(r.apply);
+});
+test('unknown demand blocks content optimization but legacy backups remain lossless and do not acquire ATP JP',()=>{
+  const state=fixture([2,1]);state.annualData.unitExecutionPlans![0].value.units.forEach(u=>u.meetings.forEach(m=>delete m.plannedJP));
+  const legacy=storage.parseBackupV5(storage.serializeBackupV5(state));assert.ok(legacy.annualData.unitExecutionPlans![0].value.units.every(u=>u.meetings.every(m=>m.plannedJP===undefined)));
+  const r=review(legacy);assert.ok(r.proposal.errors.some(e=>e.includes('JP pertemuan belum diketahui')));assert.throws(r.apply);
+});
+test('AI drafts reject invented IDs/JP, lost essentials, changed duration, stale source and protected IDs',()=>{
+  const state=fixture([2,1]);mixedPattern(state);const ms=state.annualData.unitExecutionPlans![0].value.units[0].meetings;activities(ms[0],[2,2]);activities(ms[1],[2]);
+  const r=review(state),fp=alignment.optimizationFingerprint(r.draft,r.source.mapping,r.source.context);
+  const valid:alignment.MeetingOptimizationDraft={sourceFingerprint:fp,reason:'Redistribusi kegiatan utuh',edits:[{id:ms[0].id,plannedJP:2,activities:ms[0].activities!.slice(0,1)},{id:ms[1].id,plannedJP:4,activities:[{...ms[0].activities![1],learningMeetingId:ms[1].id},...ms[1].activities!]}]};
+  assert.deepEqual(alignment.validateMeetingOptimizationDraft(valid,r.draft,r.source.mapping,r.source.context).errors,[]);
+  for(const mode of ['id','tp','jp','activity','duration','stale','protected']) {
+    const invalid=structuredClone(valid),context=structuredClone(r.source.context);
+    if(mode==='id')invalid.edits[0].id='invented';if(mode==='tp')invalid.edits[0].linkedTpIds=['invented'];if(mode==='jp')invalid.edits[0].plannedJP=1;
+    if(mode==='activity')invalid.edits[0].activities=[];if(mode==='duration')invalid.edits[0].activities![0].durationMinutes=1;
+    if(mode==='stale')invalid.sourceFingerprint='old';if(mode==='protected')context.protectedMeetings[ms[0].id]=['journal'];
+    assert.ok(alignment.validateMeetingOptimizationDraft(invalid,r.draft,r.source.mapping,context).errors.length,mode);
+  }
+});
+test('ordinary save also rejects edits to referenced assessment/factual meeting IDs',()=>{
+  const state=fixture([2,1]);state.semesterData.assessmentPlan=[{semesterPlanId:'sp1',value:[{id:'assessment-ref',academicSettingId:'sp1',learningMeetingId:'m0-0'} as any]}];
+  const r=review(state),changed=structuredClone(r.draft),before=memory.get(storage.STORAGE_KEY_V5);changed.units[0].meetings[0].title='Changed';
+  assert.throws(()=>storage.saveUnitExecutionPlanV5('y',changed),/terlindungi/);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+});
+
+
+test('automatic/manual schedules and document projections reject a meeting that exceeds its actual JP slot',()=>{
+  const r=review(fixture([1,1],[1,1],2)), state=storage.loadStorageV5(),calendar=state.semesterData.academicCalendar[0].value,weekly=state.semesterData.subjectWeeklySchedules![0].value;
+  const params={semesterPlanId:'sp1',semester:1 as const,mapping:r.source.mapping,unitExecutionPlan:r.draft,subjectWeeklySchedule:weekly,expectedWeeklyJP:2,calendar:calendar.calendar,calendarDays:calendar.days};
+  const slots=resolveEffectiveSubjectSlots({...params,schedule:weekly});const good=resolveLearningMeetingSchedule({...params,subjectSlotResult:slots});assert.equal(good.isValid,true);
+  const data=buildLearningMeetingScheduleData({...params,autoResult:good,manualOverrides:[]});
+  const oversized=structuredClone(r.draft);oversized.units[0].meetings[0].plannedJP=3;
+  assert.equal(resolveLearningMeetingSchedule({...params,unitExecutionPlan:oversized,subjectSlotResult:slots}).isValid,false);
+  assert.equal(validateLearningMeetingScheduleData({...params,unitExecutionPlan:oversized,data}).isValid,false);
+  assert.equal(resolveScheduledLearningMeetings({mapping:r.source.mapping,unitExecutionPlan:oversized,schedules:[{semesterPlanId:'sp1',semester:1,schedule:data}],atp:r.source.context.atp,tp:r.source.context.tp}).isValid,false);
+});
+test('Modul Ajar activity validator preserves essential source descriptions and their time budgets',()=>{
+  const setting:any={level:'SD',grade:'3',subject:'PJOK',curriculumType:'KURIKULUM_MERDEKA',curriculum:'Kurikulum Merdeka',academicYear:'2026/2027'};
+  const plan:any={learningSteps:{opening:[{id:'o',learningMeetingId:'m',description:'Pembukaan',durationMinutes:10}],core:[{id:'c',learningMeetingId:'m',description:'Praktik esensial',durationMinutes:50}],closing:[{id:'f',learningMeetingId:'m',description:'Penutup',durationMinutes:10}]}};
+  const meetings=[{meetingId:'m',jp:2,activities:[{id:'source',description:'Praktik esensial',durationMinutes:35,essential:true}]}];
+  assert.equal(validateLearningPlanActivityMeetings(plan,['m'],true,meetings,setting).isValid,true);
+  plan.learningSteps.core[0].description='Kegiatan lain';assert.equal(validateLearningPlanActivityMeetings(plan,['m'],true,meetings,setting).isValid,false);
+  plan.learningSteps.core[0].description='Praktik esensial';meetings[0].activities[0].durationMinutes=60;assert.equal(validateLearningPlanActivityMeetings(plan,['m'],true,meetings,setting).isValid,false);
+  (meetings[0].activities[0] as any).durationMinutes=undefined;assert.equal(validateLearningPlanActivityMeetings(plan,['m'],true,meetings,setting).isValid,false);
+});
+
+
+test('infeasible 48 to 41 reports JP blockers and never forces a partial reduction',()=>{
+  const state=fixture([48,1],[41,1],2);state.annualData.unitExecutionPlans![0].value.units[0].meetings.forEach(m=>m.plannedJP=4);
+  const r=review(state),before=memory.get(storage.STORAGE_KEY_V5);
+  assert.ok(r.proposal.errors.length);assert.ok([...r.proposal.errors,...r.proposal.conflicts].some(e=>e.includes('4 JP') || e.includes('4 →')));
+  assert.throws(r.apply);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);assert.equal(storage.getUnitExecutionPlanV5('y')!.units[0].meetings.length,48);
+});
+test('empty removal cannot shift the dated slot of a realized meeting',()=>{
+  const state=fixture([3,1],[2,1],2);empty(state.annualData.unitExecutionPlans![0].value.units[0].meetings[0]);addSchedule(state);
+  const schedule=state.semesterData.learningMeetingSchedules![0].value;
+  schedule.entries=schedule.entries.filter(e=>e.meetingId==='m0-1');Object.assign(schedule.entries[0],{date:'2026-08-10',jp:2});schedule.status='DRAFT';schedule.unresolvedMeetingIds=['m0-0','m0-2'];
+  state.semesterData.journalRealizations=[{semesterPlanId:'sp1',value:[{semesterPlanId:'sp1',meetingId:'m0-1',actualDate:'2026-08-10',actualJP:2,outcome:'Terlaksana',updatedAt:'2026-11-05'}]}];
+  const r=review(state);assert.ok(r.proposal.errors.length);assert.ok(r.proposal.conflicts.some(c=>c.includes('terlindungi')));assert.throws(r.apply);
+});
+
 function ui(props:any) {
   const values:any[]=[];let cursor=0;
   const source=readFileSync('src/components/UnitExecutionPlanManager.tsx','utf8');
   const compiled=ts.transpileModule(source.slice(source.indexOf('function generateStableId')), {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
   const exports:any={};
-  runInNewContext(compiled,{exports,React,console,crypto:{randomUUID:newId},structuredClone,JSON,Date,Math,...icons,...alignment,...execution,...placement,...allocation,...storage,Map,Set,
-    useMemo:(factory:()=>any)=>factory(),useEffect:()=>{},useState:(initial:any)=>{const i=cursor++;if(!(i in values)) values[i]=typeof initial==='function'?initial():initial;return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}];},
+  runInNewContext(compiled,{exports,React,console,crypto:{randomUUID:newId},structuredClone,JSON,Date,Math,...icons,...alignment,...execution,...placement,...allocation,...storage,Map,Set,requestMeetingOptimizationAI:props.__optimization || (async()=>{throw new Error('AI unavailable');}),
+    useMemo:(factory:()=>any)=>factory(),useEffect:()=>{},useRef:(initial:any)=>{const i=cursor++;if(!(i in values))values[i]={current:initial};return values[i];},useState:(initial:any)=>{const i=cursor++;if(!(i in values)) values[i]=typeof initial==='function'?initial():initial;return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}];},
     recordDiagnosticEvent:()=>{},setTimeout:()=>{},AIMeetingGenerationError:class extends Error{},generateUnitMeetingsWithAI:()=>{throw new Error('AI should not be called');},
   });
   const walk=(e:any):any[]=>!React.isValidElement(e)?[]:[e,...React.Children.toArray((e.props as any).children).flatMap(walk)];
@@ -230,5 +368,44 @@ async function backendZeroWork() {
   body.unitMeetingTargets[0].newTargetCount=2;await handler({body},res);assert.equal(status,400);assert.equal(response.code,'UNIT_TARGET_INVALID');
   console.log('PASS real backend: approved targets below calendar ceiling; zero requested slots never call Gemini; excess rejected');passed++;
 }
+
+async function aiDraftHandlers() {
+  const r=review(fixture([1,1])), draft:alignment.MeetingOptimizationDraft={sourceFingerprint:alignment.optimizationFingerprint(r.draft,r.source.mapping,r.source.context),reason:'Perjelas judul tanpa mengurangi substansi/JP',edits:[{id:'m0-0',title:'Kegiatan 1 — penjelasan konteks'}]};
+  let calls=0;const props:any={mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__optimization:async()=>draft,onSave:(next:UnitExecutionPlanData,approval:any)=>{calls++;storage.saveUnitExecutionPlanV5('y',next,approval);return true;}};
+  const h=ui(props),before=memory.get(storage.STORAGE_KEY_V5);h.button('Tinjau Penyesuaian').props.onClick();
+  await h.button('Usulkan Optimalisasi dengan AI').props.onClick();assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+  assert.equal(h.button('Setujui & Terapkan').props.disabled,false);h.button('Setujui & Terapkan').props.onClick();assert.equal(calls,1);
+  const saved=storage.getUnitExecutionPlanV5('y')!;assert.equal(saved.units[0].meetings[0].title,draft.edits[0].title);assert.deepEqual(saved.units[0].meetings[0].alignmentMerge!.sources[0],r.draft.units[0].meetings[0]);
+  props.unitExecutionPlan=saved;assert.ok(!h.nodes().some(n=>n.props.role==='dialog'));assert.ok(!h.nodes().some(n=>n.type==='p' && React.Children.toArray(n.props.children).join('').includes('Konflik')));
+  console.log('PASS actual UI: AI result remains draft until explicit teacher approval');passed++;
+  const fresh=review(fixture([1,1]));let release:(value:any)=>void=()=>{};
+  const pending=ui({...props,mapping:fresh.source.mapping,unitExecutionPlan:fresh.draft,__optimization:()=>new Promise(resolve=>{release=resolve;})});pending.button('Tinjau Penyesuaian').props.onClick();
+  const request=pending.button('Usulkan Optimalisasi dengan AI').props.onClick();pending.button('Batal').props.onClick();release(draft);await request;
+  assert.ok(!pending.nodes().some(n=>n.props.role==='dialog'));console.log('PASS actual UI: cancel discards a late AI result');passed++;
+  const source=readFileSync('server.ts','utf8'),start=source.indexOf("app.post('/api/ai/recommend-meeting-reconciliation'"),end=source.indexOf('\napp.post(',start+10);let handler:any,modelResult:any={reason:'Judul diperjelas',edits:[{id:'m0-0',title:'Kegiatan 1 — konteks AI'}]};
+  const compiled=ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+  runInNewContext(compiled,{console,app:{post:(_path:string,value:any)=>handler=value},validateUnitExecutionPlan:execution.validateUnitExecutionPlan,...alignment,resolveApiKey:()=> 'mock-key',createAIClient:()=>({}),generateContentWithRetry:async()=>({text:JSON.stringify(modelResult)})});
+  let status=200,response:any;const res:any={status:(n:number)=>{status=n;return res;},json:(value:any)=>{response=value;return res;}};
+  const body={mode:'OPTIMIZE',plan:fresh.draft,mapping:fresh.source.mapping,context:fresh.source.context},rawBefore=memory.get(storage.STORAGE_KEY_V5);
+  await handler({body},res);assert.equal(status,200);assert.ok(response.draft);assert.equal(memory.get(storage.STORAGE_KEY_V5),rawBefore);
+  modelResult.edits=[{id:'invented',plannedJP:99}];await handler({body},res);assert.equal(status,422);assert.equal(response.code,'AI_OPTIMIZATION_INVALID');assert.equal(memory.get(storage.STORAGE_KEY_V5),rawBefore);
+  console.log('PASS actual optimization route with mocked provider: canonical draft accepted, invented ID/JP rejected, storage unchanged');passed++;
+}
+
+
+async function optimizedImportRoundtrip() {
+  const state=fixture([3,1]);mixedPattern(state);const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
+  meetings.forEach(m=>activities(m,[1]));const r=review(state),next=r.apply();storage.saveUnitExecutionPlanV5('y',next,{draft:r.draft,proposal:r.proposal});
+  const zipped=await readCompleteProjectZip(await createCompleteProjectZip(storage.loadStorageV5(),'y'));
+  const result=importCompleteAdministrationProject(zipped,{mode:'CONTINUE_EDITING',targetProfileId:'p2',targetSchoolId:'s2',documentDate:'2026-11-05'});
+  const imported=storage.getUnitExecutionPlanV5(result.yearPlanId)!;
+  assert.deepEqual(imported.units.map(u=>u.meetings.map(m=>m.plannedJP)),next.units.map(u=>u.meetings.map(m=>m.plannedJP)));
+  assert.ok(imported.units.flatMap(u=>u.meetings).some(m=>m.alignmentMerge?.sources.length));
+  assert.ok(imported.units.flatMap(u=>u.meetings).every(m=>(m.activities || []).every(a=>a.learningMeetingId===m.id)));
+  console.log('PASS actual optimized-plan ZIP import/export: planned JP, source provenance and remapped activity/meeting IDs retained');passed++;
+}
+
+await optimizedImportRoundtrip();
 await backendZeroWork();
+await aiDraftHandlers();
 console.log(`PASS ${passed} calendar-driven alignment scenarios.`);

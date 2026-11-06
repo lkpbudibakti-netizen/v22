@@ -1,4 +1,5 @@
 import { checkCP4Backend } from './cpAnalysisBackend';
+import { validateMeetingOptimizationDraft, type MeetingAlignmentContext, type MeetingOptimizationDraft } from './meetingAlignmentService';
 import { validateCP4Input, validateCP4Targets } from './cpAnalysisDraft';
 import type { CP4RepairTarget } from './cpAnalysisAIContract';
 import { CP4ResponseError, parseCP4JSON, responseMime, safeResponseInfo } from './cpAnalysisResponse';
@@ -876,6 +877,8 @@ export interface GenerateLearningPlanParams {
     title: string;
     date?: string;
     jp: number;
+    plannedJP?: number;
+    activities?: import('../types').LearningActivity[];
     materials?: { id: string; title: string }[];
     linkedTpIds?: string[];
     linkedAtpItemIds?: string[];
@@ -1615,6 +1618,20 @@ export async function requestMeetingReconciliationAI(
       error: `Gagal memproses rekomendasi AI: ${err.message || String(err)}`,
     };
   }
+}
+
+/** Existing AI transport/route; historical journal/attendance payloads are never sent. */
+export async function requestMeetingOptimizationAI(plan: UnitExecutionPlanData, mapping: ATPUnitMappingData, context: MeetingAlignmentContext): Promise<MeetingOptimizationDraft> {
+  const safeContext = { atp: context.atp, tp: context.tp, slotJP: context.slotJP, minutesPerJP: context.minutesPerJP,
+    protectedMeetings: context.protectedMeetings, protectedContent: {}, sourceFingerprint: '', errors: [], impacts: [] };
+  const response = await aiFetch('/api/ai/recommend-meeting-reconciliation', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'OPTIMIZE', plan, mapping, context: safeContext }),
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.error || 'Draf optimalisasi AI tidak tersedia.');
+  const checked = validateMeetingOptimizationDraft(data.draft, plan, mapping, context);
+  if (checked.errors.length || !checked.draft) throw new Error(checked.errors.join(' '));
+  return checked.draft;
 }
 
 

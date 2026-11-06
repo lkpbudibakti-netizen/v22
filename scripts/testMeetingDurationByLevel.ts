@@ -38,6 +38,8 @@ function fixture(level:string,grade:string,pattern:number[]) {
  const c=createModulAjarRuntimeFixture();Object.assign(c.academicSetting,{level,grade,academicYear:'2025/2026',subject:pattern.length===2?'Matematika':'PJOK'});
  const plan=c.learningPlans[0],weekly=pattern.reduce((a,b)=>a+b,0);
  c.unitExecutionPlan.semesterPlacement={mode:'CONTIGUOUS_BOUNDARY',semester1LastUnitId:'unit'};
+ // A real saved schedule needs a non-empty execution revision for stale checks.
+ c.unitExecutionPlan.updatedAt=c.atpUnitMapping.updatedAt || '2025-07-01T00:00:00Z';
  for(const m of c.unitExecutionPlan.units[0].meetings) delete m.jp;
  c.calendar={id:'calendar',academicSettingId:'sem',startDate:'2025-07-07',endDate:'2025-07-25',schoolDaysPerWeek:5,workflowStatus:'CONFIRMED',updatedAt:'calendar-stamp'};
  c.calendarDays=[];

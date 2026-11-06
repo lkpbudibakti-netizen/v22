@@ -1,4 +1,4 @@
-import { isEmptyAlignmentMeeting } from './meetingContentService';
+import { isEmptyAlignmentMeeting, meetingSlotIssue } from './meetingContentService';
 import {
   UnitExecutionPlanData,
   UnitExecutionPlan,
@@ -210,6 +210,17 @@ export function validateUnitExecutionPlan(
     const seenUnitOrders = new Set<number>();
 
     for (const m of planUnit.meetings || []) {
+      if (m.plannedJP !== undefined) {
+        const issue = meetingSlotIssue(m, Number.MAX_VALUE);
+        if (issue) errors.push(issue);
+      }
+      if (m.activities !== undefined) {
+        if (!Array.isArray(m.activities) || m.activities.some(a => !a || typeof a.id !== 'string' || !a.id.trim() || typeof a.description !== 'string' || !a.description.trim() ||
+            (a.essential !== undefined && typeof a.essential !== 'boolean') ||
+            (a.learningMeetingId !== undefined && a.learningMeetingId !== m.id) ||
+            (a.durationMinutes !== undefined && (!Number.isFinite(a.durationMinutes) || a.durationMinutes <= 0))) ||
+            new Set(m.activities.map(a => a.id)).size !== m.activities.length) errors.push(`Kegiatan pertemuan ${m.id} tidak valid atau memiliki ID ganda.`);
+      }
       // Non-empty meeting ID check
       if (typeof m.id !== 'string' || !m.id.trim()) {
         errors.push(`Meeting pada Unit '${planUnit.unitId}' memiliki ID kosong.`);

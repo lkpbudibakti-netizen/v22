@@ -9,6 +9,7 @@ import {
   CalendarDay,
 } from '../types';
 import { resolveUnitSemesterPlacement } from './unitSemesterPlanningService';
+import { simulateMeetingSlotJP, meetingSlotIssue } from './meetingContentService';
 import {
   EffectiveSubjectSlotResult,
   resolveEffectiveSubjectSlots,
@@ -173,6 +174,8 @@ export function resolveLearningMeetingSchedule(params: {
   });
 
   const totalAvailableSlots = sortedSlots.length;
+  const jpSimulation = simulateMeetingSlotJP(flatMeetings.slice(0, sortedSlots.length), sortedSlots);
+  if (jpSimulation.errors.length) return createFailedResult(jpSimulation.errors, subjectSlotResult);
 
   // 11. Sequential pairing
   const scheduledEntries: LearningMeetingScheduleEntry[] = [];
@@ -410,6 +413,11 @@ export function validateLearningMeetingScheduleData(
 
     if (!canonicalMeetingIds.has(entry.meetingId)) {
       errors.push(`Meeting ID "${entry.meetingId}" pada entries bukan merupakan Pertemuan untuk semester ini.`);
+    }
+    const canonicalMeeting = unitExecutionPlan.units.flatMap(u => u.meetings).find(m => m.id === entry.meetingId);
+    if (canonicalMeeting) {
+      const issue = meetingSlotIssue(canonicalMeeting, entry.jp);
+      if (issue) errors.push(issue);
     }
 
     if (!entry.sourceSlotId || typeof entry.sourceSlotId !== 'string') {
