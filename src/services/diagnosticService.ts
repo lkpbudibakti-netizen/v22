@@ -13,7 +13,9 @@ import {
   UnitExecutionPlanData,
   LearningMeetingScheduleData,
 } from '../types';
-import { APP_BUILD_ID } from '../config/buildInfo';
+import { APP_BUILD_ID, APP_BUILD_SHA, APP_BUILD_DIRTY } from '../config/buildInfo';
+import type { MeetingAlignmentProposal } from './meetingAlignmentService';
+import { isEmptyAlignmentMeeting } from './meetingContentService';
 import { normalizePhaseCode, TPValidationDetails } from './cpWorkflowService';
 import {
   UnitExecutionPlanValidationResult,
@@ -620,6 +622,12 @@ export function buildAdministrationChainDiagnosticReport(data: {
 }
 
 export function buildUnitExecutionPlanAIDiagnosticReport(data: {
+  alignmentProposal?: MeetingAlignmentProposal | null;
+  alignmentSourceError?: string | null;
+  optimizationError?: string | null;
+  generationError?: string | null;
+  isOptimizing?: boolean;
+  isGeneratingMeetings?: boolean;
   mapping?: ATPUnitMappingData | null;
   unitExecutionPlan?: UnitExecutionPlanData | null;
   capacityContext?: {
@@ -637,7 +645,7 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
   const val = data.validation;
 
   // Semester boundary resolution
-  const s1Last = diag?.semester1LastUnitId !== undefined
+  const s1Last = plan?.semesterPlacement ? plan.semesterPlacement.semester1LastUnitId : diag?.semester1LastUnitId !== undefined
     ? diag.semester1LastUnitId
     : (data.capacityContext?.semester1LastUnitId !== undefined
         ? data.capacityContext.semester1LastUnitId
@@ -646,7 +654,7 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
   let s1UnitIds = diag?.semester1UnitIds || [];
   let s2UnitIds = diag?.semester2UnitIds || [];
 
-  if (!diag && mapping && plan) {
+  if (mapping && plan) {
      const placementValidation = resolveUnitSemesterPlacement(plan, mapping);
      s1UnitIds = placementValidation.semester1UnitIds || [];
      s2UnitIds = placementValidation.semester2UnitIds || [];
@@ -663,12 +671,12 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
     targetS1: capS1Target, targetS2: capS2Target,
   }) : null;
 
-  const capS1 = diag?.capacity?.semester1 || {
+  const capS1 = {
     target: capS1Target,
     existing: capS1Existing,
     requestedNew: plannedAllocation?.semester1.newTarget ?? Math.max(0, capS1Target - capS1Existing),
   };
-  const capS2 = diag?.capacity?.semester2 || {
+  const capS2 = {
     target: capS2Target,
     existing: capS2Existing,
     requestedNew: plannedAllocation?.semester2.newTarget ?? Math.max(0, capS2Target - capS2Existing),
@@ -714,6 +722,8 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
     '',
     'Build:',
     APP_BUILD_ID,
+    line('commitSHA', APP_BUILD_SHA ?? 'UNKNOWN'),
+    line('buildDirty', APP_BUILD_DIRTY ?? 'UNKNOWN'),
     '',
     'GeneratedAt:',
     new Date().toISOString(),
@@ -727,6 +737,29 @@ export function buildUnitExecutionPlanAIDiagnosticReport(data: {
     'Capacity:',
     `S1 target=${capS1.target} existing=${capS1.existing} requestedNew=${capS1.requestedNew}`,
     `S2 target=${capS2.target} existing=${capS2.existing} requestedNew=${capS2.requestedNew}`,
+    line('withinCapacity', mapping && plan ? capS1.existing <= capS1.target && capS2.existing <= capS2.target : 'NOT_EVALUATED'),
+    'Capacity Validation (separate from curriculum coverage):',
+    ...(plannedAllocation?.errors.length ? plannedAllocation.errors.map(error => `- ${error}`) : [plannedAllocation ? '- none' : '- NOT_EVALUATED']),
+    '',
+    'Current Optimization:',
+    line('sourceError', data.alignmentSourceError),
+    line('generationInProgress', data.isGeneratingMeetings ?? 'UNKNOWN'),
+    line('optimizationInProgress', data.isOptimizing ?? 'UNKNOWN'),
+    line('generationError', data.generationError),
+    line('optimizationError', data.optimizationError),
+    line('meetingStatus', data.alignmentProposal?.meetingStatus ?? 'NOT_EVALUATED'),
+    line('slotStatus', data.alignmentProposal?.slotStatus ?? 'NOT_EVALUATED'),
+    line('curriculumJPStatus', data.alignmentProposal?.curriculumJPStatus ?? 'SEPARATE_REVIEW'),
+    'Stored meeting demand (missing plannedJP is not ATP JP):',
+    ...(plan?.units || []).map(unit => `- ${unit.unitId}: known=${unit.meetings.filter(m => m.plannedJP !== undefined).length} missing=[${unit.meetings.filter(m => m.plannedJP === undefined && !isEmptyAlignmentMeeting(m)).map(m => m.id).join(', ')}]`),
+    'Optimization Blockers:',
+    ...(data.alignmentProposal ? data.alignmentProposal.errors.length ? data.alignmentProposal.errors.map(e => `- ${e}`) : ['- none'] : ['- NOT_EVALUATED; this report cannot establish optimization feasibility.']),
+    'Optimization Conflicts:',
+    ...(data.alignmentProposal?.conflicts.length ? data.alignmentProposal.conflicts.map(e => `- ${e}`) : ['- none']),
+    'Proposed Distribution:',
+    ...(data.alignmentProposal?.rows.map(r => `- S${r.semester} ${r.unitId}: ${r.before} -> ${r.proposed}`) || ['- NOT_EVALUATED']),
+    'Actual ordered slot simulation (demand / slot JP):',
+    ...(data.alignmentProposal?.simulation.map(r => `- S${r.semester} #${r.slotIndex+1} ${r.meetingId}: ${r.plannedJP ?? 'UNKNOWN'} / ${r.slotJP ?? 'NO_SLOT'}`) || ['- NOT_EVALUATED']),
     '',
     'Semester Boundary:',
     line('semester1LastUnitId', s1Last === null ? 'null (all S2)' : s1Last),

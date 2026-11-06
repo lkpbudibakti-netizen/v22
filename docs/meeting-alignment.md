@@ -82,3 +82,25 @@ NOT RUN: live Gemini, visual browser walkthrough, or the entire unrelated reposi
 ## Remaining teacher decisions
 
 Supply unknown meeting demand/quantified activities instead of reusing ATP JP. Review substantive and pedagogical suitability before approval; the deterministic checks do not replace teacher judgment. Essential/assessment/prerequisite or protected-reference conflicts require explicit manual planning, never deleting factual data to unlock optimization. If 41 slots are insufficient, keep the blocker rather than forcing 41. After approval, review both schedules and regenerate current documents; historical snapshots stay historical. Curriculum annual-JP comparison remains a separate review.
+
+## Diagnostic follow-up — 2026-11-06
+
+Baseline for this follow-up: `9129596` (clean working tree before editing). The supplied production diagnostic confirmed S2 48/41 but did not contain meeting demand, actual-slot feasibility or optimization blockers; it cannot establish which reductions are safe or prove a Gemini error.
+
+Confirmed reporting gaps in the owning source:
+- Generation recorded AI_GENERATION_REQUEST, then returned on allocator conflict without a terminal event or last-attempt diagnostic.
+- Optimization requests/results/errors/cancellation had no diagnostic events.
+- The report omitted the existing alignment proposal, blockers, source errors and actual ordered JP simulation.
+- A historical AI snapshot could replace the report's current capacity/boundary values.
+
+Changes are limited to `diagnosticService.ts`, `UnitExecutionPlanManager.tsx`, `testMeetingAlignment.ts` and this report. Current capacity is now computed from the current plan/boundary; stale AI snapshots remain historical results. Reports include build SHA/dirty state, capacity validation separate from coverage, stored plannedJP gaps, current optimization status/errors/conflicts/proposed distribution, and actual JP simulation. Missing evaluation is explicitly NOT_EVALUATED. Generation preflight emits CAPACITY_CONFLICT/BLOCKED, zero-work emits a terminal success, and optimization request/draft/error/cancellation events are recorded. The diagnostic copy handler passes live component state and the existing proposal.
+
+No allocation, calendar, curriculum, meeting data, or provider/model behavior is changed by this follow-up. A fresh report from the new build is still required to identify the supplied project's actual optimization blockers; aggregate counts alone are insufficient. Tests cover stale AI capacity snapshots, coverage-complete-but-over-capacity, missing demand, unevaluated optimization, real preflight terminal events, copied diagnostics and optimization/cancellation events. Live Gemini and the user's stored project were not accessed.
+
+## Final generator: actual calendar slots — 2026-11-06
+
+Final generation now uses the existing effective-slot resolver through Storage V5. Confirmed actual slots are ordered by date/session; every slot receives exactly one meeting and supplies its plannedJP. Estimated capacity is rejected. The existing allocator has an opt-in exact mode; flexible alignment and legacy API callers retain their previous ceiling semantics. Canonical coverage and ATP introduction order are validated independently of calendar count/JP.
+
+Generate completes existing meetings; Regenerate starts a new content draft for all actual slots. Both produce a review before saving. Regenerate rejects any protected meeting reference, and archives unprotected prior meeting content using existing alignment provenance. Approval rechecks the source fingerprint, coverage, IDs, ordering, slot JP and protected references, then reuses the existing single-write schedule/document invalidation path. A provider, stale-data or storage failure leaves the saved plan intact. Calendar and canonical curriculum data are not modified.
+
+The meeting suite covers exact 10-slot generation, mixed 4/2 JP, holidays, 48-to-41 preview/save, protected references, stale calendar, invalid AI output, estimated capacity, atomic write failure, and actual UI approval/cancellation. Modul Ajar already resolves JP from actual scheduled meetings; its existing duration/projection regressions verify that connection. Live Gemini and deployed-browser interaction remain unverified. Teacher approval still assesses pedagogical quality; protected plans require manual review rather than automatic regeneration.

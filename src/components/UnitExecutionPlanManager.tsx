@@ -45,7 +45,7 @@ import {
   resolveUnitSemesterPlacement,
 } from '../services/unitSemesterPlanningService';
 import { proposeMeetingAlignment, applyMeetingAlignment, MeetingAlignmentProposal, MeetingAlignmentApproval, MeetingOptimizationDraft } from '../services/meetingAlignmentService';
-import { allocateUnitMeetings } from '../services/unitMeetingAllocationService';
+import { allocateUnitMeetings, prepareCalendarMeetingGeneration, buildCalendarMeetingCandidate, validateCalendarMeetingCandidate, calendarGenerationFingerprint, type CalendarGenerationReview } from '../services/unitMeetingAllocationService';
 import {
   buildUnitExecutionPlanAIDiagnosticReport,
   recordDiagnosticEvent,
@@ -139,16 +139,26 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   const [optimizationDraft, setOptimizationDraft] = useState<MeetingOptimizationDraft | undefined>();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationError, setOptimizationError] = useState<string | null>(null);
+  const cancelOptimization = () => {
+    if(isOptimizing)recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_OPTIMIZATION_CANCELLED',status:'CANCELLED',metadata:{mappingId:mapping.id}});
+    optimizationRun.current++;setIsOptimizing(false);
+  };
   const requestOptimization = async () => {
     if (!alignmentSource.source || isOptimizing) return;
     const run=++optimizationRun.current;
     setIsOptimizing(true);setOptimizationError(null);
+    recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_OPTIMIZATION_REQUEST',metadata:{mappingId:mapping.id}});
     try {
       const result=await requestMeetingOptimizationAI(draft,mapping,alignmentSource.source.context);
       if(run!==optimizationRun.current)return;
       setOptimizationDraft(result);
-      setAlignmentPreview(proposeMeetingAlignment(draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,addAlignmentSlots,result));
-    } catch(error) {if(run===optimizationRun.current)setOptimizationError(error instanceof Error ? error.message : String(error));}
+      const proposal=proposeMeetingAlignment(draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,addAlignmentSlots,result);
+      setAlignmentPreview(proposal);
+      recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_OPTIMIZATION_DRAFT_READY',status:proposal.errors.length?'BLOCKED':'SUCCESS',metadata:{mappingId:mapping.id,blockerCount:proposal.errors.length,operationCount:proposal.operations.length}});
+    } catch(error) {if(run===optimizationRun.current) {
+      setOptimizationError(error instanceof Error ? error.message : String(error));
+      recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_OPTIMIZATION_FAILED',status:'FAILED',metadata:{mappingId:mapping.id}});
+    }}
     finally {if(run===optimizationRun.current)setIsOptimizing(false);}
   };
   const alignmentSource = useMemo(() => {
@@ -168,7 +178,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       if(!checked.isValid || checked.isStale) throw new Error(checked.errors.join(' ') || 'Pemetaan berubah.');
       if(!onSave(next,{draft,proposal:alignmentPreview})) throw new Error('Penyesuaian belum tersimpan. Tinjau pesan penyimpanan dan coba kembali.');
       setDraft(next);setAlignmentPreview(null);setGenerationError(null);
-      optimizationRun.current++;setIsOptimizing(false);setOptimizationDraft(undefined);setOptimizationError(null);setAddAlignmentSlots(false);
+      cancelOptimization();setOptimizationDraft(undefined);setOptimizationError(null);setAddAlignmentSlots(false);
       setSaveNotice({type:checked.isComplete ? 'success':'warning',message:checked.isComplete ? 'Penyesuaian tersimpan. Tinjau jadwal dan dokumen turunan pada Langkah 5.' : 'Alokasi tersimpan. Lengkapi konten/coverage dan tinjau jadwal Langkah 5.'});
     } catch(error) {setSaveNotice({type:'error',message:error instanceof Error ? error.message : String(error)});}
   };
@@ -177,240 +187,49 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     return draft.units.reduce((sum, u) => sum + (u.meetings || []).length, 0);
   }, [draft]);
 
-  const handleGenerateWithAI = async () => {
-    if (validation.isStale || !validation.isValid || isGeneratingMeetings) {
-      return;
-    }
-
-    if (!meetingCapacity || !meetingCapacity.semester1.isReady || !meetingCapacity.semester2.isReady) {
-      setGenerationError('Lengkapi Kalender Pendidikan dan Pola Pertemuan Mingguan Semester 1 & 2 agar AI dapat menyusun jumlah Pertemuan sesuai kapasitas waktu.');
-      return;
-    }
-
-    setIsGeneratingMeetings(true);
-    setGenerationError(null);
-    setGenerationNotice(null);
-
-    const targetS1 = meetingCapacity.semester1.targetMeetingCount;
-    const targetS2 = meetingCapacity.semester2.targetMeetingCount;
-
-    recordDiagnosticEvent({
-      scope: 'UNIT_EXECUTION_PLAN',
-      action: 'AI_GENERATION_REQUEST',
-      metadata: {
-        mappingId: mapping.id,
-        targetS1,
-        targetS2,
-      },
-    });
-
+  const [generationPreview,setGenerationPreview]=useState<CalendarGenerationReview | null>(null);
+  const generateCalendarMeetings = async (mode:'COMPLETE'|'REGENERATE') => {
+    if(isGeneratingMeetings || validation.isStale)return;
+    setIsGeneratingMeetings(true);setGenerationError(null);setGenerationNotice(null);setGenerationPreview(null);
+    recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_REQUEST',metadata:{mappingId:mapping.id,mode}});
     try {
-      // 1. Resolve semesterPlacement candidate
-      let candidatePlacement = draft.semesterPlacement;
-
-      if (!candidatePlacement || candidatePlacement.mode !== 'CONTIGUOUS_BOUNDARY') {
-        const boundary = suggestSemesterBoundaryByMeetingSlots(draft, mapping, targetS1, targetS2);
-        if (boundary !== undefined) {
-          candidatePlacement = {
-            mode: 'CONTIGUOUS_BOUNDARY',
-            semester1LastUnitId: boundary,
-            updatedAt: new Date().toISOString()
-          };
-        }
+      const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
+      const request=prepareCalendarMeetingGeneration(draft,live.mapping,live.capacity,live.context,mode);
+      if(mode==='COMPLETE' && !validateCalendarMeetingCandidate(draft,draft,live.mapping,live.capacity,live.context).length) {
+        setLastAIDiagnostic({code:'NO_WORK',stage:'CAPACITY_CHECK'});setLastAIGenerationError(null);
+        setGenerationNotice('Jumlah dan JP pertemuan sudah persis sesuai seluruh slot aktual.');
+        recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_NO_WORK',status:'SUCCESS',metadata:{mappingId:mapping.id}});return;
       }
-
-      if (!candidatePlacement) {
-        throw new Error('Pembagian unit semester sementara tidak dapat dihitung.');
-      }
-
-      const placementResult = resolveUnitSemesterPlacement({ ...draft, semesterPlacement: candidatePlacement }, mapping);
-      if (!placementResult.isValid) {
-        throw new Error('Pembagian unit semester sementara tidak valid.');
-      }
-
-      // 2. Run deterministic allocator
-      const allocationResult = allocateUnitMeetings({
-        mapping,
-        currentPlan: draft,
-        semester1UnitIds: placementResult.semester1UnitIds,
-        semester2UnitIds: placementResult.semester2UnitIds,
-        targetS1,
-        targetS2,
-      });
-
-      if (!allocationResult.isValid) {
-        setGenerationError('Konflik kapasitas: ' + allocationResult.errors.join(' ') + ' Gunakan Tinjau Penyesuaian.');
-        return;
-      }
-
-      const additionalS1 = allocationResult.semester1.newTarget;
-      const additionalS2 = allocationResult.semester2.newTarget;
-
-      // 3. No-work condition
-      const isCoverageComplete = validation.isComplete && !isStale;
-      if (isCoverageComplete && additionalS1 <= 0 && additionalS2 <= 0) {
-        setGenerationNotice('Struktur Pertemuan sudah mencakup seluruh materi, ATP, dan TP secara lengkap dalam kapasitas semester.');
-        setIsGeneratingMeetings(false);
-        return;
-      }
-
-      const unitMeetingTargets = allocationResult.units.map((u) => ({
-        unitId: u.unitId,
-        semester: u.semester,
-        existingCount: u.existingCount,
-        newTargetCount: u.newTargetCount,
-      }));
-
-      const resolvedSubject = subject || 'Mata Pelajaran';
-      const resolvedGrade = grade || '';
-      const resolvedPhase = phase || '';
-
-      const result = await generateUnitMeetingsWithAI({
-        subject: resolvedSubject,
-        grade: resolvedGrade,
-        phase: resolvedPhase,
-        mapping,
-        tpData: tp,
-        atpData: atp,
-        currentPlan: draft,
-        capacityContext: {
-          semester1LastUnitId: candidatePlacement.semester1LastUnitId,
-          semester1: {
-            targetMeetingCount: targetS1,
-            totalJP: meetingCapacity.semester1.totalJP,
-          },
-          semester2: {
-            targetMeetingCount: targetS2,
-            totalJP: meetingCapacity.semester2.totalJP,
-          },
-        },
-        unitMeetingTargets,
-      });
-
-      if (!result || !Array.isArray(result.units)) {
-        throw new Error('Hasil AI tidak valid.');
-      }
-
-      const mergedDraft: UnitExecutionPlanData = JSON.parse(JSON.stringify(draft));
-      
-      // Update mergedDraft.semesterPlacement if not already present
-      if (!mergedDraft.semesterPlacement) {
-        mergedDraft.semesterPlacement = {
-          mode: 'CONTIGUOUS_BOUNDARY',
-          semester1LastUnitId: candidatePlacement.semester1LastUnitId,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-
-      const unitPlanMap = new Map(mergedDraft.units.map((u) => [u.unitId, u]));
-
-      for (const su of result.units) {
-        let uPlan = unitPlanMap.get(su.unitId);
-        if (!uPlan) {
-          uPlan = { unitId: su.unitId, meetings: [] };
-          mergedDraft.units.push(uPlan);
-        }
-
-        const existingCount = uPlan.meetings.length;
-        const newMeetings: LearningMeeting[] = (su.meetings || []).map((m, idx) => ({
-          id: generateStableId(),
-          unitId: su.unitId,
-          order: existingCount + idx + 1,
-          title: m.title.trim(),
-          materialIds: Array.isArray(m.materialIds) ? m.materialIds : [],
-          linkedAtpItemIds: Array.isArray(m.linkedAtpItemIds) ? m.linkedAtpItemIds : [],
-          linkedTpIds: Array.isArray(m.linkedTpIds) ? m.linkedTpIds : [],
-        }));
-
-        uPlan.meetings.push(...newMeetings);
-      }
-
-      // Sequential normalize order
-      mergedDraft.units.forEach((u) => {
-        if (Array.isArray(u.meetings)) {
-          u.meetings.forEach((m, idx) => {
-            m.order = idx + 1;
-          });
-        }
-      });
-
-      // Post-merge validation
-      const resVal = validateUnitExecutionPlan(mergedDraft, mapping, atp, tp);
-      const resPlac = resolveUnitSemesterPlacement(mergedDraft, mapping);
-
-      // Verify each unit's exact meeting count against allocation result
-      for (const target of allocationResult.units) {
-        const uPlan = mergedDraft.units.find((u) => u.unitId === target.unitId);
-        const actualCount = (uPlan?.meetings || []).length;
-        if (actualCount !== target.finalTargetCount) {
-          throw new Error(
-            `Draf hasil AI untuk Unit '${target.unitId}' (${actualCount}) tidak sesuai target kapasitas final (${target.finalTargetCount}).`
-          );
-        }
-      }
-
-      let finalS1Count = 0;
-      let finalS2Count = 0;
-      const resS1Set = new Set(resPlac.semester1UnitIds);
-      const resS2Set = new Set(resPlac.semester2UnitIds);
-
-      mergedDraft.units.forEach((u) => {
-        const count = u.meetings?.length || 0;
-        if (resS1Set.has(u.unitId)) finalS1Count += count;
-        else if (resS2Set.has(u.unitId)) finalS2Count += count;
-      });
-
-      const isCountMatch = finalS1Count <= targetS1 && finalS2Count <= targetS2;
-
-      if (!resVal.isValid || !resPlac.isValid || !isCountMatch) {
-        throw new Error('Draf hasil AI tidak sesuai dengan kapasitas perencanaan atau pembagian semester tidak valid.');
-      }
-
-      setDraft(mergedDraft);
-      setGenerationNotice(`AI menyusun draf sesuai kapasitas perencanaan semester: Semester 1 = ${targetS1} Pertemuan, Semester 2 = ${targetS2} Pertemuan. Tinjau struktur dan pembagian Unit/Bab sebelum menyimpan.`);
-      setLastAIDiagnostic(null);
-      setLastAIGenerationError(null);
-
-      recordDiagnosticEvent({
-        scope: 'UNIT_EXECUTION_PLAN',
-        action: 'AI_GENERATION_SUCCESS',
-        status: 'SUCCESS',
-        metadata: {
-          mappingId: mapping.id,
-          targetS1,
-          targetS2,
-          generatedS1: finalS1Count,
-          generatedS2: finalS2Count,
-        },
-      });
-    } catch (err: any) {
-      const isAIMeetingErr = err instanceof AIMeetingGenerationError;
-      const diag = isAIMeetingErr ? err.diagnostic || null : null;
-      const code = isAIMeetingErr ? err.code || 'AI_GENERATION_ERROR' : 'AI_GENERATION_ERROR';
-      const errMsg = err?.message || 'Gagal menyusun draf Pertemuan dengan AI.';
-
-      setLastAIDiagnostic(diag);
-      setLastAIGenerationError(errMsg);
-      setGenerationError(errMsg);
-
-      recordDiagnosticEvent({
-        scope: 'UNIT_EXECUTION_PLAN',
-        action: 'AI_GENERATION_FAILED',
-        status: 'FAILED',
-        metadata: {
-          mappingId: mapping.id,
-          code,
-          targetS1,
-          targetS2,
-          generatedS1: diag?.generated?.semester1,
-          generatedS2: diag?.generated?.semester2,
-          deltaS1: diag?.generated?.deltaSemester1,
-          deltaS2: diag?.generated?.deltaSemester2,
-        },
-      });
-    } finally {
-      setIsGeneratingMeetings(false);
-    }
+      const additional=request.allocation.semester1.newTarget+request.allocation.semester2.newTarget;
+      const result=additional===0 ? {units:[]} : await generateUnitMeetingsWithAI({subject:subject || 'Mata Pelajaran',grade,phase,mapping:live.mapping,tpData:tp,atpData:atp,currentPlan:request.basis,
+        calendarSlots:request.slots,
+        capacityContext:{semester1LastUnitId:draft.semesterPlacement!.semester1LastUnitId,semester1:{targetMeetingCount:request.slots.semester1.length,totalJP:request.slots.semester1.reduce((s,slot)=>s+slot.jp,0)},semester2:{targetMeetingCount:request.slots.semester2.length,totalJP:request.slots.semester2.reduce((s,slot)=>s+slot.jp,0)}},
+        unitMeetingTargets:request.allocation.units.map(u=>({unitId:u.unitId,semester:u.semester,existingCount:u.existingCount,newTargetCount:u.newTargetCount}))});
+      const latest=getMeetingAlignmentSourceV5(mapping.academicSettingId);
+      if(request.fingerprint!==calendarGenerationFingerprint(draft,latest.mapping,latest.capacity,latest.context))throw new Error('Kalender atau referensi berubah selama generate. Data lama dipertahankan; generate ulang.');
+      const preview=buildCalendarMeetingCandidate(draft,live.mapping,live.capacity,live.context,mode,result,generateStableId);
+      setGenerationPreview(preview);setLastAIDiagnostic({code:'CALENDAR_DRAFT_READY',stage:'REVIEW'});setLastAIGenerationError(null);
+      setGenerationNotice('Pratinjau siap: satu slot efektif = satu pertemuan; JP ditetapkan dari kalender. Data lama belum diubah.');
+      recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_DRAFT_READY',status:'SUCCESS',metadata:{mappingId:mapping.id,mode}});
+    } catch(error) {
+      const message=error instanceof Error ? error.message : String(error),capacityConflict=mode==='COMPLETE' && message.includes('melebihi kapasitas');
+      const code=capacityConflict?'CAPACITY_CONFLICT':error instanceof AIMeetingGenerationError ? error.code || 'AI_GENERATION_ERROR':'CALENDAR_GENERATION_INVALID';
+      setGenerationError(capacityConflict ? message+' Gunakan Regenerate untuk meninjau penggantian yang aman.':message);setLastAIGenerationError(message);
+      setLastAIDiagnostic({code,stage:capacityConflict?'CAPACITY_CHECK':'CALENDAR_VALIDATION'});
+      recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:capacityConflict?'AI_GENERATION_BLOCKED':'AI_GENERATION_FAILED',status:capacityConflict?'BLOCKED':'FAILED',metadata:{mappingId:mapping.id,code,mode}});
+    } finally {setIsGeneratingMeetings(false);}
+  };
+  const handleGenerateWithAI = async () => generateCalendarMeetings('COMPLETE');
+  const handleRegenerate = async () => generateCalendarMeetings('REGENERATE');
+  const applyCalendarGeneration = () => {
+    if(!generationPreview)return;
+    try {
+      const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
+      if(generationPreview.fingerprint!==calendarGenerationFingerprint(draft,live.mapping,live.capacity,live.context))throw new Error('Draf/kalender/referensi berubah. Tinjau Regenerate terbaru.');
+      const errors=validateCalendarMeetingCandidate(generationPreview.candidate,draft,live.mapping,live.capacity,live.context);if(errors.length)throw new Error(errors.join(' '));
+      if(!onSave(generationPreview.candidate,{draft,calendarGeneration:generationPreview}))throw new Error('Penyimpanan gagal. Data lama dipertahankan.');
+      setDraft(generationPreview.candidate);setGenerationPreview(null);setGenerationError(null);setGenerationNotice('Struktur tersimpan tepat mengikuti slot aktual. Tinjau dan simpan ulang jadwal pada Langkah 5.');
+    } catch(error) {setGenerationError(error instanceof Error ? error.message : String(error));}
   };
 
   const handleCopyDiagnostic = async () => {
@@ -426,6 +245,12 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
         validation,
         lastAIDiagnostic,
         lastAIGenerationError,
+        alignmentProposal: alignment,
+        alignmentSourceError: alignmentSource.error,
+        optimizationError,
+        generationError,
+        isOptimizing,
+        isGeneratingMeetings,
       });
 
       if (navigator.clipboard?.writeText) {
@@ -504,38 +329,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     return "Lengkapi Pertemuan sesuai Kalender dengan AI";
   }, [totalMeetingsCount]);
 
-  const isAINoWork = useMemo(() => {
-    if (!isCapacityReady || !meetingCapacity) return false;
-    const targetS1 = meetingCapacity.semester1.targetMeetingCount;
-    const targetS2 = meetingCapacity.semester2.targetMeetingCount;
-
-    let candidatePlacement = draft.semesterPlacement;
-    if (!candidatePlacement || candidatePlacement.mode !== 'CONTIGUOUS_BOUNDARY') {
-      const boundary = suggestSemesterBoundaryByMeetingSlots(draft, mapping, targetS1, targetS2);
-      if (boundary !== undefined) {
-        candidatePlacement = {
-          mode: 'CONTIGUOUS_BOUNDARY',
-          semester1LastUnitId: boundary,
-          updatedAt: new Date().toISOString()
-        };
-      }
-    }
-    if (!candidatePlacement) return false;
-    const plac = resolveUnitSemesterPlacement({ ...draft, semesterPlacement: candidatePlacement }, mapping);
-    if (!plac.isValid) return false;
-
-    let s1Existing = 0;
-    let s2Existing = 0;
-    const s1UnitIds = new Set(plac.semester1UnitIds);
-    draft.units.forEach((u) => {
-      const count = u.meetings?.length || 0;
-      if (s1UnitIds.has(u.unitId)) s1Existing += count;
-      else s2Existing += count;
-    });
-
-    const isCoverageComplete = validation.isComplete && !isStale;
-    return s1Existing <= targetS1 && s2Existing <= targetS2 && isCoverageComplete;
-  }, [isCapacityReady, meetingCapacity, draft, mapping, validation.isComplete, isStale]);
+  const isAINoWork = useMemo(() => !!alignmentSource.source && !validateCalendarMeetingCandidate(draft,draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context).length,[draft,mapping,alignmentSource]);
 
   const capacityOverflow = useMemo(() => {
     if (!meetingCapacity) return null;
@@ -1053,12 +847,21 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
         </div>
       )}
 
+      <div className="mx-5 mt-3 space-y-2">
+        <button type="button" onClick={handleRegenerate} disabled={isGeneratingMeetings || validation.isStale} className="px-4 py-2 rounded-lg border border-blue-300 text-blue-700 disabled:opacity-50">Regenerate sesuai Slot Aktual</button>
+        {generationPreview && <div role="dialog" aria-label="Pratinjau Generate Kalender" className="p-4 border rounded-xl bg-slate-50 space-y-3">
+          <p>Jumlah dan plannedJP telah divalidasi terhadap seluruh slot kalender terkonfirmasi. Belum ada data tersimpan yang berubah. Regenerate menyimpan konten lama sebagai riwayat sumber; pertemuan terlindungi tidak boleh diganti.</p>
+          <table className="w-full text-sm"><thead><tr><th>Bab</th><th>Sebelum</th><th>Sesudah</th><th>JP per slot aktual</th></tr></thead><tbody>{generationPreview.candidate.units.map(u=><tr key={u.unitId}><td>{mapping.units.find(m=>m.id===u.unitId)?.title}</td><td>{draft.units.find(old=>old.unitId===u.unitId)?.meetings.length || 0}</td><td>{u.meetings.length}</td><td>Sebelum: {draft.units.find(old=>old.unitId===u.unitId)?.meetings.map(m=>m.plannedJP ?? '?').join(' / ')} → Slot aktual: {[...u.meetings].sort((a,b)=>a.order-b.order).map(m=>m.plannedJP).join(' / ')}<details><summary>Konten usulan</summary>{u.meetings.map(m=><p key={m.id}>{m.order}. {m.title} — {m.plannedJP} JP</p>)}</details></td></tr>)}</tbody></table>
+          <button type="button" onClick={applyCalendarGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Setujui &amp; Simpan Hasil Generate</button>
+          <button type="button" onClick={()=>setGenerationPreview(null)} className="px-4 py-2">Batal Regenerate</button>
+        </div>}
+      </div>
       {alignmentSource.error && <p className="m-6 text-red-700">Penyesuaian belum tersedia: {alignmentSource.error}</p>}
       {alignment && <div className="m-6 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
         {alignment.totals.map(t => <p key={t.semester}>Semester {t.semester}: Kapasitas kalender <strong>{t.target}</strong> · Jumlah alokasi <strong>{t.allocated}</strong> · Selisih {t.allocated-t.target} · {alignment.errors.length ? 'Konflik' : t.allocated<=t.target ? 'Dalam kapasitas' : 'Perlu penyesuaian'}
           {t.allocated>t.target && <span className="block text-amber-800">Alokasi {t.allocated} pertemuan melebihi kapasitas Semester {t.semester} sebanyak {t.allocated-t.target} pertemuan.</span>}
           {t.allocated<t.target && <span className="block">Tersisa {t.target-t.allocated} slot. Alokasi saat ini diperbolehkan; penambahan bersifat opsional.</span>}</p>)}
-        <button type="button" disabled={isGeneratingMeetings} onClick={() => {setAddAlignmentSlots(false);optimizationRun.current++;setIsOptimizing(false);setOptimizationDraft(undefined);setOptimizationError(null);setAlignmentPreview(proposeMeetingAlignment(draft,mapping,alignmentSource.source!.capacity,alignmentSource.source!.context));}} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">Tinjau Penyesuaian</button>
+        <button type="button" disabled={isGeneratingMeetings} onClick={() => {setAddAlignmentSlots(false);cancelOptimization();setOptimizationDraft(undefined);setOptimizationError(null);setAlignmentPreview(proposeMeetingAlignment(draft,mapping,alignmentSource.source!.capacity,alignmentSource.source!.context));}} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">Tinjau Penyesuaian</button>
         {alignmentPreview && <div role="dialog" aria-label="Preview penyesuaian pertemuan" className="space-y-3">
           <button type="button" disabled={isOptimizing || isGeneratingMeetings} onClick={requestOptimization} className="px-4 py-2 rounded-lg border border-blue-300 text-blue-700 disabled:opacity-50">{isOptimizing ? 'Menyiapkan Draf AI…' : 'Usulkan Optimalisasi dengan AI'}</button>
           {optimizationError && <p className="text-red-700">Draf AI: {optimizationError}</p>}
@@ -1077,7 +880,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
           {alignmentPreview.impacts.map(impact => <p key={impact} className="text-amber-800">{impact}</p>)}
           {alignmentPreview.fingerprint!==alignment.fingerprint && <p className="text-red-700">Kapasitas, konten, atau dependensi berubah. Batal dan tinjau usulan terbaru.</p>}
           <button type="button" onClick={applyAlignment} disabled={isGeneratingMeetings || isOptimizing || !alignmentPreview.operations.length || alignment.errors.length>0 || alignmentPreview.errors.length>0 || alignmentPreview.fingerprint!==alignment.fingerprint} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50">Setujui &amp; Terapkan</button>
-          <button type="button" onClick={() => {optimizationRun.current++;setIsOptimizing(false);setAlignmentPreview(null);setAddAlignmentSlots(false);setOptimizationDraft(undefined);setOptimizationError(null);}} className="px-4 py-2">Batal</button>
+          <button type="button" onClick={() => {cancelOptimization();setAlignmentPreview(null);setAddAlignmentSlots(false);setOptimizationDraft(undefined);setOptimizationError(null);}} className="px-4 py-2">Batal</button>
         </div>}
       </div>}
       {/* Overflow Warning if capacity decreased without auto-deletion */}

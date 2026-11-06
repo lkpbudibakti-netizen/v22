@@ -569,7 +569,7 @@ export interface LearningMeeting {
   alignmentMerge?: {
     sources: LearningMeeting[];
     requiredJP: number;
-    strategy?: 'MERGE' | 'REDUCE_REDUNDANT' | 'COMPACT' | 'REDISTRIBUTE';
+    strategy?: 'MERGE' | 'REDUCE_REDUNDANT' | 'COMPACT' | 'REDISTRIBUTE' | 'REGENERATE';
   };
 }
 

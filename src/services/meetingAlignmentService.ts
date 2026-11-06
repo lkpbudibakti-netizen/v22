@@ -16,7 +16,7 @@ export interface MeetingAlignmentContext {
   protectedMeetings: Record<string, string[]>;
   protectedContent: Record<string, LearningMeeting>;
   slotJP: { semester1: number[]; semester2: number[] };
-  slotDetails?: { semester1: { id: string; date: string; sessionId: string; jp: number }[]; semester2: { id: string; date: string; sessionId: string; jp: number }[] };
+  slotDetails?: { semester1: { id: string; date: string; sessionId: string; sessionOrder?: number; jp: number }[]; semester2: { id: string; date: string; sessionId: string; sessionOrder?: number; jp: number }[] };
   protectedSlots?: Record<string, { date: string; sessionId: string; jp: number }>;
   minutesPerJP?: number;
   impacts: string[];
@@ -60,7 +60,7 @@ export interface MeetingAlignmentProposal {
   slotStatus: 'VALID' | 'UNKNOWN' | 'CONFLICT';
   curriculumJPStatus: 'SEPARATE_REVIEW';
 }
-export interface MeetingAlignmentApproval { draft: UnitExecutionPlanData; proposal: MeetingAlignmentProposal }
+export type MeetingAlignmentApproval = { draft: UnitExecutionPlanData; proposal: MeetingAlignmentProposal } | { draft: UnitExecutionPlanData; calendarGeneration: import('./unitMeetingAllocationService').CalendarGenerationReview };
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(id => b.includes(id));
 const normalized = (text: string) => text.trim().replace(/\s+/g,' ').toLocaleLowerCase('id');
 const assessment = /\b(asesmen|assessment|ujian|sumatif|summative|evaluasi|penilaian|tes|pas|sas|pts|psts|sts|pat|sat)\b/i;
@@ -82,7 +82,7 @@ function activityBudgetIssue(m: LearningMeeting, context: MeetingAlignmentContex
   if (demand===null || Math.abs(m.activities.reduce((sum,a)=>sum+a.durationMinutes!,0)-demand*context.minutesPerJP)>1e-6) return `Kegiatan ${m.id} tidak cocok dengan kebutuhan JP pertemuan.`;
   return null;
 }
-function prerequisiteIssue(meetings: LearningMeeting[], atp?: ATPData): string | null {
+export function validateMeetingATPOrder(meetings: LearningMeeting[], atp?: ATPData): string | null {
   if (!atp) return 'ATP canonical belum tersedia.';
   const introduced=new Set<string>(); let previous=-Infinity;
   for (const meeting of [...meetings].sort((a,b)=>a.order-b.order)) {
@@ -104,7 +104,7 @@ function groupIssue(group: LearningMeeting[], context: MeetingAlignmentContext):
     const issue=activityBudgetIssue(m,context);if(issue)return issue;
   }
   if(group.some(m=>!sameScope(m,group[0])) && group.some(m=>!m.activities?.length)) return 'Lingkup berbeda memerlukan bukti kegiatan dan urutan substansi; jangan menggabungkan hanya berdasarkan ID.';
-  return prerequisiteIssue(group,context.atp);
+  return validateMeetingATPOrder(group,context.atp);
 }
 function mergeGroup(group: LearningMeeting[], context: MeetingAlignmentContext, redundant=false): LearningMeeting {
   const merged=group.slice(1).reduce((target,m)=>mergeReconciliationContent(target,m),structuredClone(group[0]));
@@ -185,7 +185,7 @@ export function validateMeetingOptimizationDraft(raw:unknown, plan:UnitExecution
       if((['materialIds','linkedAtpItemIds','linkedTpIds'] as const).some(key=>beforeOwner[key].some(id=>!afterOwner[key].includes(id))))return fail('Kegiatan yang dipindahkan wajib membawa seluruh lineage materi/TP/ATP sumbernya; tidak boleh mengalihkan substansi ke TP lain.');
     }
     const ids=activities.map(a=>a.id);if(originals.some((a,i)=>ids[i]!==a.id))return fail('AI membalik urutan kegiatan/prasyarat.');
-    const issue=prerequisiteIssue(updated.meetings,context.atp);if(issue)return fail(issue);
+    const issue=validateMeetingATPOrder(updated.meetings,context.atp);if(issue)return fail(issue);
     for(const m of updated.meetings) {const issue=activityBudgetIssue(m,context);if(issue)return fail(issue);}
   }
   return {draft:structuredClone(draft),plan:next,errors:[]};
@@ -242,7 +242,7 @@ export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUn
         if(!isEmptyAlignmentMeeting(m) && meetingPlannedJP(m,context)===null)result.errors.push(`${m.id}: kebutuhan JP pertemuan belum diketahui. Isi kebutuhan JP/kegiatan; JP ATP tidak boleh digandakan.`);
         const issue=activityBudgetIssue(m,context);if(issue)result.errors.push(issue);
       }
-      for(const unit of units) {const issue=prerequisiteIssue(input.filter(m=>m.unitId===unit.id),context.atp);if(issue)result.errors.push(issue);}
+      for(const unit of units) {const issue=validateMeetingATPOrder(input.filter(m=>m.unitId===unit.id),context.atp);if(issue)result.errors.push(issue);}
       const conflicts=new Set<string>(), memo=new Map<string,{cost:number;meetings:LearningMeeting[];operations:AlignmentOperation[]}|null>();
       type Choice={consume:number;out:LearningMeeting[];type?:AlignmentStrategy;cost:number;reason:string};
       const visit=(index:number,slot:number,hasOutput:boolean):{cost:number;meetings:LearningMeeting[];operations:AlignmentOperation[]}|null=>{

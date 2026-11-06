@@ -1,3 +1,4 @@
+import { resolveLearningPlanMeetingBudgets } from '../src/services/learningPlanActivityMeetingService';
 import { validateLearningPlanActivityMeetings } from '../src/services/learningPlanActivityMeetingService';
 import { resolveEffectiveSubjectSlots } from '../src/services/subjectScheduleService';
 import { resolveLearningMeetingSchedule, buildLearningMeetingScheduleData, validateLearningMeetingScheduleData } from '../src/services/learningMeetingScheduleService';
@@ -320,6 +321,71 @@ test('empty removal cannot shift the dated slot of a realized meeting',()=>{
   const r=review(state);assert.ok(r.proposal.errors.length);assert.ok(r.proposal.conflicts.some(c=>c.includes('terlindungi')));assert.throws(r.apply);
 });
 
+
+function calendarContent(request:ReturnType<typeof allocation.prepareCalendarMeetingGeneration>,mapping:any) {
+  return {units:request.allocation.units.map(target=>{const unit=mapping.units.find((u:any)=>u.id===target.unitId);return {unitId:target.unitId,meetings:Array.from({length:target.newTargetCount},(_,i)=>({title:unit.title+' sesi '+(i+1),materialIds:unit.materials.map((m:any)=>m.id),linkedTpIds:unit.linkedTpIds,linkedAtpItemIds:unit.linkedAtpItemIds,plannedJP:999}))};})};
+}
+function finalReview(state:AppStorageStateV5,mode:'COMPLETE'|'REGENERATE'='COMPLETE') {
+  const r=review(state),request=allocation.prepareCalendarMeetingGeneration(r.draft,r.source.mapping,r.source.capacity,r.source.context,mode);
+  const result=allocation.buildCalendarMeetingCandidate(r.draft,r.source.mapping,r.source.capacity,r.source.context,mode,calendarContent(request,r.source.mapping),newId);
+  return {...r,request,result};
+}
+test('final generation fills 10 confirmed slots exactly, including already complete curriculum coverage',()=>{
+  const r=finalReview(fixture([1,1],[10,1])),next=r.result.candidate;
+  assert.equal(next.units[0].meetings.length,10);assert.ok(next.units[0].meetings.every(m=>m.plannedJP===4));
+  assert.equal(r.request.allocation.semester1.newTarget,9);assert.equal(next.units[0].meetings[0].id,r.draft.units[0].meetings[0].id);
+  assert.deepEqual(allocation.validateCalendarMeetingCandidate(next,r.draft,r.source.mapping,r.source.capacity,r.source.context),[]);
+  storage.saveUnitExecutionPlanV5('y',next,{draft:r.draft,calendarGeneration:r.result});assert.deepEqual(storage.getUnitExecutionPlanV5('y'),next);
+});
+test('system binds 4/2 JP from ordered actual slots and ignores AI JP, with correct Modul Ajar budgets',()=>{
+  const state=fixture([0,0]);mixedPattern(state);const weekly=state.semesterData.subjectWeeklySchedules![0].value;weekly.sessions[0].jp=4;weekly.sessions[1].jp=2;
+  const r=finalReview(state),meetings=r.result.candidate.units[0].meetings;
+  assert.deepEqual(meetings.map(m=>m.plannedJP),[4,2]);
+  const budgets=resolveLearningPlanMeetingBudgets(meetings.map(m=>({meetingId:m.id,jp:m.plannedJP!,plannedJP:m.plannedJP})),{level:'SD',grade:'2',subject:'PJOK',curriculumType:'KURIKULUM_MERDEKA',curriculum:'Kurikulum Merdeka',academicYear:'2026/2027'});
+  assert.equal(budgets.isValid,true);assert.deepEqual(budgets.meetings.map(m=>m.durationMinutes),[140,70]);
+});
+test('holiday removes exactly one effective slot and generated meeting without editing the calendar',()=>{
+  const state=fixture([0,0],[10,1]),cal=state.semesterData.academicCalendar[0].value;
+  cal.days.find(d=>d.date===cal.calendar.startDate)!.status='HOLIDAY';const before=JSON.stringify(state.semesterData.academicCalendar);
+  const r=finalReview(state);assert.equal(r.request.slots.semester1.length,9);assert.equal(r.result.candidate.units[0].meetings.length,9);
+  storage.saveUnitExecutionPlanV5('y',r.result.candidate,{draft:r.draft,calendarGeneration:r.result});assert.equal(JSON.stringify(storage.loadStorageV5().semesterData.academicCalendar),before);
+});
+test('48 old meetings regenerate to 41 only after approval, retaining source content; protected data rejects preflight',()=>{
+  const state=fixture([1,48],[1,41]),r=finalReview(state,'REGENERATE'),before=memory.get(storage.STORAGE_KEY_V5);
+  assert.equal(r.result.candidate.units[1].meetings.length,41);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+  assert.deepEqual(r.result.candidate.units[1].meetings[0].alignmentMerge!.sources,r.draft.units[1].meetings);
+  storage.saveUnitExecutionPlanV5('y',r.result.candidate,{draft:r.draft,calendarGeneration:r.result});assert.equal(storage.getUnitExecutionPlanV5('y')!.units[1].meetings.length,41);
+  state.semesterData.journalRealizations=[{semesterPlanId:'sp2',value:[{semesterPlanId:'sp2',meetingId:'m1-0',outcome:'Executed',updatedAt:'2026-11-06'}]}];
+  const protectedSource=review(state),stored=memory.get(storage.STORAGE_KEY_V5);
+  assert.throws(()=>allocation.prepareCalendarMeetingGeneration(protectedSource.draft,protectedSource.source.mapping,protectedSource.source.capacity,protectedSource.source.context,'REGENERATE'),/terlindungi/);
+  assert.equal(memory.get(storage.STORAGE_KEY_V5),stored);
+});
+test('final generation rejects estimates, invalid AI counts/coverage, stale calendar and failed save atomically',()=>{
+  const r=finalReview(fixture([0,0],[3,1]));
+  assert.throws(()=>allocation.prepareCalendarMeetingGeneration(r.draft,r.source.mapping,{...r.source.capacity,semester1:{...r.source.capacity.semester1,capacitySource:'ESTIMATE'}},r.source.context,'COMPLETE'),/estimasi/);
+  const bad=calendarContent(r.request,r.source.mapping);bad.units[0].meetings.pop();
+  assert.throws(()=>allocation.buildCalendarMeetingCandidate(r.draft,r.source.mapping,r.source.capacity,r.source.context,'COMPLETE',bad,newId),/Jumlah/);
+  const incomplete=calendarContent(r.request,r.source.mapping);incomplete.units[0].meetings.forEach(m=>m.materialIds=[]);
+  assert.throws(()=>allocation.buildCalendarMeetingCandidate(r.draft,r.source.mapping,r.source.capacity,r.source.context,'COMPLETE',incomplete,newId));
+  const before=memory.get(storage.STORAGE_KEY_V5);failWrites=true;try{assert.throws(()=>storage.saveUnitExecutionPlanV5('y',r.result.candidate,{draft:r.draft,calendarGeneration:r.result}),/quota/);}finally{failWrites=false;}assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+  const changed=storage.loadStorageV5();changed.semesterData.academicCalendar[0].value.calendar.updatedAt='new-calendar';storage.saveStorageV5(changed);const latest=memory.get(storage.STORAGE_KEY_V5);
+  assert.throws(()=>storage.saveUnitExecutionPlanV5('y',r.result.candidate,{draft:r.draft,calendarGeneration:r.result}),/berubah/);assert.equal(memory.get(storage.STORAGE_KEY_V5),latest);
+});
+async function calendarGenerationUIAndRoute() {
+  const r=review(fixture([1,2],[2,1])),savedBefore=memory.get(storage.STORAGE_KEY_V5);let sent:any,calls=0;
+  const props:any={mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__generate:async(params:any)=>{sent=params;return {units:params.unitMeetingTargets.map((target:any)=>{const unit=r.source.mapping.units.find(u=>u.id===target.unitId)!;return{unitId:unit.id,meetings:Array.from({length:target.newTargetCount},()=>({title:unit.title,materialIds:unit.materials.map(m=>m.id),linkedAtpItemIds:unit.linkedAtpItemIds,linkedTpIds:unit.linkedTpIds,plannedJP:99}))};})};},onSave:(next:UnitExecutionPlanData,approval:any)=>{calls++;storage.saveUnitExecutionPlanV5('y',next,approval);props.unitExecutionPlan=next;return true;}};
+  const h=ui(props);await h.button('Regenerate sesuai Slot Aktual').props.onClick();assert.equal(sent.calendarSlots.confirmed,true);assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),savedBefore);
+  h.button('Batal Regenerate').props.onClick();assert.equal(calls,0);await h.button('Regenerate sesuai Slot Aktual').props.onClick();h.button('Setujui & Simpan Hasil Generate').props.onClick();assert.equal(calls,1);
+  assert.deepEqual(storage.getUnitExecutionPlanV5('y')!.units.map(u=>u.meetings.length),[2,1]);console.log('PASS real Regenerate UI sends actual slots, cancellation preserves data, approval saves exact counts');passed++;
+  const server=readFileSync('server.ts','utf8'),start=server.indexOf("app.post('/api/ai/generate-unit-meetings'"),end=server.indexOf('\napp.post(',start+10);let handler:any;
+  runInNewContext(ts.transpileModule(server.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{console,app:{post:(_p:string,f:any)=>handler=f},assertMeetingSourceLineage,MeetingCoverageError,validateUnitExecutionPlan:execution.validateUnitExecutionPlan,validateCalendarMeetingSlots:allocation.validateCalendarMeetingSlots});
+  const body:any=sent;body.unitMeetingTargets[0].newTargetCount--;
+  let status=200,payload:any;const res:any={status:(n:number)=>{status=n;return res;},json:(v:any)=>{payload=v;return res;}};
+  await handler({body},res);assert.equal(status,400);assert.equal(payload.code,'UNIT_TARGET_INVALID');
+  body.calendarSlots.confirmed=false;await handler({body},res);assert.equal(status,400);assert.equal(payload.code,'CALENDAR_SLOTS_INVALID');
+  console.log('PASS real final-mode backend rejects underfilled targets and unconfirmed calendars before provider call');passed++;
+}
+
 function ui(props:any) {
   const values:any[]=[];let cursor=0;
   const source=readFileSync('src/components/UnitExecutionPlanManager.tsx','utf8');
@@ -327,7 +393,7 @@ function ui(props:any) {
   const exports:any={};
   runInNewContext(compiled,{exports,React,console,crypto:{randomUUID:newId},structuredClone,JSON,Date,Math,...icons,...alignment,...execution,...placement,...allocation,...storage,Map,Set,requestMeetingOptimizationAI:props.__optimization || (async()=>{throw new Error('AI unavailable');}),
     useMemo:(factory:()=>any)=>factory(),useEffect:()=>{},useRef:(initial:any)=>{const i=cursor++;if(!(i in values))values[i]={current:initial};return values[i];},useState:(initial:any)=>{const i=cursor++;if(!(i in values)) values[i]=typeof initial==='function'?initial():initial;return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}];},
-    recordDiagnosticEvent:()=>{},setTimeout:()=>{},AIMeetingGenerationError:class extends Error{},generateUnitMeetingsWithAI:()=>{throw new Error('AI should not be called');},
+    recordDiagnosticEvent:props.__recordEvent || (()=>{}),buildUnitExecutionPlanAIDiagnosticReport,navigator:{clipboard:{writeText:async(report:string)=>props.__copyReport?.(report)}},setTimeout:()=>{},AIMeetingGenerationError:class extends Error{},generateUnitMeetingsWithAI:props.__generate || (()=>{throw new Error('AI should not be called');}),
   });
   const walk=(e:any):any[]=>!React.isValidElement(e)?[]:[e,...React.Children.toArray((e.props as any).children).flatMap(walk)];
   const nodes=()=>{cursor=0;return walk(exports.UnitExecutionPlanManager(props));};
@@ -371,9 +437,9 @@ async function backendZeroWork() {
 
 async function aiDraftHandlers() {
   const r=review(fixture([1,1])), draft:alignment.MeetingOptimizationDraft={sourceFingerprint:alignment.optimizationFingerprint(r.draft,r.source.mapping,r.source.context),reason:'Perjelas judul tanpa mengurangi substansi/JP',edits:[{id:'m0-0',title:'Kegiatan 1 — penjelasan konteks'}]};
-  let calls=0;const props:any={mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__optimization:async()=>draft,onSave:(next:UnitExecutionPlanData,approval:any)=>{calls++;storage.saveUnitExecutionPlanV5('y',next,approval);return true;}};
+  let calls=0;const optimizationEvents:any[]=[];const props:any={__recordEvent:(event:any)=>optimizationEvents.push(event),mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__optimization:async()=>draft,onSave:(next:UnitExecutionPlanData,approval:any)=>{calls++;storage.saveUnitExecutionPlanV5('y',next,approval);return true;}};
   const h=ui(props),before=memory.get(storage.STORAGE_KEY_V5);h.button('Tinjau Penyesuaian').props.onClick();
-  await h.button('Usulkan Optimalisasi dengan AI').props.onClick();assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
+  await h.button('Usulkan Optimalisasi dengan AI').props.onClick();assert.deepEqual(optimizationEvents.map(e=>e.action),['AI_OPTIMIZATION_REQUEST','AI_OPTIMIZATION_DRAFT_READY']);assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),before);
   assert.equal(h.button('Setujui & Terapkan').props.disabled,false);h.button('Setujui & Terapkan').props.onClick();assert.equal(calls,1);
   const saved=storage.getUnitExecutionPlanV5('y')!;assert.equal(saved.units[0].meetings[0].title,draft.edits[0].title);assert.deepEqual(saved.units[0].meetings[0].alignmentMerge!.sources[0],r.draft.units[0].meetings[0]);
   props.unitExecutionPlan=saved;assert.ok(!h.nodes().some(n=>n.props.role==='dialog'));assert.ok(!h.nodes().some(n=>n.type==='p' && React.Children.toArray(n.props.children).join('').includes('Konflik')));
@@ -381,7 +447,7 @@ async function aiDraftHandlers() {
   const fresh=review(fixture([1,1]));let release:(value:any)=>void=()=>{};
   const pending=ui({...props,mapping:fresh.source.mapping,unitExecutionPlan:fresh.draft,__optimization:()=>new Promise(resolve=>{release=resolve;})});pending.button('Tinjau Penyesuaian').props.onClick();
   const request=pending.button('Usulkan Optimalisasi dengan AI').props.onClick();pending.button('Batal').props.onClick();release(draft);await request;
-  assert.ok(!pending.nodes().some(n=>n.props.role==='dialog'));console.log('PASS actual UI: cancel discards a late AI result');passed++;
+  assert.ok(!pending.nodes().some(n=>n.props.role==='dialog'));assert.ok(optimizationEvents.some(e=>e.action==='AI_OPTIMIZATION_CANCELLED'));console.log('PASS actual UI: cancel discards a late AI result');passed++;
   const source=readFileSync('server.ts','utf8'),start=source.indexOf("app.post('/api/ai/recommend-meeting-reconciliation'"),end=source.indexOf('\napp.post(',start+10);let handler:any,modelResult:any={reason:'Judul diperjelas',edits:[{id:'m0-0',title:'Kegiatan 1 — konteks AI'}]};
   const compiled=ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
   runInNewContext(compiled,{console,app:{post:(_path:string,value:any)=>handler=value},validateUnitExecutionPlan:execution.validateUnitExecutionPlan,...alignment,resolveApiKey:()=> 'mock-key',createAIClient:()=>({}),generateContentWithRetry:async()=>({text:JSON.stringify(modelResult)})});
@@ -392,6 +458,28 @@ async function aiDraftHandlers() {
   console.log('PASS actual optimization route with mocked provider: canonical draft accepted, invented ID/JP rejected, storage unchanged');passed++;
 }
 
+
+
+test('diagnostic reports current capacity instead of an old AI snapshot, with actual optimization blockers',()=>{
+  const state=fixture([1,2],[1,1]);delete state.annualData.unitExecutionPlans![0].value.units[1].meetings[0].plannedJP;
+  const r=review(state),report=buildUnitExecutionPlanAIDiagnosticReport({mapping:r.source.mapping,unitExecutionPlan:r.draft,capacityContext:r.source.capacity,
+    validation:execution.validateUnitExecutionPlan(r.draft,r.source.mapping,r.source.context.atp,r.source.context.tp),alignmentProposal:r.proposal,isGeneratingMeetings:false,isOptimizing:false,
+    lastAIDiagnostic:{capacity:{semester1:{target:99,existing:99,requestedNew:0},semester2:{target:88,existing:88,requestedNew:0}}}});
+  assert.ok(report.includes('S2 target=1 existing=2 requestedNew=0'));assert.ok(!report.includes('S2 target=88'));
+  assert.ok(report.includes('withinCapacity: false'));assert.ok(report.includes('isComplete: true'));assert.ok(report.includes('missing=[m1-0]'));
+  assert.ok(report.includes('kebutuhan JP pertemuan belum diketahui'));assert.ok(report.includes('slotStatus: CONFLICT'));assert.ok(report.includes('generationInProgress: false'));
+  const without=buildUnitExecutionPlanAIDiagnosticReport({mapping:r.source.mapping,unitExecutionPlan:r.draft,capacityContext:r.source.capacity});
+  assert.ok(without.includes('meetingStatus: NOT_EVALUATED'));assert.ok(without.includes('this report cannot establish optimization feasibility'));
+});
+async function generationPreflightTelemetry() {
+  const r=review(fixture([1,2],[1,1])),events:any[]=[];let copied='';
+  const props:any={mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,onSave:()=>true,__recordEvent:(event:any)=>events.push(event),__copyReport:(report:string)=>{copied=report;}};
+  const h=ui(props);const button=h.nodes().find(n=>n.type==='button' && n.props.onClick?.name==='handleGenerateWithAI');assert.ok(button);
+  await button.props.onClick();assert.deepEqual(events.map(e=>e.action),['AI_GENERATION_REQUEST','AI_GENERATION_BLOCKED']);assert.equal(events[1].metadata.code,'CAPACITY_CONFLICT');
+  await h.nodes().find(n=>n.type==='button' && n.props.onClick?.name==='handleCopyDiagnostic').props.onClick();
+  assert.ok(copied.includes('code: CAPACITY_CONFLICT'));assert.ok(copied.includes('stage: CAPACITY_CHECK'));assert.ok(copied.includes('generationInProgress: false'));assert.ok(copied.includes('Proposed Distribution:'));
+  console.log('PASS real generation preflight logs CAPACITY_CONFLICT terminal state without calling Gemini');passed++;
+}
 
 async function optimizedImportRoundtrip() {
   const state=fixture([3,1]);mixedPattern(state);const meetings=state.annualData.unitExecutionPlans![0].value.units[0].meetings;
@@ -405,6 +493,8 @@ async function optimizedImportRoundtrip() {
   console.log('PASS actual optimized-plan ZIP import/export: planned JP, source provenance and remapped activity/meeting IDs retained');passed++;
 }
 
+await calendarGenerationUIAndRoute();
+await generationPreflightTelemetry();
 await optimizedImportRoundtrip();
 await backendZeroWork();
 await aiDraftHandlers();

@@ -1,3 +1,4 @@
+import { calendarGenerationFingerprint, prepareCalendarMeetingGeneration, validateCalendarMeetingCandidate } from './unitMeetingAllocationService';
 import { applyMeetingAlignment, type AlignmentCapacity, type MeetingAlignmentContext, type MeetingAlignmentApproval } from './meetingAlignmentService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
 import { resolveSemesterCapacityV5 } from './jpEngine';
@@ -1412,7 +1413,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
     if(slots.isReady) {
       const ordered=[...slots.slots].sort((a,b) => a.date.localeCompare(b.date) || (a.sessionOrder || 0)-(b.sessionOrder || 0));
       context.slotJP[key]=ordered.map(slot => slot.jp);
-      context.slotDetails![key]=ordered.map(({id,date,sessionId,jp})=>({id,date,sessionId,jp}));
+      context.slotDetails![key]=ordered.map(({id,date,sessionId,jp,sessionOrder})=>({id,date,sessionId,jp,sessionOrder:sessionOrder ?? weekly?.sessions.find(s=>s.id===sessionId)?.order}));
       const year=state.yearPlans.find(y=>y.id===yearPlanId)!;
       const budgets=resolveLearningPlanMeetingBudgets(ordered.map(s=>({meetingId:s.id,jp:s.jp})),{...year,curriculum:year.curriculumType==='KURIKULUM_MERDEKA'?'Kurikulum Merdeka':'Kurikulum 2013'});
       if(budgets.isValid && budgets.meetings.length)context.minutesPerJP=budgets.meetings[0].minutesPerJP;
@@ -1515,7 +1516,13 @@ export function saveUnitExecutionPlanV5(
       if (JSON.stringify(updated) !== JSON.stringify(original)) throw new Error(`Pertemuan terlindungi ${id} memiliki jurnal/absensi/realisasi/rujukan manual; perubahan ditolak.`);
     }
   }
-  if (alignmentApproval) {
+  if (alignmentApproval && 'calendarGeneration' in alignmentApproval) {
+    const live=getMeetingAlignmentSourceV5(yearPlanId,state),review=alignmentApproval.calendarGeneration;
+    prepareCalendarMeetingGeneration(alignmentApproval.draft,live.mapping,live.capacity,live.context,review.mode);
+    if(review.fingerprint!==calendarGenerationFingerprint(alignmentApproval.draft,live.mapping,live.capacity,live.context) || JSON.stringify(review.candidate)!==JSON.stringify(value))throw new Error('Kalender, draf, atau referensi berubah. Tinjau Regenerate terbaru; data lama dipertahankan.');
+    const errors=validateCalendarMeetingCandidate(value,alignmentApproval.draft,live.mapping,live.capacity,live.context);if(errors.length)throw new Error(errors.join(' '));
+  }
+  if (alignmentApproval && 'proposal' in alignmentApproval) {
     const live = getMeetingAlignmentSourceV5(yearPlanId, state);
     const existingIds = new Set(alignmentApproval.draft.units.flatMap(u => u.meetings.map(m => m.id)));
     const added = value.units.flatMap(u => u.meetings).filter(m => !existingIds.has(m.id)).map(m => m.id);
@@ -1524,6 +1531,8 @@ export function saveUnitExecutionPlanV5(
     if (!alignmentApproval.proposal.operations.length) return value;
     const old = state.annualData.unitExecutionPlans?.find(e => e.yearPlanId === yearPlanId)?.value;
     if (old && value.updatedAt === old.updatedAt) throw new Error('Revisi struktur pertemuan harus berubah agar jadwal diinvalidasi.');
+  }
+  if (alignmentApproval) {
     const semesters = state.semesterPlans.filter(sp => sp.yearPlanId === yearPlanId);
     const semesterIds = new Set(semesters.map(sp => sp.id));
     const placement = resolveUnitSemesterPlacement(value, mapping);

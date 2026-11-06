@@ -1489,6 +1489,7 @@ export class AIMeetingGenerationError extends Error {
 }
 
 export interface GenerateUnitMeetingsWithAIParams {
+  calendarSlots?: import('./unitMeetingAllocationService').CalendarMeetingSlots;
   subject?: string;
   grade?: string;
   phase?: string;

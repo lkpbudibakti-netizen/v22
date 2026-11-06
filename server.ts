@@ -6,6 +6,7 @@ import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets
 import express from 'express';
 import { validateATPUnitMappingCanonical } from './src/services/atpUnitMappingValidationService';
 import { validateUnitExecutionPlan } from './src/services/unitExecutionPlanService';
+import { validateCalendarMeetingSlots } from './src/services/unitMeetingAllocationService';
 import { optimizationFingerprint, validateMeetingOptimizationDraft } from './src/services/meetingAlignmentService';
 import { assertMeetingSourceLineage, MeetingCoverageError, repairUnitMeetingCoverage } from './server/unitMeetingCoverageRepair';
 import path from 'path';
@@ -1890,6 +1891,7 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
     currentPlan,
     capacityContext,
     unitMeetingTargets,
+    calendarSlots,
   } = req.body || {};
 
   if (!mapping || !Array.isArray(mapping.units)) {
@@ -2013,6 +2015,13 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
 
   const targetS1 = capacityContext?.semester1?.targetMeetingCount ?? 0;
   const targetS2 = capacityContext?.semester2?.targetMeetingCount ?? 0;
+  if (calendarSlots) {
+    const errors=validateCalendarMeetingSlots(calendarSlots);
+    if(!errors.length && (calendarSlots.semester1.length!==targetS1 || calendarSlots.semester2.length!==targetS2 ||
+        calendarSlots.semester1.reduce((s:number,slot:any)=>s+slot.jp,0)!==capacityContext?.semester1?.totalJP ||
+        calendarSlots.semester2.reduce((s:number,slot:any)=>s+slot.jp,0)!==capacityContext?.semester2?.totalJP))errors.push('Jumlah/total JP harus persis mengikuti slot aktual.');
+    if(errors.length)return res.status(400).json({success:false,code:'CALENDAR_SLOTS_INVALID',error:errors.join(' ')});
+  }
 
   if (![targetS1, targetS2].every(n => Number.isSafeInteger(n) && n >= 0)) {
     return res.status(400).json({ success: false, code: 'CAPACITY_INVALID', error: 'Kapasitas semester harus bilangan bulat valid >= 0.' });
@@ -2194,7 +2203,7 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
     }
   }
 
-  if (sumS1Target > additionalS1 || sumS2Target > additionalS2) {
+  if (sumS1Target > additionalS1 || sumS2Target > additionalS2 || (calendarSlots && (sumS1Target !== additionalS1 || sumS2Target !== additionalS2))) {
     return res.status(400).json({
       success: false,
       code: 'UNIT_TARGET_INVALID',
@@ -2212,10 +2221,13 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
     return res.json({ success: true, data: { units: [] }, engine: 'no_work' });
   }
 
+  const slotCursor={1:0,2:0};
   const unitsContext = sortedMappingUnits.map((unit: any) => {
     const unitPlan = currentPlan?.units?.find((u: any) => u.unitId === unit.id);
     const existingMeetings = unitPlan?.meetings || [];
     const unitTarget = targetsByUnitId.get(unit.id);
+    const actualUnitSlots=calendarSlots ? (unitTarget?.semester===1?calendarSlots.semester1:calendarSlots.semester2).slice(slotCursor[unitTarget!.semester],slotCursor[unitTarget!.semester]+existingMeetings.length+(unitTarget?.newTargetCount || 0)) : undefined;
+    if(unitTarget)slotCursor[unitTarget.semester]+=existingMeetings.length+unitTarget.newTargetCount;
 
     const coveredMaterials = new Set(existingMeetings.flatMap((m: any) => m.materialIds || []));
     const coveredAtp = new Set(existingMeetings.flatMap((m: any) => m.linkedAtpItemIds || []));
@@ -2232,6 +2244,7 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
       unitTitle: unit.title,
       semester,
       newMeetingsToGenerate: unitTarget?.newTargetCount ?? 0,
+      ...(actualUnitSlots ? { readonlyNewSlotJP: actualUnitSlots.slice(existingMeetings.length).map((slot:any)=>slot.jp) } : {}),
       existingMeetingsCount: existingMeetings.length,
       materials: (unit.materials || []).map((m: any) => ({
         id: m.id,
@@ -2292,6 +2305,7 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
 
     const prompt = `Anda adalah pakar pengembang kurikulum dan perangkat pembelajaran Kurikulum Merdeka.
 TUGAS ANDA: Mengisi konten slot Pertemuan baru yang sudah ditentukan secara deterministik untuk setiap Unit / Bab Pembelajaran.
+${calendarSlots ? 'MODE FINAL KALENDER: satu slot aktual = satu pertemuan. Urutan readonlyNewSlotJP per Bab adalah otoritas durasi (mis. 4/2 JP); gunakan untuk menyesuaikan substansi. Jangan menentukan atau mengubah JP, tanggal, urutan, atau jumlah slot. Sistem menetapkan plannedJP setelah respons.' : ''}
 
 TARGET WAJIB PER UNIT (HARUS DIPENUHI SECARA EXACT):
 ${targetPerUnitPrompt}
