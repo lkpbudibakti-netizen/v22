@@ -389,9 +389,9 @@ test('final generation rejects estimates, invalid AI counts/coverage, stale cale
 async function calendarGenerationUIAndRoute() {
   const r=review(fixture([1,2],[2,1])),savedBefore=memory.get(storage.STORAGE_KEY_V5);let sent:any,calls=0;
   const props:any={mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__generate:async(params:any)=>{sent=params;return {units:params.unitMeetingTargets.map((target:any)=>{const unit=r.source.mapping.units.find(u=>u.id===target.unitId)!;return{unitId:unit.id,meetings:Array.from({length:target.newTargetCount},()=>({title:unit.title,materialIds:unit.materials.map(m=>m.id),linkedAtpItemIds:unit.linkedAtpItemIds,linkedTpIds:unit.linkedTpIds,plannedJP:99}))};})};},onSave:(next:UnitExecutionPlanData,approval:any)=>{calls++;storage.saveUnitExecutionPlanV5('y',next,approval);props.unitExecutionPlan=next;return true;}};
-  const h=ui(props);await h.button('Regenerate sesuai Slot Aktual').props.onClick();assert.equal(sent.calendarSlots.confirmed,true);assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),savedBefore);
+  const h=ui(props);h.button('Kosongkan Draf Pertemuan').props.onClick();assert.equal(memory.get(storage.STORAGE_KEY_V5),savedBefore);await h.button('Regenerate sesuai Slot Aktual').props.onClick();assert.equal(sent.calendarSlots.confirmed,true);assert.equal(calls,0);assert.equal(memory.get(storage.STORAGE_KEY_V5),savedBefore);
   h.button('Batal Regenerate').props.onClick();assert.equal(calls,0);await h.button('Regenerate sesuai Slot Aktual').props.onClick();h.button('Setujui & Simpan Hasil Generate').props.onClick();assert.equal(calls,1);
-  assert.deepEqual(storage.getUnitExecutionPlanV5('y')!.units.map(u=>u.meetings.length),[2,1]);console.log('PASS real Regenerate UI sends actual slots, cancellation preserves data, approval saves exact counts');passed++;
+  assert.deepEqual(storage.getUnitExecutionPlanV5('y')!.units.map(u=>u.meetings.length),[2,1]);assert.deepEqual(storage.getUnitExecutionPlanV5('y')!.units[0].meetings[0].alignmentMerge!.sources,r.draft.units[0].meetings);console.log('PASS real Regenerate UI sends actual slots, cancellation preserves data, approval saves exact counts with pre-clear provenance');passed++;
   const server=readFileSync('server.ts','utf8'),start=server.indexOf("app.post('/api/ai/generate-unit-meetings'"),end=server.indexOf('\napp.post(',start+10);let handler:any;
   runInNewContext(ts.transpileModule(server.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{console,app:{post:(_p:string,f:any)=>handler=f},assertMeetingSourceLineage,MeetingCoverageError,validateUnitExecutionPlan:execution.validateUnitExecutionPlan,validateCalendarMeetingSlots:allocation.validateCalendarMeetingSlots});
   const body:any=sent;body.unitMeetingTargets[0].newTargetCount--;
@@ -406,7 +406,7 @@ function ui(props:any) {
   const source=readFileSync('src/components/UnitExecutionPlanManager.tsx','utf8');
   const compiled=ts.transpileModule(source.slice(source.indexOf('function generateStableId')), {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
   const exports:any={};
-  runInNewContext(compiled,{exports,React,console,crypto:{randomUUID:newId},structuredClone,JSON,Date,Math,...icons,...alignment,...execution,...placement,...allocation,...storage,Map,Set,requestMeetingOptimizationAI:props.__optimization || (async()=>{throw new Error('AI unavailable');}),
+  runInNewContext(compiled,{exports,React,console,window:{confirm:props.__confirm || (()=>true)},crypto:{randomUUID:newId},structuredClone,JSON,Date,Math,...icons,...alignment,...execution,...placement,...allocation,...storage,Map,Set,requestMeetingOptimizationAI:props.__optimization || (async()=>{throw new Error('AI unavailable');}),
     useMemo:(factory:()=>any)=>factory(),useEffect:()=>{},useRef:(initial:any)=>{const i=cursor++;if(!(i in values))values[i]={current:initial};return values[i];},useState:(initial:any)=>{const i=cursor++;if(!(i in values)) values[i]=typeof initial==='function'?initial():initial;return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}];},
     recordDiagnosticEvent:props.__recordEvent || (()=>{}),buildUnitExecutionPlanAIDiagnosticReport,navigator:{clipboard:{writeText:async(report:string)=>props.__copyReport?.(report)}},setTimeout:()=>{},AIMeetingGenerationError:class extends Error{},generateUnitMeetingsWithAI:props.__generate || (()=>{throw new Error('AI should not be called');}),
   });
@@ -415,6 +415,20 @@ function ui(props:any) {
   const button=(label:string)=>nodes().find(n=>n.type==='button' && React.Children.toArray(n.props.children).join('')===label);
   return {nodes,button};
 }
+test('clear draft requires confirmation, preserves storage, restores content and refuses protected references',()=>{
+  for(const mode of ['cancel','clear','protected']){
+    const state=fixture([2,1],[2,1]);if(mode==='protected')state.semesterData.journalRealizations=[{semesterPlanId:'sp1',value:[{semesterPlanId:'sp1',meetingId:'m0-0',outcome:'Keep',updatedAt:'2026-11-05'}]}];
+    const r=review(state);let calls=0;
+    const h=ui({mapping:r.source.mapping,unitExecutionPlan:r.draft,atp:r.source.context.atp,tp:r.source.context.tp,meetingCapacity:r.source.capacity,__confirm:()=>mode!=='cancel',onSave:()=>{calls++;return true;}}),before=memory.get(storage.STORAGE_KEY_V5);
+    h.button('Kosongkan Draf Pertemuan').props.onClick();
+    assert.equal(memory.get(storage.STORAGE_KEY_V5),before);assert.equal(calls,0);
+    if(mode==='clear'){
+      assert.ok(h.button('Pulihkan Draf Pertemuan'));
+      h.nodes().find(n=>n.type==='button' && React.Children.toArray(n.props.children).some((child:any)=>child?.props?.children==='Simpan Struktur Pertemuan'))!.props.onClick();assert.equal(calls,0);
+      h.button('Pulihkan Draf Pertemuan').props.onClick();assert.ok(!h.button('Pulihkan Draf Pertemuan'));
+    }else assert.ok(!h.button('Pulihkan Draf Pertemuan'));
+  }
+});
 test('real UI cancel, teacher approval, optional additions and failed save',()=>{
   for(const mode of ['cancel','approve','fail','add']) {
     const r=review(fixture(mode==='add'?[1,1]:[2,1],mode==='add'?[2,2]:[1,1]));let calls=0;

@@ -33,7 +33,8 @@ import {
   AnnualPlanningTaskRailItem,
   AnnualPlanningTaskStatus,
 } from './AnnualPlanningTaskRail';
-import { getSemesterDataV5, loadStorageV5 } from '../services/storageV5';
+import { getSemesterDataV5, loadStorageV5, getMeetingAlignmentSourceV5 } from '../services/storageV5';
+import { validateCalendarMeetingCandidate } from '../services/unitMeetingAllocationService';
 import { resolveSemesterCapacityV5, getSubjectJP } from '../services/jpEngine';
 import { TimePlanningManager } from './administration/TimePlanningManager';
 import { UnitExecutionPlanManager } from './UnitExecutionPlanManager';
@@ -335,7 +336,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     s1Capacity.actualScheduledWeeklyJP > 0
   );
   const s1ScheduleSaved = Boolean(s1Data?.subjectWeeklySchedule);
-  const s1TimeReady = s1CalendarReady && s1JpReady && s1ScheduleSaved && s1PlannedCapacity.isReady;
+  const s1TimeReady = s1CalendarReady && s1JpReady && s1ScheduleSaved && s1PlannedCapacity.isReady && s1PlannedCapacity.capacitySource === 'ACTUAL_SLOTS';
 
   const s2CalendarReady = Boolean(
     s2Capacity?.isCalendarConfirmed &&
@@ -347,19 +348,24 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     s2Capacity.actualScheduledWeeklyJP > 0
   );
   const s2ScheduleSaved = Boolean(s2Data?.subjectWeeklySchedule);
-  const s2TimeReady = s2CalendarReady && s2JpReady && s2ScheduleSaved && s2PlannedCapacity.isReady;
+  const s2TimeReady = s2CalendarReady && s2JpReady && s2ScheduleSaved && s2PlannedCapacity.isReady && s2PlannedCapacity.capacitySource === 'ACTUAL_SLOTS';
 
   const s1TargetMeetings = s1PlannedCapacity.totalMeetingCapacity;
   const s2TargetMeetings = s2PlannedCapacity.totalMeetingCapacity;
 
-  const s1MeetingCountWithinCapacity = meetingCounts.semester1 <= s1TargetMeetings;
-  const s2MeetingCountWithinCapacity = meetingCounts.semester2 <= s2TargetMeetings;
+  const s1MeetingCountWithinCapacity = meetingCounts.semester1 === s1TargetMeetings;
+  const s2MeetingCountWithinCapacity = meetingCounts.semester2 === s2TargetMeetings;
   const meetingCountDetail = `S1 ${meetingCounts.semester1} digunakan (kapasitas ${s1TargetMeetings}) • S2 ${meetingCounts.semester2} digunakan (kapasitas ${s2TargetMeetings})`;
   const meetingCoverageComplete = Boolean(placementReady && meetingValidation?.isComplete);
+  const meetingSlotsValid=useMemo(()=>{
+    if(!mapping || !effectiveUnitExecutionPlan)return false;
+    try{const source=getMeetingAlignmentSourceV5(mapping.academicSettingId);return !source.context.calendarErrors?.length && !validateCalendarMeetingCandidate(effectiveUnitExecutionPlan,effectiveUnitExecutionPlan,mapping,source.capacity,source.context).length;}catch{return false;}
+  },[mapping,effectiveUnitExecutionPlan,s1Data,s2Data]);
   const meetingExactReady = Boolean(
     meetingCoverageComplete &&
-    s1PlannedCapacity.isReady &&
-    s2PlannedCapacity.isReady &&
+    (meetingSlotsValid || (isS1ExactScheduleReady && isS2ExactScheduleReady)) &&
+    s1TimeReady &&
+    s2TimeReady &&
     s1MeetingCountWithinCapacity &&
     s2MeetingCountWithinCapacity
   );
@@ -371,8 +377,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     const t4Complete = meetingExactReady;
     const t5Complete = isTask5Complete;
 
-    const t2Locked =
-      !t1Complete;
+    const t2Locked = false;
 
     const t3Locked =
       !(t1Complete && t2Complete);
@@ -380,8 +385,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     const t4Locked =
       !(t1Complete && t2Complete && t3Complete);
 
-    const t5Locked =
-      !(t1Complete && t2Complete && t3Complete);
+    const t5Locked = false;
 
     return [
       {

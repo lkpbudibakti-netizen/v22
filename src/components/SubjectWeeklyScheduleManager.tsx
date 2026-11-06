@@ -247,7 +247,7 @@ export const SubjectWeeklyScheduleManager: React.FC<SubjectWeeklyScheduleManager
             </span>
           </div>
           <p className="text-xs text-slate-300">
-            Tentukan jumlah pertemuan per minggu dan JP tiap pertemuan. Hari mengajar ditentukan nanti pada Alokasi Waktu.
+            Tentukan jumlah pertemuan per minggu dan JP tiap pertemuan, lalu simpan. Lengkapi Alokasi Hari Mengajar Sesi di bawah agar slot kalender aktual dapat dihitung.
           </p>
         </div>
 
@@ -486,7 +486,7 @@ export const SubjectWeeklyScheduleManager: React.FC<SubjectWeeklyScheduleManager
                 </span>
               ) : (
                 <span>
-                  💡 <strong>Catatan:</strong> Kapasitas di atas adalah estimasi sementara ({plannedResult.effectiveWeekSlots} pekan × {plannedResult.meetingsPerWeek} pertemuan). Slot tanggal aktual ditetapkan setelah hari mengajar dialokasikan pada Alokasi Waktu.
+                  💡 <strong>Catatan:</strong> Kapasitas di atas adalah estimasi sementara ({plannedResult.effectiveWeekSlots} pekan × {plannedResult.meetingsPerWeek} pertemuan). Lengkapi dan simpan Alokasi Hari Mengajar Sesi di bawah atau pada Alokasi Waktu untuk menghitung slot tanggal aktual.
                 </span>
               )}
             </div>

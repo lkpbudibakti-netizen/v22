@@ -170,6 +170,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   }, [draft, mapping, unitExecutionPlan, meetingCapacity]);
   const alignment = useMemo(() => alignmentSource.source ? proposeMeetingAlignment(draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,addAlignmentSlots,optimizationDraft) : null, [draft,mapping,alignmentSource,addAlignmentSlots,optimizationDraft]);
   const applyAlignment = () => {
+    if(clearedDraftBackup){setGenerationError('Pulihkan draf atau gunakan Regenerate sebelum menyimpan penyesuaian.');return;}
     if (!alignmentPreview || !alignmentSource.source) return;
     try {
       const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
@@ -188,13 +189,25 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   }, [draft]);
 
   const [generationPreview,setGenerationPreview]=useState<CalendarGenerationReview | null>(null);
+  const [clearedDraftBackup,setClearedDraftBackup]=useState<UnitExecutionPlanData | null>(null);
+  const generationBase=clearedDraftBackup || draft;
+  const handleClearDraft=()=>{
+    try {
+      const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
+      const protectedIds=Object.keys(live.context.protectedMeetings);
+      if(protectedIds.length)throw new Error('Draf tidak dapat dikosongkan karena referensi terlindungi: '+protectedIds.join(', ')+'. Gunakan peninjauan manual.');
+      if(!window.confirm('Kosongkan draf pertemuan di layar? Data tersimpan, kalender, Bab, CP/TP/ATP dan dokumen tetap disimpan. Pulihkan draf atau gunakan Regenerate dan tinjau sebelum mengganti data tersimpan.'))return;
+      setClearedDraftBackup(draft);setDraft({...structuredClone(draft),units:draft.units.map(u=>({...u,meetings:[]}))});
+      setGenerationPreview(null);setAlignmentPreview(null);setGenerationNotice('Draf di layar dikosongkan. Data tersimpan belum berubah. Pulihkan draf atau gunakan Regenerate untuk mengganti melalui pratinjau.');
+    }catch(error){setGenerationError(error instanceof Error?error.message:String(error));}
+  };
   const generateCalendarMeetings = async (mode:'COMPLETE'|'REGENERATE') => {
     if(isGeneratingMeetings || validation.isStale)return;
     setIsGeneratingMeetings(true);setGenerationError(null);setGenerationNotice(null);setGenerationPreview(null);
     recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_REQUEST',metadata:{mappingId:mapping.id,mode}});
     try {
       const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
-      const request=prepareCalendarMeetingGeneration(draft,live.mapping,live.capacity,live.context,mode);
+      const request=prepareCalendarMeetingGeneration(generationBase,live.mapping,live.capacity,live.context,mode);
       if(mode==='COMPLETE' && !validateCalendarMeetingCandidate(draft,draft,live.mapping,live.capacity,live.context).length) {
         setLastAIDiagnostic({code:'NO_WORK',stage:'CAPACITY_CHECK'});setLastAIGenerationError(null);
         setGenerationNotice('Jumlah dan JP pertemuan sudah persis sesuai seluruh slot aktual.');
@@ -203,11 +216,11 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       const additional=request.allocation.semester1.newTarget+request.allocation.semester2.newTarget;
       const result=additional===0 ? {units:[]} : await generateUnitMeetingsWithAI({subject:subject || 'Mata Pelajaran',grade,phase,mapping:live.mapping,tpData:tp,atpData:atp,currentPlan:request.basis,
         calendarSlots:request.slots,
-        capacityContext:{semester1LastUnitId:draft.semesterPlacement!.semester1LastUnitId,semester1:{targetMeetingCount:request.slots.semester1.length,totalJP:request.slots.semester1.reduce((s,slot)=>s+slot.jp,0)},semester2:{targetMeetingCount:request.slots.semester2.length,totalJP:request.slots.semester2.reduce((s,slot)=>s+slot.jp,0)}},
+        capacityContext:{semester1LastUnitId:generationBase.semesterPlacement!.semester1LastUnitId,semester1:{targetMeetingCount:request.slots.semester1.length,totalJP:request.slots.semester1.reduce((s,slot)=>s+slot.jp,0)},semester2:{targetMeetingCount:request.slots.semester2.length,totalJP:request.slots.semester2.reduce((s,slot)=>s+slot.jp,0)}},
         unitMeetingTargets:request.allocation.units.map(u=>({unitId:u.unitId,semester:u.semester,existingCount:u.existingCount,newTargetCount:u.newTargetCount}))});
       const latest=getMeetingAlignmentSourceV5(mapping.academicSettingId);
-      if(request.fingerprint!==calendarGenerationFingerprint(draft,latest.mapping,latest.capacity,latest.context))throw new Error('Kalender atau referensi berubah selama generate. Data lama dipertahankan; generate ulang.');
-      const preview=buildCalendarMeetingCandidate(draft,live.mapping,live.capacity,live.context,mode,result,generateStableId);
+      if(request.fingerprint!==calendarGenerationFingerprint(generationBase,latest.mapping,latest.capacity,latest.context))throw new Error('Kalender atau referensi berubah selama generate. Data lama dipertahankan; generate ulang.');
+      const preview=buildCalendarMeetingCandidate(generationBase,live.mapping,live.capacity,live.context,mode,result,generateStableId);
       setGenerationPreview(preview);setLastAIDiagnostic({code:'CALENDAR_DRAFT_READY',stage:'REVIEW'});setLastAIGenerationError(null);
       setGenerationNotice('Pratinjau siap: satu slot efektif = satu pertemuan; JP ditetapkan dari kalender. Data lama belum diubah.');
       recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_DRAFT_READY',status:'SUCCESS',metadata:{mappingId:mapping.id,mode}});
@@ -219,16 +232,16 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:capacityConflict?'AI_GENERATION_BLOCKED':'AI_GENERATION_FAILED',status:capacityConflict?'BLOCKED':'FAILED',metadata:{mappingId:mapping.id,code,mode}});
     } finally {setIsGeneratingMeetings(false);}
   };
-  const handleGenerateWithAI = async () => generateCalendarMeetings('COMPLETE');
+  const handleGenerateWithAI = async () => generateCalendarMeetings(clearedDraftBackup?'REGENERATE':'COMPLETE');
   const handleRegenerate = async () => generateCalendarMeetings('REGENERATE');
   const applyCalendarGeneration = () => {
     if(!generationPreview)return;
     try {
       const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
-      if(generationPreview.fingerprint!==calendarGenerationFingerprint(draft,live.mapping,live.capacity,live.context))throw new Error('Draf/kalender/referensi berubah. Tinjau Regenerate terbaru.');
-      const errors=validateCalendarMeetingCandidate(generationPreview.candidate,draft,live.mapping,live.capacity,live.context);if(errors.length)throw new Error(errors.join(' '));
-      if(!onSave(generationPreview.candidate,{draft,calendarGeneration:generationPreview}))throw new Error('Penyimpanan gagal. Data lama dipertahankan.');
-      setDraft(generationPreview.candidate);setGenerationPreview(null);setGenerationError(null);setGenerationNotice('Struktur tersimpan tepat mengikuti slot aktual. Tinjau dan simpan ulang jadwal pada Langkah 5.');
+      if(generationPreview.fingerprint!==calendarGenerationFingerprint(generationBase,live.mapping,live.capacity,live.context))throw new Error('Draf/kalender/referensi berubah. Tinjau Regenerate terbaru.');
+      const errors=validateCalendarMeetingCandidate(generationPreview.candidate,generationBase,live.mapping,live.capacity,live.context);if(errors.length)throw new Error(errors.join(' '));
+      if(!onSave(generationPreview.candidate,{draft:generationBase,calendarGeneration:generationPreview}))throw new Error('Penyimpanan gagal. Data lama dipertahankan.');
+      setClearedDraftBackup(null);setDraft(generationPreview.candidate);setGenerationPreview(null);setGenerationError(null);setGenerationNotice('Struktur tersimpan tepat mengikuti slot aktual. Tinjau dan simpan ulang jadwal pada Langkah 5.');
     } catch(error) {setGenerationError(error instanceof Error ? error.message : String(error));}
   };
 
@@ -275,6 +288,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
 
   // Sync draft if persisted source changes genuinely (using stable dependencies)
   useEffect(() => {
+    setClearedDraftBackup(null);setGenerationPreview(null);
     if (unitExecutionPlan) {
       setDraft(JSON.parse(JSON.stringify(unitExecutionPlan)));
     } else {
@@ -614,6 +628,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
 
   // 11. Save Handler
   const handleSave = () => {
+    if(clearedDraftBackup){setGenerationError('Draf kosong hanya di layar. Pulihkan draf atau gunakan Regenerate dan setujui pratinjau; data tersimpan tidak dihapus.');return;}
     if (!validation.isValid) {
       setSaveNotice({
         type: 'error',
@@ -852,9 +867,11 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
 
       <div className="mx-5 mt-3 space-y-2">
         <button type="button" onClick={handleRegenerate} disabled={isGeneratingMeetings || validation.isStale} className="px-4 py-2 rounded-lg border border-blue-300 text-blue-700 disabled:opacity-50">Regenerate sesuai Slot Aktual</button>
+        <button type="button" onClick={handleClearDraft} disabled={isGeneratingMeetings || !!clearedDraftBackup} className="px-4 py-2 rounded-lg border">Kosongkan Draf Pertemuan</button>
+        {clearedDraftBackup && <button type="button" disabled={isGeneratingMeetings} onClick={()=>{setDraft(clearedDraftBackup);setClearedDraftBackup(null);setGenerationPreview(null);setAlignmentPreview(null);}} className="px-4 py-2 rounded-lg border">Pulihkan Draf Pertemuan</button>}
         {generationPreview && <div role="dialog" aria-label="Pratinjau Generate Kalender" className="p-4 border rounded-xl bg-slate-50 space-y-3">
           <p>Jumlah dan plannedJP telah divalidasi terhadap seluruh slot kalender terkonfirmasi. Belum ada data tersimpan yang berubah. Regenerate menyimpan konten lama sebagai riwayat sumber; pertemuan terlindungi tidak boleh diganti.</p>
-          <table className="w-full text-sm"><thead><tr><th>Bab</th><th>Sebelum</th><th>Sesudah</th><th>JP per slot aktual</th></tr></thead><tbody>{generationPreview.candidate.units.map(u=><tr key={u.unitId}><td>{mapping.units.find(m=>m.id===u.unitId)?.title}</td><td>{draft.units.find(old=>old.unitId===u.unitId)?.meetings.length || 0}</td><td>{u.meetings.length}</td><td>Sebelum: {draft.units.find(old=>old.unitId===u.unitId)?.meetings.map(m=>m.plannedJP ?? '?').join(' / ')} → Slot aktual: {[...u.meetings].sort((a,b)=>a.order-b.order).map(m=>m.plannedJP).join(' / ')}<details><summary>Konten usulan</summary>{u.meetings.map(m=><p key={m.id}>{m.order}. {m.title} — {m.plannedJP} JP</p>)}</details></td></tr>)}</tbody></table>
+          <table className="w-full text-sm"><thead><tr><th>Bab</th><th>Sebelum</th><th>Sesudah</th><th>JP per slot aktual</th></tr></thead><tbody>{generationPreview.candidate.units.map(u=><tr key={u.unitId}><td>{mapping.units.find(m=>m.id===u.unitId)?.title}</td><td>{generationBase.units.find(old=>old.unitId===u.unitId)?.meetings.length || 0}</td><td>{u.meetings.length}</td><td>Sebelum: {generationBase.units.find(old=>old.unitId===u.unitId)?.meetings.map(m=>m.plannedJP ?? '?').join(' / ')} → Slot aktual: {[...u.meetings].sort((a,b)=>a.order-b.order).map(m=>m.plannedJP).join(' / ')}<details><summary>Konten usulan</summary>{u.meetings.map(m=><p key={m.id}>{m.order}. {m.title} — {m.plannedJP} JP</p>)}</details></td></tr>)}</tbody></table>
           <button type="button" onClick={applyCalendarGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Setujui &amp; Simpan Hasil Generate</button>
           <button type="button" onClick={()=>setGenerationPreview(null)} className="px-4 py-2">Batal Regenerate</button>
         </div>}

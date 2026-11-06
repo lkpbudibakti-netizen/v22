@@ -2554,9 +2554,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
 
       {afterTimeSetup}
 
-      {viewMode !== 'TIME_SETUP' && (
-        <div className="space-y-6">
-          {!isK13Curriculum && viewMode === 'ALLOCATION' && (
+          {!isK13Curriculum && (viewMode === 'TIME_SETUP' || viewMode === 'ALLOCATION') && (
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
               <SubjectWeekdayAllocationEditor
                 semesterPlanId={effectiveSemesterPlanId}
@@ -2571,6 +2569,8 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
             </div>
           )}
 
+      {viewMode !== 'TIME_SETUP' && (
+        <div className="space-y-6">
           {!isK13Curriculum && viewMode === 'ALLOCATION' && (
             <LearningMeetingSchedulePreview
               semesterPlanId={effectiveSemesterPlanId}

@@ -11,6 +11,7 @@ import * as slots from '../../src/services/subjectScheduleService';
 import * as schedule from '../../src/services/learningMeetingScheduleService';
 import * as mappingValidation from '../../src/services/atpUnitMappingValidationService';
 import * as readiness from '../../src/services/atpMappingReadinessService';
+import * as allocation from '../../src/services/unitMeetingAllocationService';
 
 /** Actual component and handlers with deterministic hooks; all resolvers/storage remain real. */
 export function annualPlanningManagerHarness(props: any) {
@@ -21,7 +22,7 @@ export function annualPlanningManagerHarness(props: any) {
   }).outputText;
   const exports: any = {};
   runInNewContext(compiled, { exports, React, console,
-    ...assessment, ...storage, ...jp, ...execution, ...placement, ...slots, ...schedule, ...mappingValidation, ...readiness,
+    ...assessment, ...storage, ...jp, ...execution, ...placement, ...slots, ...schedule, ...mappingValidation, ...readiness,...allocation,
     useState: (initial: any) => { const i=cursor++; if (!(i in values)) values[i]=typeof initial==='function'?initial():initial; return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}]; },
     useMemo: (factory:()=>any)=>factory(), useEffect: ()=>{},
     window: {setTimeout:(fn:()=>void)=>fn()}, document:{getElementById:()=>null},
