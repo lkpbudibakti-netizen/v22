@@ -1,3 +1,4 @@
+import { signoffColumns, type PrintSignoff } from '../../signoffLayout';
 import { formatClassLabel } from '../../../academicScope';
 import { jsPDF } from 'jspdf';
 import autoTable, { UserOptions } from 'jspdf-autotable';
@@ -92,6 +93,8 @@ export class PdfDocumentBuilder {
   private marginTop: number;
   private marginBottom: number;
   private currentY: number;
+  private documentTitle = 'Dokumen administrasi guru';
+  private identityContext = '';
 
   constructor(
     orientation: 'portrait' | 'landscape' = 'portrait',
@@ -140,22 +143,20 @@ export class PdfDocumentBuilder {
   }
 
   public renderHeader(title: string, subTitle?: string): void {
-    const centerX = this.pageWidth / 2;
+    this.documentTitle = title;
+    const centerX = this.marginLeft + this.getContentWidth() / 2;
 
-    // Document Title
-    this.doc.setFont(this.theme.fonts.bold, 'bold');
-    this.doc.setFontSize(this.theme.sizes.docTitle);
-    this.doc.setTextColor(this.theme.colors.primary[0], this.theme.colors.primary[1], this.theme.colors.primary[2]);
-    this.doc.text(title.toUpperCase(), centerX, this.currentY, { align: 'center' });
-    this.currentY += this.styleProfile === 'FORMAL_NEUTRAL' ? 6 : 5.5;
-
-    // Subtitle
-    if (subTitle) {
+    for (const [text, size] of [[title, this.theme.sizes.docTitle], [subTitle || '', this.theme.sizes.docSubTitle]] as const) {
+      if (!text) continue;
       this.doc.setFont(this.theme.fonts.bold, 'bold');
-      this.doc.setFontSize(this.theme.sizes.docSubTitle);
-      this.doc.setTextColor(this.theme.colors.secondary[0], this.theme.colors.secondary[1], this.theme.colors.secondary[2]);
-      this.doc.text(subTitle.toUpperCase(), centerX, this.currentY, { align: 'center' });
-      this.currentY += this.styleProfile === 'FORMAL_NEUTRAL' ? 6 : 5.5;
+      this.doc.setFontSize(size);
+      this.doc.setTextColor(...this.theme.colors.text as [number,number,number]);
+      for (const line of this.doc.splitTextToSize(text.toUpperCase(), this.getContentWidth() - 2)) {
+        this.checkPageBreak(size * 0.5);
+        this.doc.text(line, centerX, this.currentY, { align:'center' });
+        this.currentY += size * 25.4 / 72 * 1.2;
+      }
+      this.currentY += 2;
     }
 
     // Divider line
@@ -172,6 +173,7 @@ export class PdfDocumentBuilder {
     extraRows: [string, string][] = [],
     options?: { scope?: 'YEAR' | 'SEMESTER'; hideSemester?: boolean }
   ): void {
+    this.identityContext = [school.name, academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' | ');
     const isK13Curriculum =
       academicSetting.curriculumType === 'K13' ||
       (academicSetting.curriculum &&
@@ -235,7 +237,7 @@ export class PdfDocumentBuilder {
 
     const tableOptions: UserOptions = {
       startY: this.currentY,
-      margin: { left: this.marginLeft, right: this.marginRight },
+      margin: { left: this.marginLeft, right: this.marginRight, top: this.marginTop, bottom: this.marginBottom },
       body: rows,
       theme: 'plain',
       styles: {
@@ -280,6 +282,7 @@ export class PdfDocumentBuilder {
     },
     extraRows: [string, string][] = []
   ): void {
+    this.identityContext = [metadata.schoolName, metadata.subject, metadata.grade, metadata.academicYear].filter(Boolean).join(' | ');
     const isK13Curriculum =
       metadata.curriculum &&
       (metadata.curriculum.includes('2013') || metadata.curriculum.includes('K13'));
@@ -344,7 +347,7 @@ export class PdfDocumentBuilder {
 
     const tableOptions: UserOptions = {
       startY: this.currentY,
-      margin: { left: this.marginLeft, right: this.marginRight },
+      margin: { left: this.marginLeft, right: this.marginRight, top: this.marginTop, bottom: this.marginBottom },
       body: rows,
       theme: 'plain',
       styles: {
@@ -373,76 +376,35 @@ export class PdfDocumentBuilder {
     this.currentY += 2;
   }
 
-  public renderNormalizedSignatureBlock(signoff: {
-    locationAndDate: string;
-    principalTitle: string;
-    principalName: string;
-    principalNip?: string;
-    teacherTitle: string;
-    teacherName: string;
-    teacherNip?: string;
-    isBlankMode: boolean;
-  }): void {
-    this.checkPageBreak(40);
-
-    const leftColX = this.marginLeft + 10;
-    const rightColX = this.pageWidth - this.marginRight - 70;
-    let sigY = this.currentY + 6;
-
+  public renderNormalizedSignatureBlock(signoff: PrintSignoff): void {
+    const width = (this.getContentWidth() - 10) / 2;
+    const fontSize = this.theme.sizes.body;
+    const lineHeight = fontSize * 25.4 / 72 * 1.2;
     this.doc.setFont(this.theme.fonts.base, 'normal');
-    this.doc.setFontSize(this.theme.sizes.body);
-    this.doc.setTextColor(this.theme.colors.text[0], this.theme.colors.text[1], this.theme.colors.text[2]);
-
-    if (signoff.isBlankMode) {
-      // Right Column: Date placeholder
-      this.doc.text('....................., .................... 20....', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.text('Mengetahui,', leftColX, sigY);
-      this.doc.text(signoff.teacherTitle || 'Guru Mata Pelajaran', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.text(signoff.principalTitle || 'Kepala Sekolah', leftColX, sigY);
-      sigY += 22;
-
-      this.doc.setFont(this.theme.fonts.bold, 'bold');
-      this.doc.text('(................................................)', leftColX, sigY);
-      this.doc.text('(................................................)', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.setFont(this.theme.fonts.base, 'normal');
-      this.doc.setFontSize(this.theme.sizes.small);
-      this.doc.setTextColor(this.theme.colors.textLight[0], this.theme.colors.textLight[1], this.theme.colors.textLight[2]);
-      this.doc.text('NIP. ....................', leftColX, sigY);
-      this.doc.text('NIP. ....................', rightColX, sigY);
-    } else {
-      // Right Column: Date
-      this.doc.text(signoff.locationAndDate, rightColX, sigY);
-      sigY += 4.5;
-
-      // Titles
-      this.doc.text('Mengetahui,', leftColX, sigY);
-      this.doc.text(signoff.teacherTitle || 'Guru Mata Pelajaran', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.text(signoff.principalTitle || 'Kepala Sekolah', leftColX, sigY);
-      sigY += 22; // Space for physical signature
-
-      // Names (Underlined / Bold)
-      this.doc.setFont(this.theme.fonts.bold, 'bold');
-      this.doc.text(signoff.principalName || '(........................)', leftColX, sigY);
-      this.doc.text(signoff.teacherName || '(........................)', rightColX, sigY);
-      sigY += 4.5;
-
-      // NIPs
-      this.doc.setFont(this.theme.fonts.base, 'normal');
-      this.doc.setFontSize(this.theme.sizes.small);
-      this.doc.setTextColor(this.theme.colors.textLight[0], this.theme.colors.textLight[1], this.theme.colors.textLight[2]);
-      this.doc.text(signoff.principalNip ? `NIP. ${signoff.principalNip}` : 'NIP. ....................', leftColX, sigY);
-      this.doc.text(signoff.teacherNip ? `NIP. ${signoff.teacherNip}` : 'NIP. ....................', rightColX, sigY);
+    this.doc.setFontSize(fontSize);
+    const columns = signoffColumns(signoff).map(lines => lines.map((line, i) => {
+      this.doc.setFont(this.theme.fonts.base, i === 2 ? 'bold' : 'normal');
+      return this.doc.splitTextToSize(line, width) as string[];
+    }));
+    // Physical signature space scales with typography, while names and NIPs use measured wrapping.
+    const heights = [0,1,2,3].map(i => Math.max(...columns.map(c => c[i].length)) * lineHeight);
+    const caption = this.doc.splitTextToSize('Pengesahan administrasi pembelajaran: ' + this.documentTitle, this.getContentWidth() - 2) as string[];
+    const contextLines = this.doc.splitTextToSize(this.identityContext, this.getContentWidth() - 2) as string[];
+    const height = heights.reduce((a,b) => a+b,0) + (caption.length + contextLines.length + 5) * lineHeight;
+    if (height > this.pageHeight - this.marginTop - this.marginBottom) throw new Error('Blok TTD terlalu panjang untuk satu halaman A4. Periksa panjang identitas.');
+    this.checkPageBreak(height);
+    this.doc.setTextColor(...this.theme.colors.text as [number,number,number]);
+    this.doc.setFont(this.theme.fonts.base, 'normal');
+    for (const line of caption) { this.doc.text(line, this.marginLeft, this.currentY); this.currentY += lineHeight; }
+    for (const line of contextLines) { this.doc.text(line, this.marginLeft, this.currentY); this.currentY += lineHeight; }
+    this.currentY += lineHeight;
+    for (let i=0;i<4;i++) {
+      if (i===2) this.currentY += 3 * lineHeight;
+      this.doc.setFont(this.theme.fonts.base, i===2 ? 'bold' : 'normal');
+      columns.forEach((column, index) => column[i].forEach((line, row) => this.doc.text(line, this.marginLeft + index * (width + 10), this.currentY + row * lineHeight)));
+      this.currentY += heights[i];
     }
-
-    this.currentY = sigY + 8;
+    this.currentY += lineHeight;
   }
 
   public renderHeading(text: string, level: 1 | 2 | 3 = 1): void {
@@ -576,9 +538,20 @@ export class PdfDocumentBuilder {
       Object.assign(columnStylesMap, section.columnStyles);
     }
 
+    const specifiedWidth = Object.values(columnStylesMap).reduce((sum: number, style: any) => sum + (typeof style.cellWidth === 'number' ? style.cellWidth : 0), 0);
+    const allWidthsSpecified = headers.every((_, index) => typeof columnStylesMap[index]?.cellWidth === 'number');
+    if (specifiedWidth > this.getContentWidth() || (allWidthsSpecified && specifiedWidth > 0)) {
+      for (const style of Object.values(columnStylesMap) as any[]) {
+        if (typeof style.cellWidth === 'number') style.cellWidth *= this.getContentWidth() / specifiedWidth;
+      }
+    }
+    for (const style of Object.values(columnStylesMap) as any[]) {
+      if (typeof style.cellWidth === 'number' && style.cellWidth <= 18) style.cellPadding = { top: 2, bottom: 2, left: 0.8, right: 0.8 };
+    }
+
     autoTable(this.doc, {
       startY: this.currentY,
-      margin: { left: this.marginLeft, right: this.marginRight },
+      margin: { left: this.marginLeft, right: this.marginRight, top: this.marginTop, bottom: this.marginBottom },
       head: [headers],
       body: section.rows as any[][],
       theme: 'grid',
@@ -608,6 +581,7 @@ export class PdfDocumentBuilder {
       },
       columnStyles: columnStylesMap,
       showHead: 'everyPage',
+      rowPageBreak: 'avoid',
     });
 
     const finalY = (this.doc as any).lastAutoTable?.finalY;
@@ -620,66 +594,7 @@ export class PdfDocumentBuilder {
     dateString?: string,
     isBlankMode: boolean = false
   ): void {
-    const blockHeight = 42;
-    this.checkPageBreak(blockHeight);
-
-    const fullDate = dateString || formatOfficialDate(school);
-    const contentWidth = this.getContentWidth();
-    const halfWidth = contentWidth / 2;
-
-    const leftColX = this.marginLeft;
-    const rightColX = this.marginLeft + halfWidth + 10;
-
-    let sigY = this.currentY + 2;
-
-    this.doc.setFont(this.theme.fonts.base, 'normal');
-    this.doc.setFontSize(this.theme.sizes.body);
-    this.doc.setTextColor(this.theme.colors.text[0], this.theme.colors.text[1], this.theme.colors.text[2]);
-
-    if (isBlankMode) {
-      this.doc.text('Mengetahui,', leftColX, sigY);
-      sigY += 4.5;
-
-      this.doc.text('Kepala Sekolah', leftColX, sigY);
-      this.doc.text('Guru Mata Pelajaran', rightColX, sigY);
-      sigY += 22; // Space for physical signature
-
-      this.doc.text('(........................)', leftColX, sigY);
-      this.doc.text('(........................)', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.setFontSize(this.theme.sizes.small);
-      this.doc.setTextColor(this.theme.colors.textLight[0], this.theme.colors.textLight[1], this.theme.colors.textLight[2]);
-      this.doc.text('NIP. ....................', leftColX, sigY);
-      this.doc.text('NIP. ....................', rightColX, sigY);
-    } else {
-      // Right Column: Date
-      this.doc.text(fullDate, rightColX, sigY);
-      sigY += 4.5;
-
-      // Titles
-      this.doc.text('Mengetahui,', leftColX, sigY);
-      this.doc.text('Guru Mata Pelajaran', rightColX, sigY);
-      sigY += 4.5;
-
-      this.doc.text('Kepala Sekolah', leftColX, sigY);
-      sigY += 22; // Space for physical signature
-
-      // Names (Underlined / Bold)
-      this.doc.setFont(this.theme.fonts.bold, 'bold');
-      this.doc.text(school.principalName || '(........................)', leftColX, sigY);
-      this.doc.text(profile.name || '(........................)', rightColX, sigY);
-      sigY += 4.5;
-
-      // NIPs
-      this.doc.setFont(this.theme.fonts.base, 'normal');
-      this.doc.setFontSize(this.theme.sizes.small);
-      this.doc.setTextColor(this.theme.colors.textLight[0], this.theme.colors.textLight[1], this.theme.colors.textLight[2]);
-      this.doc.text(school.principalNip ? `NIP. ${school.principalNip}` : 'NIP. ....................', leftColX, sigY);
-      this.doc.text(profile.nip ? `NIP. ${profile.nip}` : 'NIP. ....................', rightColX, sigY);
-    }
-
-    this.currentY = sigY + 8;
+    this.renderNormalizedSignatureBlock({ locationAndDate: dateString || formatOfficialDate(school), principalTitle:'Kepala Sekolah', principalName:school.principalName || '', principalNip:school.principalNip, teacherTitle:'Guru Mata Pelajaran', teacherName:profile.name || '', teacherNip:profile.nip, isBlankMode });
   }
 
   public finalizePageNumbers(): void {

@@ -1,3 +1,4 @@
+import { annualJPNotes, promesAnnualJPNotes } from '../../jpPresentation';
 import { buildJurnalProjection, JURNAL_COLUMNS, JURNAL_WIDTHS, jurnalTableRows } from '../../jurnalProjection';
 import { buildPromesPresentation, formatAllocationStatusIndonesian } from '../../promesPresentation';
 import { sourceIdentityExportIssue } from '../../sourceIdentityGuard';
@@ -624,22 +625,7 @@ export async function generatePdfDocument(
       });
 
       if (!isBlankMode) {
-        const lines: string[] = [
-          `• Alokasi Semester 1: ${projection.semester1AllocatedJP} JP`,
-          `• Alokasi Semester 2: ${projection.semester2AllocatedJP} JP`,
-          `• Total Alokasi Tahunan: ${projection.totalAllocatedJP} JP`,
-          `• Acuan Intrakurikuler Tahunan: ${projection.officialAnnualJP !== null ? `${projection.officialAnnualJP} JP` : '—'}`,
-          `• Selisih terhadap Acuan JP: ${projection.remainingAnnualJP !== null ? `${projection.remainingAnnualJP} JP` : '—'}`,
-        ];
-        if (projection.availableAnnualJP !== null && projection.availableAnnualJP !== undefined) {
-          lines.push(`• Target Alokasi Waktu Tahunan: ${projection.availableAnnualJP} JP`);
-        }
-        if (projection.unallocatedAnnualJP !== null && projection.unallocatedAnnualJP !== undefined) {
-          lines.push(`• Selisih Alokasi terhadap Target: ${projection.unallocatedAnnualJP} JP`);
-        }
-        if (projection.referenceWeeklyEquivalentJP !== null) {
-          lines.push(`• Referensi Ekuivalen JP per Minggu: ${projection.referenceWeeklyEquivalentJP} JP / Minggu`);
-        }
+        const lines = [annualJPNotes(projection), 'Alokasi Semester 1: '+projection.semester1AllocatedJP+' JP; Semester 2: '+projection.semester2AllocatedJP+' JP.'];
         sections.push({
           type: 'heading',
           text: 'Ringkasan Alokasi Waktu Tahunan',
@@ -684,7 +670,7 @@ export async function generatePdfDocument(
       extraIdentityRows = [
         ['Alokasi Intrakurikuler per Minggu', `: ${weeklyJpText}`],
         ['Minggu Efektif Semester', `: ${weeksText}`],
-        ['Alokasi JP Semester', `: ${availableJpText}`],
+        ['Kapasitas Kalender Semester', `: ${availableJpText}`],
       ];
 
       sections.push({
@@ -703,7 +689,9 @@ export async function generatePdfDocument(
         rows: [...presentation.rows, ...presentation.summaryRows],
       });
       sections.push({ type: 'heading', text: 'Status & Catatan Pelaksanaan', level: 2 });
+      for (const detail of presentation.details) sections.push({ type: 'paragraph', text: detail });
       sections.push({ type: 'paragraph', text: presentation.notes });
+      if (!isBlankMode) sections.push({ type: 'paragraph', text: promesAnnualJPNotes(context) });
       break;
     }
 

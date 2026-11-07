@@ -94,7 +94,7 @@ export async function generateAnalisisK13(context: DocumentGenerationContext): P
   docChildren.push(new Paragraph({ spacing: { after: 220 } }));
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Administrasi Kurikulum 2013' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({
@@ -208,7 +208,7 @@ export async function generatePenetapanKKM(context: DocumentGenerationContext): 
   docChildren.push(new Paragraph({ spacing: { after: 220 } }));
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Administrasi Kurikulum 2013' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({

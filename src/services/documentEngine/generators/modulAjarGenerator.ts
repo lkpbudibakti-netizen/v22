@@ -1,3 +1,5 @@
+import { createDocxSectionProperties } from '../docxStyles';
+import { createSignoffBlock as createModulAjarSignoffBlock } from '../docxStyles';
 import { formatClassLabel } from '../../academicScope';
 import { MODUL_AJAR_RENDERER_VERSION } from '../../../config/modulAjarRendererVersion';
 export { MODUL_AJAR_RENDERER_VERSION };
@@ -66,127 +68,6 @@ function createModulAjarIdentityTable(rows: [string, string][]): Table {
         })
     ),
   });
-}
-
-function createModulAjarSignoffBlock(
-  school: SchoolData,
-  profile: TeacherProfile,
-  isBlankMode: boolean = false,
-  customDate?: string
-): (Paragraph | Table)[] {
-  const dateStr = formatOfficialDate(school, customDate);
-  const principalTitle = 'Kepala Sekolah';
-  const teacherTitle = 'Guru Mata Pelajaran';
-
-  const principalNameText = isBlankMode
-    ? '(........................)'
-    : school.principalName
-    ? school.principalName
-    : '(........................)';
-
-  const principalNipText = isBlankMode
-    ? 'NIP. ....................'
-    : school.principalNip
-    ? `NIP. ${school.principalNip}`
-    : 'NIP. ....................';
-
-  const teacherNameText = isBlankMode
-    ? '(........................)'
-    : profile.name
-    ? profile.name
-    : '(........................)';
-
-  const teacherNipText = isBlankMode
-    ? 'NIP. ....................'
-    : profile.nip
-    ? `NIP. ${profile.nip}`
-    : 'NIP. ....................';
-
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideHorizontal: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE },
-    },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({
-                children: [new TextRun({ text: 'Mengetahui,', size: 24, font: 'Times New Roman' })],
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: principalTitle, size: 24, font: 'Times New Roman' })],
-              }),
-              new Paragraph({ spacing: { after: 720 } }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: principalNameText,
-                    bold: !isBlankMode && !!school.principalName,
-                    size: 24,
-                    font: 'Times New Roman',
-                    underline: !isBlankMode && school.principalName ? {} : undefined,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: principalNipText,
-                    size: 24,
-                    font: 'Times New Roman',
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              isBlankMode
-                ? new Paragraph({ children: [] })
-                : new Paragraph({
-                    children: [new TextRun({ text: dateStr, size: 24, font: 'Times New Roman' })],
-                  }),
-              new Paragraph({
-                children: [new TextRun({ text: teacherTitle, size: 24, font: 'Times New Roman' })],
-              }),
-              new Paragraph({ spacing: { after: 720 } }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: teacherNameText,
-                    bold: !isBlankMode && !!profile.name,
-                    size: 24,
-                    font: 'Times New Roman',
-                    underline: !isBlankMode && profile.name ? {} : undefined,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: teacherNipText,
-                    size: 24,
-                    font: 'Times New Roman',
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  return [new Paragraph({ spacing: { before: 240, after: 120 } }), table];
 }
 
 /**
@@ -897,23 +778,14 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
       school,
       profile,
       isBlankMode,
-      context.documentDate
+      context.documentDate, 'Modul Ajar' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')
     )
   );
 
   const doc = new Document({
     sections: [
       {
-        properties: {
-          page: {
-            margin: {
-              top: 1417, // 2.5 cm (2.5 * 566.929 = 1417 twips)
-              bottom: 1417, // 2.5 cm
-              left: 1701, // 3.0 cm (3.0 * 566.929 = 1701 twips)
-              right: 1417, // 2.5 cm
-            },
-          },
-        },
+        properties: createDocxSectionProperties('portrait'),
         children: docChildren,
       },
     ],

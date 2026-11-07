@@ -440,7 +440,7 @@ async function runTests() {
   const expectedPromesSnippets = [
     'Alokasi Intrakurikuler per Minggu',
     'Minggu Efektif Semester',
-    'Total Kapasitas JP Tersedia',
+    'Kapasitas Kalender Semester',
     'Matriks Distribusi Alokasi Waktu Pembelajaran Bulanan',
     'Status & Catatan Pelaksanaan',
     promesCtx.school.name,

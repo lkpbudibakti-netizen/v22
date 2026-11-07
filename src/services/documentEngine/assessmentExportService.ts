@@ -1,3 +1,5 @@
+import { createDocxSectionProperties } from './docxStyles';
+import { createPrintSignoff } from './signoffLayout';
 import { formatClassLabel } from '../academicScope';
 import {
   Document,
@@ -1133,157 +1135,7 @@ function createNormalizedAssessmentIdentityTable(
   });
 }
 
-function createNormalizedAssessmentSignoffBlock(
-  signoff: NormalizedAssessmentDocument['signoff']
-): (Paragraph | Table)[] {
-  const isBlankMode = signoff.isBlankMode;
-  const dateStr = isBlankMode
-    ? '....................., .................... 20....'
-    : signoff.locationAndDate;
-
-  const principalTitle = signoff.principalTitle || 'Kepala Sekolah';
-  const teacherTitle = signoff.teacherTitle || 'Guru Mata Pelajaran';
-
-  const principalNameText = isBlankMode
-    ? '(........................)'
-    : signoff.principalName
-    ? signoff.principalName
-    : '(........................)';
-
-  const principalNipText = isBlankMode
-    ? 'NIP. ....................'
-    : signoff.principalNip
-    ? `NIP. ${signoff.principalNip}`
-    : 'NIP. ....................';
-
-  const teacherNameText = isBlankMode
-    ? '(........................)'
-    : signoff.teacherName
-    ? signoff.teacherName
-    : '(........................)';
-
-  const teacherNipText = isBlankMode
-    ? 'NIP. ....................'
-    : signoff.teacherNip
-    ? `NIP. ${signoff.teacherNip}`
-    : 'NIP. ....................';
-
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideHorizontal: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE },
-    },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: 'Mengetahui,',
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: principalTitle,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({ spacing: { after: 720 } }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: principalNameText,
-                    bold: !isBlankMode && !!signoff.principalName,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    underline: !isBlankMode && signoff.principalName ? {} : undefined,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: principalNipText,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: dateStr,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: teacherTitle,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({ spacing: { after: 720 } }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: teacherNameText,
-                    bold: !isBlankMode && !!signoff.teacherName,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    underline: !isBlankMode && signoff.teacherName ? {} : undefined,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: teacherNipText,
-                    size: FONT_SIZE_DOCX_SIGNOFF,
-                    font: ASSESSMENT_DOCX_FONT,
-                    color: ASSESSMENT_DOCX_BLACK,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  return [new Paragraph({ spacing: { before: 360 } }), table];
-}
+function createNormalizedAssessmentSignoffBlock(signoff: NormalizedAssessmentDocument['signoff'] & { contextLabel?: string }): (Paragraph | Table)[] { return createPrintSignoff({ ...signoff, contextLabel: signoff.contextLabel || 'Instrumen Asesmen dan Rubrik Penilaian' }, ASSESSMENT_DOCX_FONT, FONT_SIZE_DOCX_SIGNOFF); }
 
 /**
  * DOCX Renderer: Produces official DOCX from normalized assessment document model according to selected projection.
@@ -1764,7 +1616,7 @@ export async function renderAssessmentDocx(
 
     // Sign-off Block
     docChildren.push(new Paragraph({ spacing: { after: 200 } }));
-    docChildren.push(...createNormalizedAssessmentSignoffBlock(model.signoff));
+    docChildren.push(...createNormalizedAssessmentSignoffBlock({ ...model.signoff, contextLabel: [model.metadata.title, model.metadata.schoolName, model.metadata.subject, model.metadata.academicYear].filter(Boolean).join(' / ') }));
   } else {
     // ==========================================
     // PROJECTION: PERANGKAT LENGKAP (COMPLETE)
@@ -2236,16 +2088,7 @@ export async function renderAssessmentDocx(
   const doc = new Document({
     sections: [
       {
-        properties: {
-          page: {
-            margin: {
-              top: 1440, // 1 inch
-              bottom: 1440,
-              left: 1440,
-              right: 1440,
-            },
-          },
-        },
+        properties: createDocxSectionProperties('portrait'),
         children: docChildren,
       },
     ],

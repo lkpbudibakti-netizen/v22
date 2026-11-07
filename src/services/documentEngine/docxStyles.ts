@@ -1,3 +1,4 @@
+import { createPrintSignoff } from './signoffLayout';
 import { formatClassLabel } from '../academicScope';
 import {
   Paragraph,
@@ -62,8 +63,10 @@ export const DOCX_PAGE_A4_PORTRAIT = {
 
 export const DOCX_PAGE_A4_LANDSCAPE = {
   orientation: PageOrientation.LANDSCAPE,
-  width: 16838,
-  height: 11906,
+  // docx swaps these dimensions when orientation is LANDSCAPE.
+  // Supply the physical paper's portrait dimensions, not pre-swapped values.
+  width: 11906,
+  height: 16838,
 };
 
 /**
@@ -74,7 +77,7 @@ export function createDocxSectionProperties(orientation: 'portrait' | 'landscape
   return {
     page: {
       size: isLandscape ? DOCX_PAGE_A4_LANDSCAPE : DOCX_PAGE_A4_PORTRAIT,
-      margin: DOCX_STANDARD_MARGINS,
+      margin: isLandscape ? { top: 1134, bottom: 1134, left: 1417, right: 1134 } : DOCX_STANDARD_MARGINS,
     },
   };
 }
@@ -147,6 +150,8 @@ export function createSectionHeading(text: string, level: 1 | 2 | 3 = 1): Paragr
   const spacingAfter = level === 1 ? 80 : 60;
 
   return new Paragraph({
+    keepNext: true,
+    keepLines: true,
     spacing: { before: spacingBefore, after: spacingAfter },
     children: [
       new TextRun({
@@ -385,144 +390,6 @@ export function createTableDataCell(
 /**
  * Creates standard official sign-off block with Principal on left and Teacher on right (Times New Roman 12pt black)
  */
-export function createSignoffBlock(
-  school: SchoolData,
-  profile: TeacherProfile,
-  isBlankMode: boolean = false,
-  customDateString?: string
-): (Paragraph | Table)[] {
-  const location =
-    school.district?.replace(/^Kec\.\s*/i, '') ||
-    school.regency ||
-    school.village ||
-    'Tempat';
-
-  const formattedOfficialDate = formatOfficialDate(school, customDateString);
-
-  const dateStr = formattedOfficialDate || `${location}, ....................`;
-
-  const principalTitle = 'Kepala Sekolah';
-  const teacherTitle = 'Guru Mata Pelajaran';
-
-  const principalNameText = isBlankMode
-    ? '(........................)'
-    : school.principalName
-    ? school.principalName
-    : '(........................)';
-
-  const principalNipText = isBlankMode
-    ? 'NIP. ....................'
-    : school.principalNip
-    ? `NIP. ${school.principalNip}`
-    : 'NIP. ....................';
-
-  const teacherNameText = isBlankMode
-    ? '(........................)'
-    : profile.name
-    ? profile.name
-    : '(........................)';
-
-  const teacherNipText = isBlankMode
-    ? 'NIP. ....................'
-    : profile.nip
-    ? `NIP. ${profile.nip}`
-    : 'NIP. ....................';
-
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideHorizontal: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE },
-    },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({
-                spacing: { line: 276, after: 40 },
-                children: [new TextRun({ text: 'Mengetahui,', size: 24, font: DOCX_FONT, color: DOCX_COLOR_BLACK })],
-              }),
-              new Paragraph({
-                spacing: { line: 276, after: 40 },
-                children: [new TextRun({ text: principalTitle, size: 24, font: DOCX_FONT, color: DOCX_COLOR_BLACK })],
-              }),
-              new Paragraph({ spacing: { after: 720 } }), // space for physical signature
-              new Paragraph({
-                spacing: { line: 276, after: 20 },
-                children: [
-                  new TextRun({
-                    text: principalNameText,
-                    bold: !isBlankMode && !!school.principalName,
-                    size: 24,
-                    font: DOCX_FONT,
-                    color: DOCX_COLOR_BLACK,
-                    underline: !isBlankMode && school.principalName ? {} : undefined,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { line: 276, after: 20 },
-                children: [
-                  new TextRun({
-                    text: principalNipText,
-                    size: 24,
-                    font: DOCX_FONT,
-                    color: DOCX_COLOR_BLACK,
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              isBlankMode
-                ? new Paragraph({ children: [] })
-                : new Paragraph({
-                    spacing: { line: 276, after: 40 },
-                    children: [new TextRun({ text: dateStr, size: 24, font: DOCX_FONT, color: DOCX_COLOR_BLACK })],
-                  }),
-              new Paragraph({
-                spacing: { line: 276, after: 40 },
-                children: [new TextRun({ text: teacherTitle, size: 24, font: DOCX_FONT, color: DOCX_COLOR_BLACK })],
-              }),
-              new Paragraph({ spacing: { after: 720 } }), // space for physical signature
-              new Paragraph({
-                spacing: { line: 276, after: 20 },
-                children: [
-                  new TextRun({
-                    text: teacherNameText,
-                    bold: !isBlankMode && !!profile.name,
-                    size: 24,
-                    font: DOCX_FONT,
-                    color: DOCX_COLOR_BLACK,
-                    underline: !isBlankMode && profile.name ? {} : undefined,
-                  }),
-                ],
-              }),
-              new Paragraph({
-                spacing: { line: 276, after: 20 },
-                children: [
-                  new TextRun({
-                    text: teacherNipText,
-                    size: 24,
-                    font: DOCX_FONT,
-                    color: DOCX_COLOR_BLACK,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  return [new Paragraph({ spacing: { before: 240, after: 120 } }), table];
+export function createSignoffBlock(school: SchoolData, profile: TeacherProfile, isBlankMode = false, customDateString?: string, documentTitle = 'Administrasi pembelajaran'): (Paragraph | Table)[] {
+ return createPrintSignoff({ contextLabel: documentTitle + ' — ' + (school.name || ''), locationAndDate: formatOfficialDate(school, customDateString), principalTitle:'Kepala Sekolah', principalName:school.principalName || '', principalNip:school.principalNip, teacherTitle:'Guru Mata Pelajaran', teacherName:profile.name || '', teacherNip:profile.nip, isBlankMode});
 }
