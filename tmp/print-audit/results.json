@@ -1,0 +1,190 @@
+[
+  {
+    "type": "CP",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "TP",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "ANALISIS_CP_TP",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "ATP",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "PEMETAAN_ATP_UNIT",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "PROTA",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "PROMES",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 3,
+    "signaturePage": 3,
+    "violations": []
+  },
+  {
+    "type": "MODUL_AJAR",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "KKTP",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "DAFTAR_HADIR",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 3,
+    "signaturePage": 3,
+    "violations": []
+  },
+  {
+    "type": "ASESMEN",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 1,
+    "signaturePage": 1,
+    "violations": []
+  },
+  {
+    "type": "DAFTAR_NILAI",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 3,
+    "signaturePage": 3,
+    "violations": []
+  },
+  {
+    "type": "JURNAL",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "REMEDIAL_PENGAYAAN",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "KALENDER_AKADEMIK",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "HARI_EFEKTIF",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "ALOKASI_WAKTU",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "ANALISIS_SKL_KI_KD",
+    "mode": "blank",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "PENETAPAN_KKM",
+    "mode": "data",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 1,
+    "signaturePage": 1,
+    "violations": []
+  },
+  {
+    "type": "ATP",
+    "mode": "data-long-identity",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 2,
+    "signaturePage": 2,
+    "violations": []
+  },
+  {
+    "type": "PROTA",
+    "mode": "data-long-identity",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 4,
+    "signaturePage": 4,
+    "violations": []
+  },
+  {
+    "type": "PROMES",
+    "mode": "data-long-identity",
+    "docx": "STRUCTURE_PASS_RENDER_PENDING",
+    "pages": 4,
+    "signaturePage": 4,
+    "violations": []
+  },
+  {
+    "type": "STRESS-portrait",
+    "pages": 4,
+    "signaturePage": 4,
+    "violations": []
+  },
+  {
+    "type": "STRESS-landscape",
+    "pages": 5,
+    "signaturePage": 5,
+    "violations": []
+  }
+]
