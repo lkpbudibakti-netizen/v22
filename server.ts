@@ -2244,7 +2244,7 @@ app.post('/api/ai/generate-unit-meetings', async (req, res) => {
       unitTitle: unit.title,
       semester,
       newMeetingsToGenerate: unitTarget?.newTargetCount ?? 0,
-      ...(actualUnitSlots ? { readonlyNewSlotJP: actualUnitSlots.slice(existingMeetings.length).map((slot:any)=>slot.jp) } : {}),
+      ...(actualUnitSlots ? { readonlyNewSlotJP: actualUnitSlots.filter((_slot:any,i:number)=>!existingMeetings.some((m:any)=>m.order===i+1)).map((slot:any)=>slot.jp) } : {}),
       existingMeetingsCount: existingMeetings.length,
       materials: (unit.materials || []).map((m: any) => ({
         id: m.id,

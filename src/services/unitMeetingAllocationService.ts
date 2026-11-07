@@ -33,6 +33,7 @@ export interface UnitMeetingAllocationResult {
 }
 
 export interface AllocateUnitMeetingsParams {
+  refillMeetingIds?: readonly string[];
   exactSlots?: boolean;
   mapping: ATPUnitMappingData;
   currentPlan?: UnitExecutionPlanData | null;
@@ -110,7 +111,8 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
       const missingTpCount = missingTp.length;
 
       const hasMissingCoverage =
-        missingMaterialCount > 0 || missingAtpCount > 0 || missingTpCount > 0;
+        (missingMaterialCount > 0 || missingAtpCount > 0 || missingTpCount > 0) &&
+        !existingMeetings.some(m=>params.refillMeetingIds?.includes(m.id));
 
       // Preserve the current unit allocation proportions; coverage still sets mandatory slots.
       const weight = params.exactSlots ? Math.max(1, unit.materials?.length || 0, unit.linkedAtpItemIds?.length || 0, unit.linkedTpIds?.length || 0) : Math.max(1, existingCount);
@@ -279,7 +281,7 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
 import { validateMeetingATPOrder, type AlignmentCapacity, type MeetingAlignmentContext } from './meetingAlignmentService';
 import { resolveUnitSemesterPlacement } from './unitSemesterPlanningService';
 import { validateUnitExecutionPlan } from './unitExecutionPlanService';
-import { simulateMeetingSlotJP } from './meetingContentService';
+import { simulateMeetingSlotJP, isEmptyAlignmentMeeting } from './meetingContentService';
 import type { LearningMeeting } from '../types';
 
 export interface CalendarMeetingSlot { id: string; date: string; sessionId: string; sessionOrder?: number; jp: number }
@@ -305,20 +307,39 @@ export function prepareCalendarMeetingGeneration(plan:UnitExecutionPlanData,mapp
   if(!plan.semesterPlacement || !placement.isValid || !placement.isComplete || placement.isStale)errors.push('Tetapkan pembagian Bab Semester 1/2 yang valid pada Langkah 3.');
   for(const [i,key] of (['semester1','semester2'] as const).entries())if(!capacity[key].isReady || capacity[key].capacitySource!=='ACTUAL_SLOTS' || capacity[key].targetMeetingCount!==slots[key].length || capacity[key].totalJP!==slots[key].reduce((s,slot)=>s+slot.jp,0))errors.push(`Kalender Semester ${i+1}: generate final memerlukan slot aktual terkonfirmasi; kapasitas estimasi (${capacity[key].targetMeetingCount}) bukan slot tanggal aktual (${slots[key].length}). Buka Step 08 → Alokasi Waktu Semester ${i+1}, lengkapi Alokasi Hari Mengajar Sesi → Simpan Hari Mengajar dan konfirmasi Kalender Pendidikan.`);
   if(mode==='REGENERATE' && Object.keys(context.protectedMeetings).length)errors.push('Regenerate ditolak: pertemuan memiliki jurnal/absensi/realisasi/rencana pembelajaran atau referensi terlindungi: '+Object.keys(context.protectedMeetings).join(', '));
+  if(mode==='COMPLETE')for(const unit of plan.units)for(const m of unit.meetings)if(context.protectedMeetings[m.id]?.length && isEmptyAlignmentMeeting({...m,title:''}))errors.push(`Bab ${mapping.units.find(u=>u.id===unit.unitId)?.title || unit.unitId}, pertemuan ${m.order} (${m.id}): materi/TP/ATP kosong tetapi terlindungi (${context.protectedMeetings[m.id].join(', ')}); lengkapi melalui peninjauan manual.`);
   // A missing calendar is not a coverage failure in the intentionally empty regenerate basis.
   if(errors.length)throw new Error([...new Set(errors)].join(' '));
   const basis=structuredClone(plan);
   if(mode==='REGENERATE')basis.units.forEach(u=>u.meetings=[]);
-  const allocation=allocateUnitMeetings({mapping,currentPlan:basis,semester1UnitIds:placement.semester1UnitIds,semester2UnitIds:placement.semester2UnitIds,targetS1:slots.semester1.length,targetS2:slots.semester2.length,exactSlots:true});
+  // Only content-free, unprotected placeholders can be filled. Unknown/manual
+  // fields and partially populated lineage remain intact and must validate.
+  const refillMeetings=mode==='COMPLETE'?basis.units.flatMap(u=>u.meetings).filter(m=>!context.protectedMeetings[m.id]?.length && isEmptyAlignmentMeeting({...m,title:''})):[];
+  const allocation=allocateUnitMeetings({mapping,currentPlan:basis,semester1UnitIds:placement.semester1UnitIds,semester2UnitIds:placement.semester2UnitIds,targetS1:slots.semester1.length,targetS2:slots.semester2.length,exactSlots:true,refillMeetingIds:refillMeetings.map(m=>m.id)});
   errors.push(...allocation.errors);
   if(errors.length)throw new Error([...new Set(errors)].join(' '));
-  return {basis,slots,allocation,fingerprint:calendarGenerationFingerprint(plan,mapping,capacity,context)};
+  for(const target of allocation.units){
+    const ids=new Set(refillMeetings.filter(m=>m.unitId===target.unitId).map(m=>m.id));
+    basis.units.find(u=>u.unitId===target.unitId)!.meetings=basis.units.find(u=>u.unitId===target.unitId)!.meetings.filter(m=>!ids.has(m.id));
+    target.existingCount-=ids.size;target.newTargetCount+=ids.size;
+    const semester=target.semester===1?allocation.semester1:allocation.semester2;semester.existing-=ids.size;semester.newTarget+=ids.size;
+  }
+  return {basis,slots,allocation,refillMeetings,fingerprint:calendarGenerationFingerprint(plan,mapping,capacity,context)};
 }
 export function validateCalendarMeetingCandidate(candidate:UnitExecutionPlanData,original:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,context:MeetingAlignmentContext):string[] {
   const placement=resolveUnitSemesterPlacement(candidate,mapping), errors:string[]=[];
   const valid=validateUnitExecutionPlan(candidate,mapping,context.atp,context.tp);
   for(const unit of candidate.units){const issue=validateMeetingATPOrder(unit.meetings,context.atp);if(issue)errors.push(issue);if([...unit.meetings].sort((a,b)=>a.order-b.order).some((m,i)=>m.order!==i+1))errors.push('Urutan pertemuan harus 1..n sesuai slot pada setiap Bab.');}
   if(!valid.isValid || !valid.isComplete || valid.isStale)errors.push('Cakupan materi/TP/ATP hasil belum lengkap atau lineage tidak valid.',...valid.errors);
+  for(const coverage of valid.coverage){
+    const unit=mapping.units.find(u=>u.id===coverage.unitId),label=`Bab ${unit?.title || coverage.unitId} (${coverage.unitId})`;
+    for(const [kind,ids] of [['materi',coverage.missingMaterialIds],['TP',coverage.missingTpIds],['ATP',coverage.missingAtpItemIds]] as const)if(ids.length)errors.push(`${label}: cakupan ${kind} hilang: ${ids.join(', ')}.`);
+  }
+  for(const unit of candidate.units)for(const m of unit.meetings){
+    const issues=valid.errors.filter(error=>error.includes(`'${m.id}'`) || error.includes(`'${m.title || m.id}'`));
+    if(issues.length)errors.push(`Bab ${mapping.units.find(u=>u.id===unit.unitId)?.title || unit.unitId}, pertemuan ${m.order} (${m.id}): ${issues.join(' ')}`);
+    if(!m.materialIds.length || !m.linkedTpIds.length || !m.linkedAtpItemIds.length)errors.push(`Bab ${mapping.units.find(u=>u.id===unit.unitId)?.title || unit.unitId}, pertemuan ${m.order} (${m.id}): materi/TP/ATP kosong; lengkapi manual bila terlindungi.`);
+  }
   if(JSON.stringify(candidate.semesterPlacement)!==JSON.stringify(original.semesterPlacement) || candidate.id!==original.id || candidate.mappingId!==original.mappingId || candidate.academicSettingId!==original.academicSettingId || candidate.basedOnMappingUpdatedAt!==original.basedOnMappingUpdatedAt || candidate.units.length!==original.units.length || candidate.units.some((u,i)=>u.unitId!==original.units[i].unitId))errors.push('Identitas, urutan Bab, atau batas semester berubah.');
   for(const semester of [1,2] as const) {
     const key=semester===1?'semester1':'semester2', unitIds=new Set(semester===1?placement.semester1UnitIds:placement.semester2UnitIds);
@@ -344,9 +365,10 @@ export function buildCalendarMeetingCandidate(original:UnitExecutionPlanData,map
     const unit=candidate.units.find(u=>u.unitId===suggested.unitId), target=request.allocation.units.find(u=>u.unitId===suggested.unitId);
     if(!unit || !target || seen.has(suggested.unitId) || !Array.isArray(suggested.meetings) || suggested.meetings.length!==target.newTargetCount)throw new Error('Jumlah/ID Bab hasil AI tidak sesuai target slot.');
     seen.add(suggested.unitId);
-    for(const m of suggested.meetings) {
-      const id=createId();if(!id || used.has(id))throw new Error('ID pertemuan baru duplikat.');used.add(id);
-      unit.meetings.push({id,unitId:unit.unitId,order:Math.max(0,...unit.meetings.map(m=>m.order))+1,title:typeof m.title==='string'?m.title.trim():'',materialIds:m.materialIds,linkedAtpItemIds:m.linkedAtpItemIds,linkedTpIds:m.linkedTpIds});
+    const refills=request.refillMeetings.filter(m=>m.unitId===unit.unitId).sort((a,b)=>a.order-b.order);
+    for(const [i,m] of suggested.meetings.entries()) {
+      const refill=refills[i],id=refill?.id || createId();if(!id || (!refill && used.has(id)))throw new Error('ID pertemuan baru duplikat.');used.add(id);
+      unit.meetings.push({...refill,id,unitId:unit.unitId,order:refill?.order ?? Math.max(0,...unit.meetings.map(m=>m.order))+1,title:refill?.title?.trim() || (typeof m.title==='string'?m.title.trim():''),materialIds:m.materialIds,linkedAtpItemIds:m.linkedAtpItemIds,linkedTpIds:m.linkedTpIds});
     }
   }
   for(const target of request.allocation.units)if(candidate.units.find(u=>u.unitId===target.unitId)!.meetings.length!==target.finalTargetCount)throw new Error('Hasil AI tidak mengisi seluruh slot Bab '+target.unitId+'.');
