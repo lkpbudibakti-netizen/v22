@@ -8,3 +8,4 @@ tmp/ci-runner-*/
 *.log
 .env*
 !.env.example
+tmp/print-audit/

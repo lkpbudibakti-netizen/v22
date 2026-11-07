@@ -1,3 +1,5 @@
+import { createDocxSectionProperties } from './documentEngine/docxStyles';
+import { createSignoffBlock } from './documentEngine/docxStyles';
 import {
   Document,
   Packer,
@@ -295,130 +297,13 @@ export async function generateAndDownloadATPWord(options: GenerateATPWordOptions
       );
     }
 
-    // Signatures Section (Indonesian Official Legal Format)
-    const today = new Date();
-    const indonesianMonths = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    const formattedDate = `${school.district || school.regency || 'Tempat'}, ${today.getDate()} ${
-      indonesianMonths[today.getMonth()]
-    } ${today.getFullYear()}`;
-
-    const signatureTable = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: 'Mengetahui,', size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: 'Kepala Sekolah', size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: school.name || 'Satuan Pendidikan', size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({ spacing: { before: 800 } }), // Space for signature
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: school.principalName || '________________________',
-                      bold: true,
-                      underline: {},
-                      size: 20,
-                      font: 'Arial',
-                    }),
-                  ],
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `NIP. ${school.principalNip || '...........................................'}`,
-                      size: 20,
-                      font: 'Arial',
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: formattedDate, size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: 'Guru Mata Pelajaran / Kelas', size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: ' ', size: 20, font: 'Arial' })],
-                }),
-                new Paragraph({ spacing: { before: 800 } }), // Space for signature
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: profile.name || '________________________',
-                      bold: true,
-                      underline: {},
-                      size: 20,
-                      font: 'Arial',
-                    }),
-                  ],
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `NIP. ${profile.nip || '...........................................'}`,
-                      size: 20,
-                      font: 'Arial',
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
-
-    docChildren.push(signatureTable);
+    docChildren.push(...createSignoffBlock(school, profile, false, new Date().toISOString().slice(0,10)));
 
     // Create document instance
     const doc = new Document({
       sections: [
         {
-          properties: {
-            page: {
-              margin: {
-                top: 1440, // 1 inch (72pt * 20 = 1440 twips)
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
-              },
-            },
-          },
+          properties: createDocxSectionProperties('portrait'),
           children: docChildren,
         },
       ],

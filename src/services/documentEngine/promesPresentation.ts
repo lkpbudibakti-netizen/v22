@@ -45,16 +45,22 @@ export function buildPromesPresentation(projection: PromesProjection, blank = fa
   const sourceRows = [...projection.rows, ...projection.assessmentRows, ...projection.reserveRows];
   const isK13 = projection.curriculumType === 'K13';
   const headers = ['No', ...(isK13 ? ['Kompetensi Dasar (KD)', 'Indikator/Materi'] : ['Unit/Bab', 'TP', 'Materi']), 'Alokasi JP', 'Pekan', ...months];
-  const widths = [3, ...(isK13 ? [13, 38] : [13, 25, 13]), 7, 7, ...months.map(() => 32 / months.length)];
+  const widths = [3, ...(isK13 ? [13, 38] : [13, 18, 20]), 7, 7, ...months.map(() => 32 / months.length)];
   const jpIndex = isK13 ? 3 : 4;
   const alignments = headers.map((_, index): 'left' | 'center' => index === 0 || index >= jpIndex ? 'center' : 'left');
+  const details: string[] = [];
+  const compact = (text: string, reference: string, label: string) => {
+    if (text.length <= 180) return text || '-';
+    details.push(reference + ' — ' + label + ': ' + text);
+    return (reference.length > 64 ? reference.split(' ')[0] : reference) + ' (lihat rincian)';
+  };
   const rows = blank
     ? Array.from({ length: 15 }, (_, index) => [String(index + 1), ...Array(isK13 ? 2 : 3).fill('........'), '.... JP', '....', ...months.map(() => '-')])
     : sourceRows.map((row, index) => [
         String(index + 1),
         ...(isK13
-          ? [row.tpCode || '-', [row.tpStatement, row.materialScope].filter(Boolean).join('\n') || '-']
-          : [row.unitTitle || row.unitId || '-', [row.tpCode, row.tpStatement].filter(Boolean).join('\n') || '-', row.materialScope || '-']),
+          ? [row.tpCode || '-', compact([row.tpStatement, row.materialScope].filter(Boolean).join('\n'), `R${index + 1}`, 'Indikator/Materi')]
+          : [row.unitTitle || row.unitId || '-', compact([row.tpCode, row.tpStatement].filter(Boolean).join('\n'), `R${index + 1} ${row.tpCode || row.unitId || ''}`, 'TP'), compact(row.materialScope, `R${index + 1}`, 'Materi')]),
         `${row.allocatedJP} JP`, formatAllocatedWeeks(row.weekAllocations),
         ...months.map(month => row.monthlyJP[month] == null || row.monthlyJP[month] === 0 ? '-' : String(row.monthlyJP[month])),
       ]);
@@ -65,13 +71,13 @@ export function buildPromesPresentation(projection: PromesProjection, blank = fa
   const statusLabel = formatAllocationStatusIndonesian(status, remainingJP);
   const summaryRows = [
     ['-', '-', 'TOTAL JP SEMESTER', '-', blank ? '-' : `${totalJP} JP`, '-', ...monthlyTotals.map(total => blank ? '-' : String(total))],
-    ['-', '-', 'ALOKASI JP SEMESTER', '-', blank || projection.availableJP === null ? '-' : `${projection.availableJP} JP`, '-', ...months.map(() => '-')],
-    ['-', '-', 'SELISIH ALOKASI JP', '-', blank || remainingJP === null ? '-' : `${remainingJP} JP`, '-', ...months.map(() => '-')],
+    ['-', '-', 'KAPASITAS KALENDER SEMESTER', '-', blank || projection.availableJP === null ? '-' : `${projection.availableJP} JP`, '-', ...months.map(() => '-')],
+    ['-', '-', 'SISA / DEFISIT KAPASITAS', '-', blank || remainingJP === null ? '-' : `${remainingJP} JP`, '-', ...months.map(() => '-')],
   ].map(row => isK13 ? row.filter((_, index) => index !== 3) : row);
   const notes = [
     'Angka pada kolom bulan menunjukkan Jam Pelajaran (JP) intrakurikuler tatap muka yang telah dijadwalkan guru.',
     'Item tanpa alokasi bulan diberi tanda strip (-) yang berarti belum dijadwalkan pada kalender aktif.',
-    'Selisih bertanda negatif menunjukkan alokasi melebihi target alokasi JP semester.',
+    'Selisih bertanda negatif menunjukkan alokasi melebihi kapasitas kalender semester, bukan acuan regulasi tahunan.',
   ].join('\n');
-  return { headers, widths, alignments, rows, summaryRows, notes, totalJP, monthlyTotals, remainingJP, status, statusLabel };
+  return { details, headers, widths, alignments, rows, summaryRows, notes, totalJP, monthlyTotals, remainingJP, status, statusLabel };
 }

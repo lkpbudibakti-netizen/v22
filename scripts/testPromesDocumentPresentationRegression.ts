@@ -43,7 +43,7 @@ async function verifyDocuments(context:any,view:ReturnType<typeof buildPromesPre
   const cells=row.match(/<w:tc>.*?<\/w:tc>/gs)!;assert.equal(cells.length,view.headers.length);
   cells.forEach((cell,index)=>assert(cell.includes('w:jc w:val="'+(rowIndex===0?'center':view.alignments[index])+'"'),view.headers[index]));
  }
- assert(xml.includes('w:orient="landscape"'));assert(xml.includes('<w:tblHeader'));assert(xml.includes('w:type="fixed"'));assert(!xml.includes('<w:cantSplit/>'));
+ assert(xml.includes('w:orient="landscape"'));assert(xml.includes('<w:tblHeader'));assert(xml.includes('w:type="fixed"'));assert(xml.includes('<w:cantSplit/>'));
  const pdf=await generatePdfDocument('PROMES',context);
  const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');const task=getDocument({data:new Uint8Array(await pdf.blob.arrayBuffer()),useSystemFonts:true});const parsed=await task.promise;
  let text='';for(let i=1;i<=parsed.numPages;i++){const page=await parsed.getPage(i);assert(page.view[2]>page.view[3]);text+=' '+(await page.getTextContent()).items.map((it:any)=>it.str||'').join(' ');}
@@ -122,4 +122,4 @@ const noData=buildPromesPresentation({...projection,rows:[],assessmentRows:[],re
 assert.equal(noData.totalJP,0);assert.equal(noData.rows.length,0);assert.equal(noData.status,'-');
 for(const delta of [-2,0,2]){const view=buildPromesPresentation({...projection,availableJP:projection.totalAllocatedJP+delta});assert.equal(view.remainingJP,delta);assert.equal(view.status,delta<0?'OVER_ALLOCATED':delta>0?'UNDER_ALLOCATED':'BALANCED');}
 const blank=makeContext(1);blank.documentMode='blank';const view=buildPromesPresentation(buildPromesProjection(blank),true);assert.equal(view.rows.length,15);assert(view.summaryRows.every(row=>row[4]==='-'));await generatePROMES(blank);await generatePdfDocument('PROMES',blank);
-console.log('PASS: exact sparse/contiguous weeks, K13 semantics, shared DOCX/PDF alignment/content, semester isolation, canonical totals/status, no fake allocation, landscape/header/splittable DOCX, and blank mode.');
+console.log('PASS: exact sparse/contiguous weeks, K13 semantics, shared DOCX/PDF alignment/content, semester isolation, canonical totals/status, no fake allocation, landscape/header/protected-row DOCX, and blank mode.');

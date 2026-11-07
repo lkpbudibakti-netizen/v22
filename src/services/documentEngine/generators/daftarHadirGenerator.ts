@@ -164,7 +164,7 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
   }
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate, 'Daftar Hadir' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Landscape A4)
   const doc = new Document({

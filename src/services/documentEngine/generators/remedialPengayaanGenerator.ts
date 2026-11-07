@@ -176,7 +176,7 @@ export async function generateRemedialPengayaan(context: DocumentGenerationConte
   docChildren.push(new Paragraph({ spacing: { after: 220 } }));
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate, 'Remedial dan Pengayaan' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({

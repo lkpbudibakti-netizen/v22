@@ -1,3 +1,4 @@
+import { promesAnnualJPNotes } from '../jpPresentation';
 import {
   Document,
   Packer,
@@ -66,7 +67,7 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
     createIdentityMetadataTable(school, profile, academicSetting, [
       ['Alokasi Intrakurikuler per Minggu', `: ${weeklyJpText}`],
       ['Minggu Efektif Semester', `: ${weeksText}`],
-      ['Alokasi JP Semester', `: ${availableJpText}`],
+      ['Kapasitas Kalender Semester', `: ${availableJpText}`],
     ])
   );
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -81,7 +82,7 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
     children: presentation.headers.map((title, index) => createTableHeaderCell(title, presentation.widths[index])),
   });
   const rows = [...presentation.rows, ...presentation.summaryRows].map((cells, rowIndex) => new TableRow({
-    cantSplit: false,
+    cantSplit: true,
     children: cells.map((text, index) => createTableDataCell(text, presentation.widths[index], presentation.alignments[index] === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT, rowIndex >= presentation.rows.length)),
   }));
   docChildren.push(new Table({
@@ -95,7 +96,7 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
   );
 
   // 4. Signoff Block
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Program Semester' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Landscape A4)
   const doc = new Document({

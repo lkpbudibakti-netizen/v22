@@ -336,7 +336,7 @@ export async function generatePemetaanAtpUnit(
       school,
       profile,
       context.documentMode === 'blank',
-      context.documentDate
+      context.documentDate, 'Pemetaan ATP Unit' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')
     )
   );
 

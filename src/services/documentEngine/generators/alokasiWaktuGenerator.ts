@@ -290,7 +290,7 @@ export async function generateAlokasiWaktu(context: DocumentGenerationContext): 
   }
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Alokasi Waktu' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({

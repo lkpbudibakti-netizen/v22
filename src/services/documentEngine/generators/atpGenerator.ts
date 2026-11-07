@@ -87,7 +87,7 @@ export async function generateATP(context: DocumentGenerationContext): Promise<G
   docChildren.push(atpTable);
 
   // Sign-off
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Alur Tujuan Pembelajaran' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({

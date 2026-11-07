@@ -602,8 +602,9 @@ export async function generateDocument(
     case 'PEMETAAN_ATP_UNIT':
       result = await generatePemetaanAtpUnit(context);
       break;
+    case 'HARI_EFEKTIF':
     case 'KALENDER_AKADEMIK':
-      result = await generateKalenderAkademik(context);
+      result = await generateKalenderAkademik(context, type);
       break;
     case 'ALOKASI_WAKTU':
       result = await generateAlokasiWaktu(context);

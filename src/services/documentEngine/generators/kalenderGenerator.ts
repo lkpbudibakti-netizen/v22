@@ -22,9 +22,10 @@ import { getSubjectJP, resolveCalendarSubjectCapacity, calculateEffectiveDays } 
 import { resolveSemesterJPFromValues } from '../../semesterJPResolver';
 import { calendarDayLabel } from '../calendarPresentation';
 
-export async function generateKalenderAkademik(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+export async function generateKalenderAkademik(context: DocumentGenerationContext, type: 'KALENDER_AKADEMIK' | 'HARI_EFEKTIF' = 'KALENDER_AKADEMIK'): Promise<GeneratedDocumentResult> {
   const { school, profile, academicSetting, calendar, calendarDays } = context;
 
+  const title = type === 'HARI_EFEKTIF' ? 'Rincian Hari & Minggu Efektif Belajar' : 'Kalender Pendidikan & Jadwal';
   const docChildren: (Paragraph | Table)[] = [];
 
   // Look up official JP
@@ -39,7 +40,7 @@ export async function generateKalenderAkademik(context: DocumentGenerationContex
   const weeklyJP = resolveSemesterJPFromValues(context.semesterJPSetting, context.annualJPReference).weeklyJP ?? academicSetting.subjectWeeklyJP ?? calendar?.jpPerWeek ?? academicSetting.totalHoursPerWeek ?? officialRule.weeklyJP ?? null;
 
   // Header
-  docChildren.push(...createDocumentHeader('KALENDER AKADEMIK & JADWAL PENDIDIKAN', academicSetting.curriculum));
+  docChildren.push(...createDocumentHeader(type === 'HARI_EFEKTIF' ? title : 'KALENDER AKADEMIK & JADWAL PENDIDIKAN', academicSetting.curriculum));
 
   // Metadata Table
   docChildren.push(
@@ -188,7 +189,7 @@ export async function generateKalenderAkademik(context: DocumentGenerationContex
   docChildren.push(new Paragraph({ spacing: { after: 240 } }));
 
   // Signatures
-  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, context.documentMode === 'blank', context.documentDate, 'Kalender Akademik' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({
@@ -201,7 +202,7 @@ export async function generateKalenderAkademik(context: DocumentGenerationContex
   });
 
   const blob = await Packer.toBlob(doc);
-  const fileName = `Kalender_Pendidikan_${academicSetting.academicYear ? academicSetting.academicYear.replace('/', '_') : '2026_2027'}.docx`;
+  const fileName = `${type === 'HARI_EFEKTIF' ? 'Hari_Efektif' : 'Kalender_Pendidikan'}_${academicSetting.academicYear ? academicSetting.academicYear.replace('/', '_') : '2026_2027'}.docx`;
 
   if (!context.skipDownload) {
     saveAs(blob, fileName);
@@ -209,14 +210,14 @@ export async function generateKalenderAkademik(context: DocumentGenerationContex
 
   return {
     success: true,
-    type: 'KALENDER_AKADEMIK',
-    title: 'Kalender Pendidikan & Jadwal',
+    type,
+    title,
     fileName,
     blob,
     record: {
       id: `doc-kalender-${Date.now()}`,
-      type: 'KALENDER_AKADEMIK',
-      title: 'Kalender Pendidikan & Jadwal',
+      type,
+      title,
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,
