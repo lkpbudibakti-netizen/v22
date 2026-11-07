@@ -8,7 +8,7 @@ import { generatePdfDocument } from '../src/services/documentEngine/renderers/pd
 import { PdfDocumentBuilder } from '../src/services/documentEngine/renderers/pdf/pdfRenderer';
 import { createPrintSignoff, type PrintSignoff } from '../src/services/documentEngine/signoffLayout';
 import { createDocxSectionProperties } from '../src/services/documentEngine/docxStyles';
-import { annualJPNotes } from '../src/services/documentEngine/jpPresentation';
+import { annualJPNotes, promesAnnualJPNotes } from '../src/services/documentEngine/jpPresentation';
 import { buildPromesPresentation } from '../src/services/documentEngine/promesPresentation';
 import { buildPromesProjection } from '../src/services/documentEngine/promesProjection';
 import type { DocumentType } from '../src/types';
@@ -32,6 +32,10 @@ async function checkPdf(blob: Blob, name: string, expectedLandscape: boolean, re
     assert(Math.abs(Math.min(w,h)-595.28)<1 && Math.abs(Math.max(w,h)-841.89)<1, `${name}: not A4`);
     const items: any[] = (await page.getTextContent()).items;
     const text = items.map(it=>it.str || '').join(' ');
+    if (name === 'PROTA-data' && i === 1) assert(text.includes('Bab 1'), 'Long Prota must start its first data row with the table header');
+    if (name.startsWith('PROMES') && items.some(it=>it.str === 'Unit/Bab')) {
+      assert(items.some(it=>it.str === 'No'), `${name}: number header wraps into separate letters`);
+    }
     assert(text.trim().length, `${name}: blank page ${i}`);
     // PDF text extents are measurable evidence, not a substitute for raster inspection.
     const left = (expectedLandscape ? 25 : 30) * 72 / 25.4;
@@ -114,6 +118,20 @@ for (const type of ['ATP','PROTA','PROMES'] as DocumentType[]) {
     assert.equal(view.monthlyTotals.reduce((a,b)=>a+b,0), view.totalJP);
     assert(view.rows[0][2].includes('R1'));
     assert(view.details.some(d=>d.includes(context.tp!.items[0].statement)));
+    const xml = await (await JSZip.loadAsync(await doc.blob!.arrayBuffer())).file('word/document.xml')!.async('string');
+    const docxText = [...xml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(match=>match[1]).join(' ')
+      .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+    const task = getDocument({ data: new Uint8Array(await pdf.blob.arrayBuffer()), useSystemFonts: true });
+    const parsed = await task.promise;
+    let pdfText = '';
+    for (let page=1;page<=parsed.numPages;page++) pdfText += (await (await parsed.getPage(page)).getTextContent()).items
+      .filter((item:any)=>!/^Halaman \d+ dari \d+$/.test(item.str || '')).map((item:any)=>item.str || '').join(' ');
+    for (const value of [...view.details, promesAnnualJPNotes(context)]) {
+      const normalize = (text:string) => text.replace(/\s/g,'');
+      assert(normalize(docxText).includes(normalize(value)), `PROMES DOCX lost full detail or annual JP note: ${value}`);
+      assert(normalize(pdfText).includes(normalize(value)), `PROMES PDF lost full detail or annual JP note: ${value}`);
+    }
+    await task.destroy();
   }
 }
 const signoff: PrintSignoff = {locationAndDate:'Kabupaten Pengujian Nama Lokasi Sangat Panjang, 7 November 2026',principalTitle:'Kepala Sekolah',teacherTitle:'Guru Mata Pelajaran',principalName:'Kepala Sekolah '+ 'Nama Panjang '.repeat(6),teacherName:'Guru '+ 'Nama Panjang '.repeat(7),principalNip:'1970'.repeat(15),teacherNip:'1980'.repeat(15),isBlankMode:false};

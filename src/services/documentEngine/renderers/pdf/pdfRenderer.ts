@@ -21,6 +21,7 @@ export interface PdfTableColumn {
 
 export interface PdfSectionTable {
   type: 'table';
+  rowPageBreak?: 'auto' | 'avoid';
   columns: (string | PdfTableColumn)[];
   rows: (string | number | boolean)[][];
   title?: string;
@@ -556,6 +557,7 @@ export class PdfDocumentBuilder {
       body: section.rows as any[][],
       theme: 'grid',
       headStyles: {
+        cellPadding: { top: 2, bottom: 2, left: 0.8, right: 0.8 },
         fillColor: this.theme.colors.tableHeaderBg as [number, number, number],
         textColor: (this.styleProfile === 'FORMAL_NEUTRAL' ? [0, 0, 0] : [255, 255, 255]) as [number, number, number],
         font: this.theme.fonts.bold,
@@ -581,7 +583,7 @@ export class PdfDocumentBuilder {
       },
       columnStyles: columnStylesMap,
       showHead: 'everyPage',
-      rowPageBreak: 'avoid',
+      rowPageBreak: section.rowPageBreak || 'avoid',
     });
 
     const finalY = (this.doc as any).lastAutoTable?.finalY;

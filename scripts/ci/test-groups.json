@@ -33,6 +33,7 @@
     "scripts/testAutoSemesterTimeAllocation.ts"
   ],
   "documents": [
+    "scripts/testPrintLayoutRegression.ts",
     "scripts/testCanonicalPromesProjection.ts",
     "scripts/testCanonicalAlokasiWaktuDocument.ts",
     "scripts/testCanonicalProtaProjection.ts",

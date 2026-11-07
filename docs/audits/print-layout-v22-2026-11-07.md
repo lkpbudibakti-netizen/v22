@@ -2,6 +2,33 @@
 
 Tanggal pengujian: 7 November 2026 (Asia/Jakarta).
 
+## Finalisasi ulang pada main
+
+Status akhir audit ulang: BLOCKED untuk sertifikasi siap cetak DOCX dan kesetaraan visual DOCX/PDF. PASS pada struktur dokumen, bidang substansi yang diuji, serta pemeriksaan PDF yang disebutkan di bawah. Ini tidak berarti seluruh hasil cetak sudah tersertifikasi.
+
+Temuan baru dan perbaikan minimal:
+
+- 124 berkas sementara di tmp/print-audit ternyata masuk Git meskipun aturan ignore sudah ada. Seluruhnya dikeluarkan dari indeks. .gitignore dan skrip pengujian di scripts/ dipertahankan; hasil regenerasi tetap diabaikan Git.
+- Promes DOCX merujuk “lihat rincian”, tetapi generator tidak menambahkan presentation.details dan promesAnnualJPNotes. Perbandingan teks aktual DOCX/PDF membuktikan TP panjang dan catatan JP hilang di DOCX. promesGenerator.ts kini memasukkan kedua keluaran bersama tersebut, sama dengan PDF. Tes sebelumnya hanya memeriksa rincian pada model presentasi; regresi baru memeriksa teks serialisasi DOCX dan ekstraksi PDF secara utuh, dengan footer pagination PDF dikecualikan.
+- Header “No” terbungkus menjadi dua huruf pada sampel PDF. Padding header diperkecil di pdfRenderer.ts. Regresi memeriksa token No utuh pada header Promes. Test print-layout juga dimasukkan ke grup CI documents agar pemeriksaan isi berkas berjalan otomatis.
+- Prota dengan TP panjang meninggalkan header tabel sendirian pada halaman pertama karena seluruh baris ditahan. Opsi pemisahan baris hanya pada tabel Prota dibuat auto, sesuai alur tabel DOCX; default jenis lain tetap avoid. Proteksi TTD tidak diubah. Regresi memastikan Bab 1 mulai pada halaman pertama. Sampel ekstrem turun dari 4 menjadi 3 halaman PDF, tanpa mengurangi isi.
+
+Renderer dan batas validasi:
+
+- LibreOffice soffice.exe tidak tersedia. Sebanyak 24 DOCX (19 jenis + 3 sampel data + 2 stress) dicoba ulang; seluruhnya RENDER_BLOCKED.
+- Registrasi Word.Application memang ada dan memberi versi 12.0, tetapi LocalServer32 mengarah ke Kingsoft WPS wps.exe /Automation. Ini bukan Microsoft Word dan tidak dihitung sebagai validasi Word. Tidak memasang atau mengganti aplikasi pengguna.
+- A4 dan margin dari XML lulus: ATP/Prota 11906 × 16838 twip portrait; Promes 16838 × 11906 landscape. Pagination, font substitusi, tabel, header, dan TTD pada render DOCX serta kesetaraan visualnya dengan PDF tetap BLOCKED.
+- Sampel ATP, Prota, Promes: identitas guru/kepala sekolah/NIP, TP dan angka JP yang diperiksa ditemukan pada kedua format. Rincian lengkap Promes dan catatan tahunan kini diperiksa oleh regresi yang tersimpan di repo. Ini pemeriksaan substansi, bukan bukti kesamaan visual seluruh dokumen.
+- PDF akhir: 57 halaman dari 24 sampel dirasterisasi. Halaman representatif ATP, Promes, Prota, termasuk identitas panjang dan TTD, diperiksa dari PNG. Tidak ditemukan potongan teks/TTD pada sampel yang ditinjau. ATP 2 halaman portrait; Promes 4 halaman landscape; Prota 3 halaman portrait. TTD lengkap dan memiliki konteks judul/sekolah/mapel/kelas/tahun. Pemeriksaan batas teks otomatis tetap bersifat pendekatan seperti dijelaskan di bawah.
+
+Pengujian ulang: print-layout 19 jenis dan kasus panjang; Promes presentation; orientation/fidelity/ZIP; asesmen 27 kasus; seluruh grup CI (storage 22, planning 7, documents 8, transport 5); TypeScript; build; production smoke 15 kasus. Hasil akhir seluruh pemeriksaan otomatis tersebut PASS. Build masih memberi peringatan ukuran bundle. Tidak ada perubahan data kurikulum, data guru, alokasi, lineage, penyimpanan, atau arsitektur aplikasi.
+
+Risiko tersisa: renderer Microsoft Word/LibreOffice wajib tersedia untuk memverifikasi seluruh pagination dan margin visual DOCX; jumlah halaman DOCX belum diketahui. PDF dan DOCX masih renderer terpisah, sehingga kesetaraan visual penuh tidak dapat disimpulkan dari XML/ekstraksi teks. Template kalender DOCX masih memuat ringkasan tambahan dibanding PDF. Tidak menyatakan semua dokumen siap cetak.
+
+## Rincian audit awal dan inventaris
+
+
+
 Status: PERBAIKAN IMPLEMENTASI DAN REGRESI LULUS; SERTIFIKASI SELURUH DOKUMEN SIAP CETAK BELUM TERBUKTI.
 
 ## Akar masalah dan batas pembuktian

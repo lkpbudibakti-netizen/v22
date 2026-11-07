@@ -613,6 +613,8 @@ export async function generatePdfDocument(
 
       sections.push({
         type: 'table',
+        // Long Prota narratives may continue across pages, as in the DOCX table.
+        rowPageBreak: 'auto',
         columns: [
           { header: 'No', dataKey: 'no', width: 8, align: 'center' },
           { header: 'Kode / Jenis', dataKey: 'code', width: 17, align: 'center' },

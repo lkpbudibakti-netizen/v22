@@ -92,7 +92,9 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
   }));
   docChildren.push(
     createSectionHeading('Status & Catatan Pelaksanaan', 2),
-    createProseParagraph(presentation.notes, { firstLineIndent: false, italics: true })
+    ...presentation.details.map(detail => createProseParagraph(detail, { firstLineIndent: false })),
+    createProseParagraph(presentation.notes, { firstLineIndent: false, italics: true }),
+    ...(context.documentMode === 'blank' ? [] : [createProseParagraph(promesAnnualJPNotes(context), { firstLineIndent: false })])
   );
 
   // 4. Signoff Block
