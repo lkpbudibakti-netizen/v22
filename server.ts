@@ -2324,6 +2324,7 @@ RULES WAJIB:
 6. Jangan output: JP, tanggal, minggu, duration, assessment, learning model.
 7. Referensi materialIds, linkedAtpItemIds, dan linkedTpIds harus menggunakan ID canonical yang persis yang ada di data konteks unit.
 8. ID atau Materi canonical yang sama boleh digunakan ulang di beberapa Pertemuan jika secara pedagogis diperlukan (misalnya untuk penguatan/praktik/refleksi lanjutan).
+   Ikuti pemetaan Bab dan materi Step 07. stepNumber ATP bukan prasyarat mutlak: ATP boleh berulang lintas materi/pertemuan/Bab sesuai pemetaan. Jangan mengurutkan ulang pemetaan atau mengubah ATP/TP canonical untuk memaksakan nomor ATP monoton.
 9. Dilarang menciptakan ID baru atau Materi canonical baru yang tidak terdaftar di konteks unit.
 10. Semua missingCoverage yang tertera wajib tercakup sepenuhnya dalam tambahan Pertemuan yang Anda buat.
 11. Judul Pertemuan harus substantif, kreatif, dan berbeda secara pedagogis. Hindari judul generik seperti "Pertemuan 1", "Pertemuan 2", atau "Pembelajaran materi X".

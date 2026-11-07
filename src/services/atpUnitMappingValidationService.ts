@@ -66,19 +66,9 @@ export function validateATPUnitMappingCanonical(
 
   const units = mapping.units || [];
 
-  // Bab presentation order is independent of ATP stepNumber. Only a wholly
-  // reversed pair of pedagogical spans is forbidden; revisits/overlaps are valid.
-  const spans = (atp.items || []).map(item => {
-    const orders = units.filter(unit => unit.linkedAtpItemIds?.includes(item.id) &&
-      unit.linkedTpIds?.some(id => getCanonicalTpsForAtpItem(item).includes(id))).map(unit => unit.order);
-    return { item, min: Math.min(...orders), max: Math.max(...orders), present: orders.length > 0 };
-  });
-  for (const early of spans) for (const late of spans) {
-    if (early.present && late.present && early.item.stepNumber < late.item.stepNumber && late.max < early.min) {
-      result.isValid = false;
-      result.issues.push(`ATP_PROGRESSION_REVERSED: ATP tahap ${late.item.stepNumber} ('${late.item.id}') seluruhnya sebelum tahap ${early.item.stepNumber} ('${early.item.id}'). Urutan Bab tidak perlu sama dengan nomor ATP; pertahankan progresi atau overlap pedagogis yang sah.`);
-    }
-  }
+  // Teacher Bab/material order is independent of ATP document numbering.
+  // ATPItem has no explicit prerequisite graph; stepNumber alone cannot prove
+  // a dependency. Validate canonical lineage and coverage below without sorting.
 
   // Check structure and duplicates
   for (const u of units) {

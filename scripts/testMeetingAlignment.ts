@@ -248,7 +248,7 @@ test('REDISTRIBUTE fits 4+2 JP demand to 2/4 slots without reducing activities',
   const r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.proposal.operations.some(o=>o.type==='REDISTRIBUTE'));
   assert.deepEqual(r.apply().units[0].meetings.map(m=>m.plannedJP),[2,4]);
 });
-test('unique TP/material and prerequisite sequence cannot be reduced away or reversed',()=>{
+test('unique TP/material cannot be reduced away; ATP document numbering is not a prerequisite',()=>{
   const state=fixture([2,1],[1,1],2),atp=state.annualData.atp[0].value,tp=state.annualData.tp[0].value,map=state.annualData.atpUnitMappings![0].value;
   tp.items.push({...tp.items[0],id:'unique-tp',order:3});atp.items[1].stepNumber=3;atp.items.push({...atp.items[0],id:'unique-atp',stepNumber:2,linkedTpIds:['unique-tp']});
   map.units[0].linkedTpIds.push('unique-tp');map.units[0].linkedAtpItemIds.push('unique-atp');map.units[0].materials.push({id:'unique-mat',title:'Substansi unik',order:2,linkedTpIds:['unique-tp'],linkedAtpItemIds:['unique-atp']});
@@ -259,7 +259,7 @@ test('unique TP/material and prerequisite sequence cannot be reduced away or rev
   const slots=state.semesterData.subjectWeeklySchedules![0].value;slots.sessions[0].jp=4;slots.basedOnWeeklyJP=4;state.semesterJPSettings[0].value.actualScheduledWeeklyJP=4;
   r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.apply().units[0].meetings[0].linkedTpIds.includes('unique-tp'));
   [meetings[0],meetings[1]]=[meetings[1],meetings[0]];meetings.forEach((m,i)=>m.order=i+1);
-  r=review(state);assert.ok(r.proposal.errors.some(e=>e.includes('prasyarat')));assert.throws(r.apply);
+  r=review(state);assert.deepEqual(r.proposal.errors,[]);assert.ok(r.apply().units[0].meetings[0].linkedTpIds.includes('unique-tp'));
 });
 test('unknown demand blocks content optimization but legacy backups remain lossless and do not acquire ATP JP',()=>{
   const state=fixture([2,1]);state.annualData.unitExecutionPlans![0].value.units.forEach(u=>u.meetings.forEach(m=>delete m.plannedJP));
@@ -344,6 +344,28 @@ test('S1 estimate 42 without teaching days reports calendar only; actual S1 42 a
   const actual=finalReview(state,'REGENERATE');
   assert.deepEqual(actual.result.candidate.units.map(u=>u.meetings.length),[42,41]);
   assert.ok(actual.result.candidate.units.every(u=>u.meetings.every(m=>m.plannedJP===4)));
+});
+test('8 Bab with 45/41 actual slots accepts repeated nonmonotonic ATP while invalid lineage fails closed',()=>{
+  const state=fixture([0,0],[45,41]),atp=state.annualData.atp[0].value,tp=state.annualData.tp[0].value;
+  tp.items.push({...structuredClone(tp.items[0]),id:'t2',code:'TP3',order:3});
+  atp.items.push({...structuredClone(atp.items[0]),id:'a2',stepNumber:3,linkedTpIds:['t2']});
+  const mapping=state.annualData.atpUnitMappings![0].value,plan=state.annualData.unitExecutionPlans![0].value,base=structuredClone(mapping.units[0]);
+  mapping.units=Array.from({length:8},(_,i)=>({...structuredClone(base),id:`bab-${i}`,title:`Bab ${i+1}`,order:i+1,linkedAtpItemIds:['a2','a0','a1'],linkedTpIds:['t2','t0','t1'],materials:[2,0,1].map((n,j)=>({id:`mat-${i}-${n}`,title:`Materi ${i+1}.${j+1}`,order:j+1,linkedAtpItemIds:[`a${n}`],linkedTpIds:[`t${n}`]}))}));
+  mapping.basedOnAtpFingerprint=computeAtpSubstantiveFingerprint(atp);mapping.basedOnTpFingerprint=computeTpSubstantiveFingerprint(tp);
+  plan.units=mapping.units.map(u=>({unitId:u.id,meetings:[]}));plan.semesterPlacement!.semester1LastUnitId='bab-3';
+  const canonical=JSON.stringify([mapping,atp,tp,state.semesterData.academicCalendar]);
+  const r=review(state),request=allocation.prepareCalendarMeetingGeneration(r.draft,r.source.mapping,r.source.capacity,r.source.context,'REGENERATE');
+  const suggestions={units:request.allocation.units.map(target=>{const unit=mapping.units.find(u=>u.id===target.unitId)!;return {unitId:unit.id,meetings:Array.from({length:target.newTargetCount},(_,i)=>{const m=unit.materials[i%3];return {title:m.title,materialIds:[m.id],linkedAtpItemIds:m.linkedAtpItemIds,linkedTpIds:m.linkedTpIds};})};})};
+  const result=allocation.buildCalendarMeetingCandidate(r.draft,r.source.mapping,r.source.capacity,r.source.context,'REGENERATE',suggestions,newId),next=result.candidate;
+  assert.equal(next.units.slice(0,4).reduce((n,u)=>n+u.meetings.length,0),45);assert.equal(next.units.slice(4).reduce((n,u)=>n+u.meetings.length,0),41);
+  for(const unit of next.units){assert.deepEqual(unit.meetings.slice(0,4).map(m=>m.linkedAtpItemIds[0]),['a2','a0','a1','a2']);assert.ok(unit.meetings.every(m=>m.plannedJP===4));}
+  assert.deepEqual(allocation.validateCalendarMeetingCandidate(next,r.draft,mapping,r.source.capacity,r.source.context),[]);
+  const bad=structuredClone(next);bad.units[0].meetings[0].linkedTpIds=['t0'];
+  assert.ok(allocation.validateCalendarMeetingCandidate(bad,r.draft,mapping,r.source.capacity,r.source.context).length);
+  bad.units[0].meetings[0].linkedAtpItemIds=['invented-atp'];assert.match(alignment.validateMeetingATPOrder(bad.units[0].meetings,atp)!,/invented-atp/);
+  assert.throws(()=>storage.saveUnitExecutionPlanV5('y',bad,{draft:r.draft,calendarGeneration:{...result,candidate:bad}}));assert.deepEqual(storage.getUnitExecutionPlanV5('y'),r.draft);
+  storage.saveUnitExecutionPlanV5('y',next,{draft:r.draft,calendarGeneration:result});assert.deepEqual(storage.getUnitExecutionPlanV5('y'),next);
+  const saved=storage.loadStorageV5();assert.equal(JSON.stringify([saved.annualData.atpUnitMappings![0].value,saved.annualData.atp[0].value,saved.annualData.tp[0].value,saved.semesterData.academicCalendar]),canonical);
 });
 test('final generation fills 10 confirmed slots exactly, including already complete curriculum coverage',()=>{
   const r=finalReview(fixture([1,1],[10,1])),next=r.result.candidate;

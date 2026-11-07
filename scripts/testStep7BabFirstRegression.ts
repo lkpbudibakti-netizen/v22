@@ -70,11 +70,11 @@ assert(!extractSelectedMappingActions(manualWithAction,new Set(analysis.material
 assert(!apply([{...assign,linkedTpIds:[]}]).success);
 assert(!apply([{id:'missing-tp-subset',type:'ADD_MATERIAL_TO_UNIT',targetUnitId:units[0].id,title:labels[0],linkedAtpItemIds:['a1']}]).success);
 
-// Strictly inverted pedagogical spans fail; revisits/interleaving and nonmatching Bab numbers remain valid.
+// ATP document numbering is not an explicit prerequisite between teacher Bab.
 const reversed=structuredClone(applied.nextUnits!);
 [reversed[0].order, reversed[5].order] = [reversed[5].order, reversed[0].order];
 const inverted=validateATPUnitMappingCanonical({...mapping,units:reversed},atp,tp);
-assert(!inverted.isValid);assert(inverted.issues.some(issue=>issue.includes('ATP_PROGRESSION_REVERSED')));
+assert(inverted.isValid);assert(inverted.isComplete);assert(!inverted.issues.some(issue=>issue.includes('ATP_PROGRESSION_REVERSED')));
 assert(validateATPUnitMappingCanonical({...mapping,units:applied.nextUnits!.map(unit=>({...unit,order:unit.order+10}))},atp,tp).isComplete);
 // Step 8 sorts by teacher unit.order, not array position or ATP step.
 const reversedArray=[...applied.nextUnits!].reverse();

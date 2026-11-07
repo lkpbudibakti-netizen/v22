@@ -85,14 +85,13 @@ function activityBudgetIssue(m: LearningMeeting, context: MeetingAlignmentContex
 }
 export function validateMeetingATPOrder(meetings: LearningMeeting[], atp?: ATPData): string | null {
   if (!atp) return 'ATP canonical belum tersedia.';
-  const introduced=new Set<string>(); let previous=-Infinity;
-  for (const meeting of [...meetings].sort((a,b)=>a.order-b.order)) {
-    const steps=meeting.linkedAtpItemIds.filter(id=>!introduced.has(id)).map(id=>atp.items.find(item=>item.id===id)).sort((a,b)=>(a?.stepNumber||0)-(b?.stepNumber||0));
-    for(const step of steps) {
-      if(!step || !Number.isFinite(step.stepNumber) || step.stepNumber<previous) return `Urutan/prasyarat ATP pada ${meeting.id} perlu ditinjau; langkah baru tidak boleh mendahului prasyaratnya.`;
-      introduced.add(step.id);previous=step.stepNumber;
-    }
-  }
+  // Keep this public entry point for callers. stepNumber orders the canonical ATP
+  // document, not dependencies between materials/meetings. ATPItem defines no
+  // explicit prerequisite relation; do not infer one or reorder teacher mapping.
+  // Full material–TP–ATP lineage remains validateUnitExecutionPlan's responsibility.
+  const canonicalIds=new Set(atp.items.map(item=>item.id));
+  for(const meeting of meetings)for(const id of meeting.linkedAtpItemIds)
+    if(!canonicalIds.has(id))return `Referensi ATP '${id}' pada ${meeting.id} tidak ditemukan pada ATP canonical.`;
   return null;
 }
 function groupIssue(group: LearningMeeting[], context: MeetingAlignmentContext): string | null {
