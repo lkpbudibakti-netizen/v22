@@ -1,3 +1,4 @@
+import { annualJPNotes } from '../jpPresentation';
 import {
   Document,
   Packer,
@@ -281,7 +282,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
 
   // Status Alokasi Waktu
   if (!isK13Curriculum && !isBlankMode) {
-    const allocationStatusText = 'Kapasitas kalender tahunan: '+(projection.availableAnnualJP ?? 'belum tersedia')+' JP; alokasi: '+projection.totalAllocatedJP+' JP; sisa/defisit kapasitas: '+(projection.unallocatedAnnualJP ?? 'belum tersedia')+' JP. Acuan intrakurikuler: '+(projection.officialAnnualJP ?? 'belum terverifikasi')+' JP; selisih terhadap acuan: '+(projection.remainingAnnualJP ?? 'belum tersedia')+' JP.';
+    const allocationStatusText = annualJPNotes(projection);
 
     docChildren.push(
       createSectionHeading('Ringkasan Alokasi Waktu Tahunan', 2),
@@ -293,7 +294,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
   }
 
   // 5. Signoff
-  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate, 'Program Tahunan' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Portrait A4)
   const doc = new Document({

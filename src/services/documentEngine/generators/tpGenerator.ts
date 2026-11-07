@@ -122,7 +122,7 @@ export async function generateTP(
   docChildren.push(new Paragraph({ spacing: { after: 240 } }));
 
   // 5. Signoff Block (Tanda Tangan)
-  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate, 'Tujuan Pembelajaran' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   const doc = new Document({
     sections: [

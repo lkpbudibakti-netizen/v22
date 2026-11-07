@@ -72,7 +72,7 @@ export async function generateJurnal(context: DocumentGenerationContext): Promis
   docChildren.push(jurnalTable);
 
   // 4. Signoff Block
-  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate));
+  docChildren.push(...createSignoffBlock(school, profile, isBlankMode, context.documentDate, 'Jurnal Pembelajaran' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')));
 
   // Build Document (Landscape A4)
   const doc = new Document({
