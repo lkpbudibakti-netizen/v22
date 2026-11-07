@@ -351,10 +351,25 @@ for(const [name,writer,annual] of [
       [writer]:(...args:unknown[])=>{if(mode==='error')throw Error('fixture failure');events.push(['save',...args]);},
       refreshV5:()=>events.push(['refresh']),setAppNotice:(n:any)=>notices.push(n)});
     const result=callback(payload);
-    if(mode==='ok')assert.deepEqual(events,[['save',annual?ready.yearPlans[0].id:ready.semesterPlans[0].id,payload],['refresh']]);
+    // Unit execution saves forward the optional reviewed alignment approval;
+    // an ordinary save explicitly forwards undefined as the third argument.
+    const optionalArgs=name==='handleSaveUnitExecutionPlan'?[undefined]:[];
+    if(mode==='ok')assert.deepEqual(events,[['save',annual?ready.yearPlans[0].id:ready.semesterPlans[0].id,payload,...optionalArgs],['refresh']]);
     else {assert.deepEqual(events,[]);assert.equal(notices.length,1);}
     if(annual)assert.equal(result,mode==='ok');
   }
+});
+runTest('Unit execution save forwards a supplied alignment approval unchanged before refreshing',()=>{
+  const payload={id:'fixture'};
+  // Opaque forwarding fixture: approval validation belongs to the storage tests.
+  const approval={draft:payload,proposal:{fingerprint:'reviewed-alignment'}};
+  const events:string[]=[];
+  const callback=appCallback('handleSaveUnitExecutionPlan',{activeYearPlan:ready.yearPlans[0],
+    saveUnitExecutionPlanV5:(id:string,plan:unknown,review:unknown)=>{
+      assert.equal(id,ready.yearPlans[0].id);assert.strictEqual(plan,payload);assert.strictEqual(review,approval);events.push('save');
+    },refreshV5:()=>events.push('refresh'),setAppNotice:()=>assert.fail('unexpected save error')});
+  assert.equal(callback(payload,approval),true);
+  assert.deepEqual(events,['save','refresh']);
 });
 runTest('Attendance/grade upserts replace only their target records; assessment deletion keeps unrelated results',()=>{
   const runtimeContext={semesterData:{attendance:{sessions:[{id:'s1'},{id:'s2'}],records:[{id:'r1',sessionId:'s1'},{id:'r2',sessionId:'s2'}]},grade:{assessments:[{id:'a1'},{id:'a2'}],results:[{id:'g1',assessmentId:'a1'},{id:'g2',assessmentId:'a2'}]}}};
