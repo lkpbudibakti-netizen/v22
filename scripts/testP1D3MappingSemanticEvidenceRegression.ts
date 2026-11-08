@@ -232,11 +232,11 @@ const matById = new Map(result.materialFindings.map((f) => [f.id, f]));
 
 assertCase(byId.get('wrong-theme')?.status === 'REVIEW', 'ID benar + tema Bab bertentangan / tidak dipetakan -> REVIEW', byId.get('wrong-theme'));
 assertCase(byId.get('no-evidence')?.status === 'REVIEW', 'AI mengklaim ALIGNED tanpa evidence / salah unit -> REVIEW', byId.get('no-evidence'));
-assertCase(byId.get('strong')?.status === 'ALIGNED', 'Bab/TP semantik kuat -> ALIGNED', byId.get('strong'));
-assertCase(byId.get('multi-ok')?.status === 'ALIGNED', 'Multi-Bab: semua subset TP selaras -> ALIGNED', byId.get('multi-ok'));
+assertCase(byId.get('strong')?.status === 'REVIEW', 'Overlap kuat tanpa bukti pedagogis/persetujuan -> REVIEW', byId.get('strong'));
+assertCase(byId.get('multi-ok')?.status === 'REVIEW', 'Coverage multi-Bab bukan bukti pedagogis -> REVIEW', byId.get('multi-ok'));
 assertCase(matById.get('mat-wrong-supported')?.status === 'MANUAL_REVIEW', 'Material ID benar tetapi domain gerak eksplisit bertentangan -> MANUAL_REVIEW', matById.get('mat-wrong-supported'));
-assertCase(matById.get('mat-supported')?.status === 'SUPPORTED', 'Material valid dan substansi sesuai -> SUPPORTED', matById.get('mat-supported'));
-assertCase(matById.get('ambiguous-action')?.status === 'ALIGNABLE' && !!matById.get('ambiguous-action')?.action, 'Usulan Gemini dengan overlap lexical rendah tetap actionable tanpa konflik eksplisit', matById.get('ambiguous-action'));
+assertCase(matById.get('mat-supported')?.status === 'MANUAL_REVIEW', 'ID dan keyword sesuai belum membuktikan dukungan pedagogis', matById.get('mat-supported'));
+assertCase(matById.get('ambiguous-action')?.status === 'MANUAL_REVIEW' && !matById.get('ambiguous-action')?.action, 'Usulan Gemini tanpa bukti exact tidak actionable', matById.get('ambiguous-action'));
 assertCase(result.summary.alignedAtp === result.atpFindings.filter((f) => f.status === 'ALIGNED').length, 'Summary alignedAtp konsisten dengan findings final', result.summary);
 
 // Additional regression tests for unmapped ATP claiming aligned, actual placement vs currentUnitId mismatch, and REVIEW from AI + strong evidence

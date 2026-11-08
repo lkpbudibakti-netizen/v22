@@ -39,7 +39,7 @@ import {
   MappingAnalysisResult,
 } from '../services/aiService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
-import { mappingCoverage, alignmentProposalStatus } from '../services/mappingAlignmentService';
+import { mappingCoverage, alignmentProposalStatus, mappingActionKind, applyMinimalAlignment, buildMappingPedagogicalReport, undoMappingTitle, recordMappingBatch } from '../services/mappingAlignmentService';
 import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
 import {
   applyATPMappingActions,
@@ -116,6 +116,7 @@ export function createInitialUnits(
 ): ATPUnitMapping[] {
   if (mapping && Array.isArray(mapping.units) && mapping.units.length > 0) {
     return mapping.units.map((u, idx) => ({
+      ...u,
       id: u.id,
       title: u.title,
       order: u.order,
@@ -125,6 +126,7 @@ export function createInitialUnits(
           ? u.linkedTpIds
           : [],
       materials: (u.materials || []).map((m, mIdx) => ({
+        ...m,
         id: m.id || `mat-${Date.now()}-${mIdx + 1}`,
         title: m.title || '',
         order: m.order || mIdx + 1,
@@ -239,6 +241,7 @@ export function buildCurrentMappingDraftFromUnits(
       const matTpIds = Array.isArray(m.linkedTpIds) ? [...m.linkedTpIds] : [];
 
       return {
+        ...m,
         id: m.id && m.id.trim() ? m.id.trim() : `mat-${Date.now()}-${mIdx + 1}`,
         title: m.title !== undefined ? m.title : '',
         order: m.order,
@@ -248,6 +251,7 @@ export function buildCurrentMappingDraftFromUnits(
     });
 
     return {
+      ...u,
       id: uId,
       title: uTitle,
       order: u.order,
@@ -723,7 +727,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     if (!generationPreview) return;
     try {
       if (generationPreviewContext !== generationContextRef.current) throw new Error('Draf atau konteks berubah sejak preview. Susun ulang untuk meninjau hasil terbaru.');
-      const next = approveMappingGenerationPreview(generationPreview, units, atp, tp);
+      const next = recordMappingBatch(units, approveMappingGenerationPreview(generationPreview, units, atp, tp), 'Guru menyetujui preview struktur AI sebelum diterapkan ke draf.');
       setUnits(next); setHasChanges(true); setGenerationPreview(null); setGenerationError(null);
       setAnalysisResult(null); setAnalysisFingerprint(null); setSelectedAnalysisActionIds(new Set());
       setAlignmentRollback(null); setApplyIssues([]); setSaveSuccessNotice(false); setSaveErrorNotice(null);
@@ -914,10 +918,22 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       return;
     }
 
-    const freshFp = computeMappingFingerprint(unitsRef.current, atpRef.current, tpRef.current);
-    setAnalysisResult(guardResult.result!);
-    setLastAnalysisSnapshot(guardResult.result!);
-    setAnalysisFingerprint(freshFp);
+    const analyzed = guardResult.result!;
+    const automaticProposals = (analyzed.alignmentProposals || []).filter(p => p.action && alignmentProposalStatus(p) === 'READY' &&
+      ['COPYEDIT','RENAME'].includes(mappingActionKind(p.action, unitsRef.current)));
+    const automatic = automaticProposals.length ? applyMinimalAlignment(unitsRef.current, automaticProposals.map(p => p.action!), atpRef.current, tpRef.current) : undefined;
+    let freshUnits = unitsRef.current;
+    if (automatic?.success && automatic.nextUnits) {
+      freshUnits = automatic.nextUnits;
+      setAlignmentRollback({ units: structuredClone(unitsRef.current), fingerprint: computeMappingFingerprint(freshUnits, atpRef.current, tpRef.current) });
+      setUnits(freshUnits); unitsRef.current = freshUnits; setHasChanges(true);
+      const applied = new Set(automaticProposals.map(p => p.id));
+      analyzed.alignmentProposals = analyzed.alignmentProposals?.map(p => applied.has(p.id) ? { ...p, action: undefined, validationStatus: 'ALREADY_APPLIED', reason: 'Redaksi setara diterapkan otomatis ke draf dan dicatat; dapat di-undo. Simpan Pemetaan untuk menyimpan.' } : p);
+      setAppliedNotice(`${automaticProposals.length} perbaikan redaksi otomatis tercatat. Substansi dan relasi TP/ATP tetap; simpan draf untuk menyimpan.`);
+    } else if (automatic && !automatic.success) setApplyIssues(automatic.issues);
+    setAnalysisResult(analyzed);
+    setLastAnalysisSnapshot(analyzed);
+    setAnalysisFingerprint(computeMappingFingerprint(freshUnits, atpRef.current, tpRef.current));
     setSelectedAnalysisActionIds(new Set());
     setIsAnalyzing(false);
   };
@@ -939,9 +955,9 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     if (!analysisResult) return;
     setApplyIssues([]);
     const allActionIds = new Set<string>();
-    if (analysisResult.alignmentProposals?.some(p => alignmentProposalStatus(p) === 'READY')) {
+    if (analysisResult.alignmentProposals?.some(p => alignmentProposalStatus(p) === 'READY' && p.approval !== 'AUTOMATIC')) {
       const materialKeys = new Set<string>();
-      analysisResult.alignmentProposals.filter(p => alignmentProposalStatus(p) === 'READY').forEach(p => {
+      analysisResult.alignmentProposals.filter(p => alignmentProposalStatus(p) === 'READY' && p.approval !== 'AUTOMATIC').forEach(p => {
         const key = p.targetMaterialId || `${p.targetUnitId}:${p.action?.after || p.action?.type}`;
         if (!materialKeys.has(key)) { allActionIds.add(p.id); materialKeys.add(key); }
       });
@@ -1788,17 +1804,17 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         <button type="button" className="text-sm font-semibold text-amber-800" onClick={() => {
           const restored = rollbackATPMappingActions(unitsRef.current, alignmentRollback.units, alignmentRollback.fingerprint, atpRef.current, tpRef.current);
           if (!restored.success || !restored.nextUnits) { setApplyIssues(restored.issues); return; }
-          setUnits(restored.nextUnits); setHasChanges(true);
+          setUnits(recordMappingBatch(unitsRef.current, restored.nextUnits, 'Guru membatalkan batch penyelarasan terakhir.', true)); setHasChanges(true);
           setAnalysisResult(null); setAnalysisFingerprint(null); setSelectedAnalysisActionIds(new Set());
           setAlignmentRollback(null); setAppliedNotice('Batch terakhir dibatalkan; materi asli dipulihkan ke draf. Simpan Pemetaan untuk menyimpan.');
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
       {analysisResult && (
         <div className="bg-white rounded-2xl border-2 border-indigo-300 shadow-md p-5 space-y-5 animate-fadeIn">
-          {(analysisResult.alignmentProposals?.length || analysisResult.gapFindings?.length) ? (
             <div className="space-y-3">
-              <h4 className="font-bold text-sm">Preview perubahan minimal — pilih hanya perubahan yang disetujui</h4>
+              <h4 className="font-bold text-sm">Kesiapan dan rekomendasi penyelarasan pedagogis</h4>
               <AlignmentProposalReview proposals={analysisResult.alignmentProposals || []}
+                readiness={mappingReadiness} findings={buildMappingPedagogicalReport(units, atp, tp)} units={units} atp={atp} tp={tp}
                 selectedIds={selectedAnalysisActionIds} onSelectionChange={ids => {
                   setSelectedAnalysisActionIds(ids); setApplyIssues([]);
                 }} />
@@ -1806,7 +1822,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 {analysisResult.gapFindings?.map(gap => <p key={gap.kind+gap.id} className="text-xs">{gap.kind} {gap.id}: {gap.reason}</p>)}
               </details>
             </div>
-          ) : null}
+          <details id="mapping-legacy-analysis-details"><summary>Detail sumber analisis dan temuan pendukung</summary>
           {/* Analysis Header & Summary Metrics */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-indigo-100">
             <div>
@@ -1816,7 +1832,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                   Hasil Analisis Pemetaan Manual ↔ TP ↔ ATP
                 </h4>
                 <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 text-[11px] font-bold border border-indigo-200">
-                  Read-Only Analysis
+                  Analisis dengan riwayat perubahan
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -2336,6 +2352,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             </div>
           )}
 
+          </details>
           {/* Action Footer inside Panel */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-indigo-100">
             <div className="flex flex-col gap-1 w-full sm:w-auto">
@@ -2371,7 +2388,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 Tutup Hasil
               </button>
 
-              <button
+              {selectedActions.length > 0 && <button
                 id="btn-apply-analysis-actions"
                 type="button"
                 onClick={handleApplySelectedActions}
@@ -2381,12 +2398,30 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Terapkan Pilihan ({selectedActions.length})</span>
-              </button>
+              </button>}
             </div>
           </div>
         </div>
       )}
 
+      <details id="mapping-action-history" className="rounded-xl border bg-white p-4 text-sm">
+        <summary>Riwayat tindakan dan perubahan redaksi sebelum/sesudah</summary>
+        <p>Perubahan draf perlu disimpan. Undo ditolak jika judul sudah berubah setelah tindakan.</p>
+        {units.flatMap(unit => [unit, ...unit.materials].map(entity => <div key={`${unit.id}-${entity.id}`} className="mt-3">
+          {(entity.titleHistory || []).map(record => <p key={record.id}>{record.at} · {record.kind} · {record.approval}: {record.before} → {record.after}</p>)}
+          {(entity.titleHistory || []).some(record => record.kind !== 'UNDO' && !(entity.titleHistory || []).some(h => h.undoOf === record.id)) &&
+            <button type="button" className="underline" onClick={() => {
+              const restored = undoMappingTitle(unitsRef.current, unit.id, entity === unit ? undefined : entity.id);
+              if (!restored.success || !restored.nextUnits) { setApplyIssues(restored.issues); return; }
+              setUnits(restored.nextUnits); setHasChanges(true); setAnalysisResult(null); setAnalysisFingerprint(null); setSelectedAnalysisActionIds(new Set());
+            }}>Undo judul {entity.title}</button>}
+          {entity === unit && (unit.actionHistory || []).map(record => <details key={record.id}><summary>{record.kind}: {record.reason}</summary><p>Sebelum: {record.before}</p><p>Sesudah: {record.after}</p></details>)}
+        </div>))}
+      </details>
+      <div id="mapping-final-status" role="status" className="text-sm rounded-xl border p-3">
+        <strong>{mappingReadiness.canProceed ? 'READY untuk Step 08' : 'Belum READY untuk Step 08'}</strong>
+        <p>{mappingReadiness.canProceed ? 'Simpan perubahan draf sebelum melanjutkan. Tinjauan pedagogis yang belum memiliki bukti tetap ditampilkan.' : mappingReadiness.blockers[0]}</p>
+      </div>
       {/* Overview Stat Bar */}
       <div className="flex items-center justify-between text-xs text-slate-500 px-1">
         <div className="flex items-center gap-2 font-semibold">

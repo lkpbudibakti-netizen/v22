@@ -1280,6 +1280,7 @@ export async function generateCanonicalATPUnitMappingWithAI(
 }
 
 export interface MappingAnalysisResult {
+  pedagogicalFindings?: import('./mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('./mappingAlignmentService').AlignmentProposal[];
   gapFindings?: { kind: 'TP' | 'ATP' | 'MATERIAL'; id: string; proposalIds: string[]; reason: string }[];
   engine?: 'gemini_ai' | 'pedagogical_engine';

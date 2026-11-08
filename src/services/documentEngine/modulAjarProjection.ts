@@ -27,6 +27,7 @@ export interface ModulAjarMeeting {
 }
 export interface ModulAjarSection { title: string; lines: string[] }
 export interface ModulAjarProjection {
+  unitTitle?: string;
   meetings?: ModulAjarMeeting[];
   sections?: ModulAjarSection[];
   isReady: boolean;
@@ -225,6 +226,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
 
   return {
     isReady: true,
+    unitTitle: context.atpUnitMapping?.units.find(unit => unit.id === selectedPlan.unitId)?.title,
     plan: selectedPlan,
     meetings, sections,
     resolvedTPs: validation.resolvedTPs || [],

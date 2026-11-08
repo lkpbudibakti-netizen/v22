@@ -1,4 +1,5 @@
 import { ATPUnitMappingData, ATPData, TPData, ATPUnitMapping, ATPUnitMaterial } from '../types';
+import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
 
 export interface ATPUnitMappingValidationResult {
   isValid: boolean;
@@ -15,6 +16,7 @@ export interface ATPUnitMappingValidationResult {
   unmappedAtpIds: string[];
   uncoveredTpIds: string[];
   materialCoverageGaps: Array<{ unitId: string; unitTitle: string; tpIds: string[]; atpItemIds: string[] }>;
+  semanticConflicts?: Array<{ unitId: string; materialId: string; tpId: string; reason: string }>;
 }
 
 function getCanonicalTpsForAtpItem(atpItem: any): string[] {
@@ -43,6 +45,7 @@ export function validateATPUnitMappingCanonical(
     unmappedAtpIds: [],
     uncoveredTpIds: [],
     materialCoverageGaps: [],
+    semanticConflicts: [],
   };
 
   if (!mapping || !atp || !tp) {
@@ -204,6 +207,14 @@ export function validateATPUnitMappingCanonical(
       // Material TP subset of Unit TP
       const parentUnitTpSet = new Set(unitTpIds);
       for (const tpId of matTpIds) {
+        const objective = tp.items.find(item => item.id === tpId);
+        const semantic = objective ? checkMappingSemanticEvidence({ label: m.title, tpItems: [objective] }) : undefined;
+        if (semantic?.hardConflict) {
+          result.isValid = false;
+          result.isComplete = false;
+          result.semanticConflicts!.push({ unitId: u.id, materialId: m.id, tpId, reason: semantic.reason });
+          result.issues.push(`MATERIAL_TP_CONFLICT: Bab '${u.id}', materi '${m.id}', TP '${tpId}': ${semantic.reason}`);
+        }
         if (!parentUnitTpSet.has(tpId)) {
           result.isValid = false;
           result.isComplete = false;

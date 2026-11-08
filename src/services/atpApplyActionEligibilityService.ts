@@ -46,7 +46,7 @@ export function extractSelectedMappingActions(
 
   const actions: MappingActionItem[] = [];
   (analysisResult.alignmentProposals || []).forEach(proposal => {
-    if (alignmentProposalStatus(proposal) === 'READY' && proposal.action && selectedActionIds.has(proposal.id)) actions.push({ ...proposal.action });
+    if (alignmentProposalStatus(proposal) === 'READY' && proposal.approval !== 'AUTOMATIC' && proposal.action && selectedActionIds.has(proposal.id)) actions.push({ ...proposal.action });
   });
 
   (analysisResult.atpFindings || []).forEach((f) => {

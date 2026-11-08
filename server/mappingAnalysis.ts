@@ -3,6 +3,7 @@ import { analyzeBabFirstMapping } from './mappingBabFirstAnalysis';
 import { TPData, ATPData, ATPUnitMappingData } from '../src/types';
 
 export interface MappingAnalysisResult {
+  pedagogicalFindings?: import('../src/services/mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('../src/services/mappingAlignmentService').AlignmentProposal[];
   gapFindings?: { kind: 'TP' | 'ATP' | 'MATERIAL'; id: string; proposalIds: string[]; reason: string }[];
   summary: {
@@ -155,11 +156,13 @@ export function buildMappingAnalysisPrompt(params: AnalyzeATPUnitMappingServerPa
   });
 
   return `Analisis semantik seluruh TP/ATP dan seluruh Bab/Materi untuk perubahan seminimal mungkin.
-CP/TP/ATP canonical immutable. Bab (ID, judul, jumlah, order) immutable. Materi guru/Excel adalah sumber asli: jangan overwrite massal.
+CP/TP/ATP canonical immutable. ID Bab dan materi tetap. Judul Bab/Materi boleh disunting dengan diff sebelum/sesudah.
+COPYEDIT: ejaan, kapitalisasi, tanda baca kosmetik. RENAME: makna dan cakupan tetap, hanya otomatis bila aturan kesetaraan deterministik membuktikannya. Jangan memakai jumlah kata/rasio kemiripan sebagai bukti.
+EDIT_UNIT_TITLE menyunting judul Bab; EDIT_MATERIAL menyunting judul materi. Perubahan makna/cakupan adalah CONTENT_CHANGE dan wajib persetujuan guru; perubahan relasi adalah REALIGN dan wajib persetujuan guru. Jangan terus mengganti judul yang sudah baik pada analisis ulang.
 Bab/Materi → pilih subset TP relevan → derive ATP canonical. Pertahankan stepNumber, focus, linkedTpIds ATP serta unit.order Bab.
 Jangan menjadikan overlap keyword sebagai authority relevansi. Analisis kompetensi, lingkup, progresi dan konteks secara menyeluruh.
 Untuk setiap gap pilih prioritas LINK_TP → EDIT_MATERIAL → ADD_MATERIAL → MOVE_MATERIAL → RESTRUCTURE_UNIT.
-LINK_TP: tautkan TP ke materi existing tanpa mengubah teks. EDIT_MATERIAL: revisi minimal (pertahankan sebagian besar kata asli), before harus exact.
+LINK_TP: usulan hubungan materi existing tanpa mengubah teks. EDIT_MATERIAL/EDIT_UNIT_TITLE: before harus exact; after berupa judul yang bermakna jelas. Kutipan kata yang sama bukan bukti dukungan kompetensi.
 ADD_MATERIAL: boleh pada Bab yang SUDAH memiliki materi jika gap tidak dapat ditutup melalui materi existing. Jangan mengganti materi lama.
 MOVE_MATERIAL: sourceUnitId dan targetUnitId existing, targetMaterialId exact. Jangan pindahkan ATP canonical atau ubah Bab.
 RESTRUCTURE_UNIT adalah opsi terakhir: hanya mengurutkan materi existing di satu Bab, materialOrder berisi seluruh ID materi; before = JSON.stringify(urutan ID materi saat ini). Tidak membuat/menghapus/mengurutkan Bab.
@@ -168,7 +171,7 @@ Untuk menghindari kutipan terlalu pendek, COPY pernyataan TP utuh ke tpQuote dan
 Minimum kutipan validator: tpQuote >= min(12, panjang pernyataan TP), materialQuote >= min(8, panjang judul sumber). Tetap harus substring exact, bukan keyword generik.
 Gunakan ID tpId/unitId/materialId dari JSON sumber, bukan kode TP atau nomor Bab. before LINK_TP/EDIT_MATERIAL/MOVE_MATERIAL wajib judul asli exact; after EDIT/ADD wajib judul revisi/baru, bukan object atau penjelasan. MOVE sourceUnitId wajib Bab induk asli.
 Gunakan satu type literal (contoh "LINK_TP"), bukan gabungan nama type dengan tanda |. Setiap proposal adalah action flat sesuai schema di bawah; envelope {id, action:{...}} juga didukung jika field yang sama tidak bertentangan. Semua penolakan validator tetap ditampilkan dan tidak dapat dipilih.
-AI hanya mengusulkan, guru memilih melalui diff. Server menurunkan ATP induk, menghitung coverage dan memvalidasi lineage/progression/ID/substansi eksplisit.
+Server memisahkan redaksi otomatis terverifikasi dari usulan yang memerlukan persetujuan guru. Server menurunkan ATP induk, menghitung coverage dan memvalidasi lineage/progression/ID/substansi eksplisit.
 Jangan memaksakan relasi demi Z=0. Untuk SETIAP TP uncovered, ATP unmapped, dan materi review, berikan proposal konkret atau alasan spesifik dalam gapFindings. Jangan mengarang ID.
 Usulkan alternatif terpisah dan terurut prioritas; hindari beberapa perubahan bertentangan pada materi sama. Action harus mandiri/atomic; coverage dari data aktual, bukan klaim AI.
 Subject: ${subject || ''}; grade: ${grade || ''}; phase: ${phase || ''}
@@ -178,7 +181,7 @@ BAB/MATERI ASLI: ${JSON.stringify(unitsContext)}
 Kembalikan JSON:
 {
  "atpFindings": [], "materialFindings": [],
- "alignmentProposals": [{"id":"unik", "type":"LINK_TP|EDIT_MATERIAL|ADD_MATERIAL|MOVE_MATERIAL|RESTRUCTURE_UNIT",
+ "alignmentProposals": [{"id":"unik", "type":"EDIT_UNIT_TITLE|LINK_TP|EDIT_MATERIAL|ADD_MATERIAL|MOVE_MATERIAL|RESTRUCTURE_UNIT",
  "targetUnitId":"exact", "sourceUnitId":"untuk MOVE", "targetMaterialId":"exact kecuali ADD",
  "linkedTpIds":["exact"], "before":"judul asli exact / JSON ID order untuk restructure", "after":"judul revisi/baru",
  "materialOrder":["hanya untuk restructure"], "reason":"alasan pedagogis dan mengapa tindakan lebih kecil tidak cukup",

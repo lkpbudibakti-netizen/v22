@@ -453,6 +453,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
     ['NIP', `: ${profile.nip || '-'}`],
     ['Alokasi Waktu', `: ${timeAllocationDisplay}`],
     ['Topik / Materi', `: ${plan.topic || plan.title || '-'}`],
+    ['Bab / Unit', `: ${sharedProjection.unitTitle || '-'}`],
     ...(academicSetting.planningReferenceNotice ? [['Acuan Waktu', `: ${academicSetting.planningReferenceNotice}`] as [string, string]] : []),
   ];
 

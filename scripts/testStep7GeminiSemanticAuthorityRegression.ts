@@ -29,6 +29,7 @@ const before = JSON.stringify(params);
 const gemini = { materialFindings: mapping.units.map((unit, index) => ({
   id: 'gemini-'+index, unitId: unit.id, materialId: unit.materials[0].id, status: 'ALIGNABLE', strength: 'MODERATE',
   reason: 'Gemini menilai materi relevan secara semantik dengan TP yang dipilih.',
+  evidence: [{tpId:tp.items[index].id,tpQuote:tp.items[index].statement,materialQuote:unit.materials[0].title}],
   action: { type: 'ALIGN_EXISTING_MATERIAL', targetUnitId: unit.id, targetMaterialId: unit.materials[0].id,
     linkedTpIds: [tp.items[index].id], linkedAtpItemIds: ['AI_PARENT_NOT_AUTHORITY'] },
 })) };
@@ -42,6 +43,8 @@ for (const [index, label] of labels.entries()) {
 const non = checkMappingSemanticEvidence({ label: labels[3], tpItems: [tp.items[3]] });
 assert(!non.reason.includes('Domain pembelajaran berbeda'), 'tempat alone must not imply lokomotor');
 const analysis = sanitizeMappingAnalysisResult(gemini, params);
+const unproven = structuredClone(gemini); unproven.materialFindings.forEach(f => { f.evidence = []; });
+assert.equal(actionsOf(sanitizeMappingAnalysisResult(unproven, params)).length, 0, 'AI claims without source evidence stay NEEDS_REVIEW');
 assert.equal(analysis.materialFindings.filter(finding => finding.action).length, 4);
 assert(analysis.materialFindings.every(finding => finding.status === 'ALIGNABLE'));
 assert.deepEqual(analysis.materialFindings.map(finding => finding.supportingAtpItemIds), atp.items.map(item => [item.id]));

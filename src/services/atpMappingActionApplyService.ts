@@ -2,7 +2,7 @@ import { deriveMappingAtpIds } from './atpMappingLineageService';
 import type { ATPData, TPData, ATPUnitMapping, ATPUnitMaterial, ATPUnitMappingData } from '../types';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
-import { applyMinimalAlignment, type AlignmentAction, type AlignmentActionType } from './mappingAlignmentService';
+import { ALIGNMENT_PRIORITY, applyMinimalAlignment, recordMappingBatch, type AlignmentAction, type AlignmentActionType } from './mappingAlignmentService';
 
 export interface MappingActionItem {
   id: string;
@@ -82,6 +82,9 @@ export function computeMappingFingerprint(units: ATPUnitMapping[], atp: ATPData,
   })).sort((a, b) => a.id.localeCompare(b.id));
 
   return JSON.stringify({
+    atpId: atp.id,
+    tpId: tp.id,
+    academicSettingId: atp.academicSettingId,
     units: unitSummary,
     atpItems: atpSummary,
     tpItems: tpSummary,
@@ -165,6 +168,7 @@ export function buildMappingDraftFromUnits(
       const matTpIds = Array.isArray(m.linkedTpIds) ? [...m.linkedTpIds] : [];
 
       return {
+        ...m,
         id: m.id && m.id.trim() ? m.id.trim() : `mat-${Date.now()}-${mIdx + 1}`,
         title: m.title !== undefined ? m.title : '',
         order: m.order,
@@ -174,6 +178,7 @@ export function buildMappingDraftFromUnits(
     });
 
     return {
+      ...u,
       id: uId,
       title: uTitle,
       order: typeof u.order === 'number' ? u.order : idx + 1,
@@ -202,7 +207,7 @@ export function applyATPMappingActions(input: ApplyATPMappingActionsInput): Appl
   if (input.expectedFingerprint !== actualFingerprint || input.currentFingerprint !== actualFingerprint) {
     return { success: false, issues: ['Analisis tidak tersedia atau sudah kedaluwarsa. Jalankan analisis ulang.'] };
   }
-  const minimalTypes = ['LINK_TP', 'EDIT_MATERIAL', 'ADD_MATERIAL', 'MOVE_MATERIAL', 'RESTRUCTURE_UNIT'];
+  const minimalTypes: readonly string[] = ALIGNMENT_PRIORITY;
   if (input.selectedActions.some(action => minimalTypes.includes(action?.type))) {
     if (input.selectedActions.some(action => !minimalTypes.includes(action?.type))) return { success: false, issues: ['Pilih proposal perubahan minimal atau bundle lama secara terpisah; tidak ada perubahan parsial diterapkan.'] };
     return applyMinimalAlignment(input.units, input.selectedActions as AlignmentAction[], input.atp, input.tp);
@@ -646,7 +651,7 @@ export function applyATPMappingActions(input: ApplyATPMappingActionsInput): Appl
 
   return {
     success: true,
-    nextUnits,
+    nextUnits: recordMappingBatch(units, nextUnits, 'Guru menyetujui bundle rekomendasi: ' + selectedActions.map(action => action.reason || action.type).join('; ')),
     issues: [],
   };
 }

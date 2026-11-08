@@ -4,6 +4,7 @@ import { applyATPMappingActions, computeMappingFingerprint } from '../src/servic
 import { deriveMappingAtpIds, getMappingAtpTpIds } from '../src/services/atpMappingLineageService';
 import { validateATPUnitMappingCanonical } from '../src/services/atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from './mappingSemanticEvidence';
+import { hasTeacherMaterialSupport } from '../src/services/mappingAlignmentService';
 
 /** Read-only Bab/Materi -> relevant TP -> exact canonical ATP parents. */
 export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingServerParams): MappingAnalysisResult {
@@ -62,7 +63,7 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
       const tpIds: string[] = Array.isArray(proposedTpIds) && proposedTpIds.length
         ? [...proposedTpIds]
         : existingTpIds.length ? [...existingTpIds]
-        : tp.items.filter(item => checkMappingSemanticEvidence({ label: title, tpItems: [item] }).supported).map(item => item.id);
+        : [];
       const parents = deriveMappingAtpIds(tpIds, atp, tp);
       if (!tpIds.length && !geminiProposal) {
         manual('Keselarasan TP belum dapat dipastikan: label tidak memuat kata kunci substansi yang cukup untuk TP pilihan.'); continue;
@@ -74,7 +75,15 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
         manual('Konflik domain gerak eksplisit antara materi dan TP pilihan Gemini; tinjau manual.'); continue;
       }
       const approvedLineage = !!material && sameIds(existingTpIds, tpIds) && sameIds(material.linkedAtpItemIds || [], parents.atpItemIds) &&
-        parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id)) && noHardConflict(title, tpIds);
+        parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id)) && noHardConflict(title, tpIds) && hasTeacherMaterialSupport(unit, material, tp);
+      const exactEvidence = !!proposal?.reason?.trim() && tpIds.every(id => {
+        const objective = tp.items.find(t => t.id === id), quote = proposal?.evidence?.find((e:any) => e.tpId === id);
+        return objective && typeof quote?.tpQuote === 'string' && quote.tpQuote.length >= Math.min(12, objective.statement.length) && objective.statement.includes(quote.tpQuote) &&
+          typeof quote?.materialQuote === 'string' && quote.materialQuote.length >= Math.min(8, title.length) && title.includes(quote.materialQuote);
+      });
+      if (!approvedLineage && !exactEvidence) {
+        manual('NEEDS_REVIEW: relasi tersimpan dipertahankan, tetapi belum ada bukti kutipan dan alasan pedagogis terverifikasi atau persetujuan guru. Kesamaan kata tidak cukup.'); continue;
+      }
       if (!geminiProposal && !approvedLineage && !evidence(title, tpIds)) {
         manual('Keselarasan TP belum dapat dipastikan: label tidak memuat kata kunci substansi yang cukup untuk TP pilihan. ' + parents.issues.join('; ')); continue;
       }
@@ -83,7 +92,7 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
         manual('Judul Bab belum mendukung TP materi usulan; materi baru tidak ditambahkan otomatis ke Bab yang tidak relevan.'); continue;
       }
       const staleIds = (material?.linkedAtpItemIds || []).filter(id => !atp.items.some(item => item.id === id));
-      const supported = !!material && sameIds(existingTpIds, tpIds) && sameIds(material.linkedAtpItemIds || [], parents.atpItemIds) &&
+      const supported = approvedLineage && !!material && sameIds(existingTpIds, tpIds) && sameIds(material.linkedAtpItemIds || [], parents.atpItemIds) &&
         parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id));
       let action: MappingAnalysisResult['materialFindings'][number]['action'];
       if (!supported) {

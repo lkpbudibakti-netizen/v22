@@ -513,7 +513,25 @@ export interface ATPData {
   updatedAt: string;
 }
 
+export interface MappingChangeRecord {
+  id: string;
+  at: string;
+  kind: 'COPYEDIT' | 'RENAME' | 'REALIGN' | 'CONTENT_CHANGE' | 'UNDO';
+  approval: 'AUTOMATIC' | 'TEACHER';
+  unitId: string;
+  materialId?: string;
+  before: string;
+  after: string;
+  reason: string;
+  undoOf?: string;
+  reviewedTitle?: string;
+  reviewedTpIds?: string[];
+  reviewedTpFingerprint?: string;
+}
+
 export interface ATPUnitMaterial {
+  originalTitle?: string;
+  titleHistory?: MappingChangeRecord[];
   id: string;
   title: string;
   order: number;
@@ -522,6 +540,9 @@ export interface ATPUnitMaterial {
 }
 
 export interface ATPUnitMapping {
+  originalTitle?: string;
+  titleHistory?: MappingChangeRecord[];
+  actionHistory?: MappingChangeRecord[];
   id: string;
   title: string;
   order: number;
@@ -531,6 +552,8 @@ export interface ATPUnitMapping {
 }
 
 export interface ATPUnitMappingData {
+  revisions?: { structure: number; substance: number; presentation: number };
+  presentationUpdatedAt?: string;
   id: string;
   academicSettingId: string;
   atpId: string;

@@ -1,4 +1,4 @@
-import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
+import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, mappingActionKind, suggestMappingCopyedit, buildMappingPedagogicalReport, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
 import type { AnalyzeATPUnitMappingServerParams, MappingAnalysisResult } from './mappingAnalysis';
 import { getMappingAtpTpIds, deriveMappingAtpIds } from '../src/services/atpMappingLineageService';
 
@@ -22,6 +22,14 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     return merged;
   });
   const seen = new Set<string>();
+  for (const unit of mapping.units) for (const entity of [unit, ...unit.materials]) {
+    const materialId = entity === unit ? undefined : entity.id;
+    const after = suggestMappingCopyedit(entity.title);
+    if (after !== entity.title && !actions.some(a => a.targetUnitId === unit.id && a.targetMaterialId === materialId && ['EDIT_UNIT_TITLE','EDIT_MATERIAL'].includes(a.type))) {
+      actions.push({ id: `copyedit-${unit.id}-${entity.id}`, type: materialId ? 'EDIT_MATERIAL' : 'EDIT_UNIT_TITLE', targetUnitId: unit.id, targetMaterialId: materialId,
+        linkedTpIds: entity.linkedTpIds, before: entity.title, after, reason: 'Perbaikan ejaan/spasi/kapital awal deterministik; kompetensi dan cakupan tetap.', evidence: [] });
+    }
+  }
   for (const candidate of actions) {
     if (!candidate || typeof candidate !== 'object') continue;
     const action: AlignmentAction = {
@@ -41,12 +49,13 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     const validationIssues = [candidate.contractIssue, duplicate ? 'PROPOSAL_ID_DUPLICATE: ID proposal duplikat; analisis ulang.' : undefined,
       ...preview.issues].filter((issue): issue is string => typeof issue === 'string' && !!issue);
     const validationStatus = validationIssues.length ? 'REJECTED' : unchanged ? 'ALREADY_APPLIED' : 'READY';
+    const changeKind = mappingActionKind(action, mapping.units);
     seen.add(action.id);
     proposals.push({ id: `minimal-${proposals.length}-${action.id}`, targetUnitId: action.targetUnitId,
       targetMaterialId: action.targetMaterialId, before: typeof action.before === 'string' ? action.before : '',
       after: action.type === 'RESTRUCTURE_UNIT' ? JSON.stringify(action.materialOrder || []) : typeof action.after === 'string' ? action.after : typeof action.before === 'string' ? action.before : '',
       tpIds: Array.isArray(action.linkedTpIds) ? action.linkedTpIds : [],
-      validationStatus, validationIssues, proposalType: typeof action.type === 'string' ? action.type : undefined,
+      validationStatus, validationIssues, changeKind, approval: changeKind === 'COPYEDIT' || changeKind === 'RENAME' ? 'AUTOMATIC' : 'TEACHER', proposalType: typeof action.type === 'string' ? action.type : undefined,
       reason: validationIssues.length ? validationIssues.join('; ') : unchanged ? 'Proposal sudah diterapkan; tidak ada perubahan tambahan.' : action.reason,
       action: validationStatus === 'READY' ? action : undefined,
       impact: { newlyCoveredTpIds: preview.coverage ? before.uncoveredTpIds.filter(id => !preview.coverage!.uncoveredTpIds.includes(id)) : [],
@@ -72,5 +81,5 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
   before.unmappedAtpIds.forEach(id => add('ATP', id));
   before.uncoveredTpIds.forEach(id => add('TP', id));
   result.materialFindings.filter(m => m.status === 'MANUAL_REVIEW').forEach(m => add('MATERIAL', m.materialId || m.id));
-  return { ...result, alignmentProposals: proposals, gapFindings: gaps };
+  return { ...result, alignmentProposals: proposals, gapFindings: gaps, pedagogicalFindings: buildMappingPedagogicalReport(mapping.units, atp, tp) };
 }

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:step07-pedagogical": "tsx scripts/testStep07PedagogicalAlignment.tsx",
     "test:meeting-alignment": "tsx scripts/testMeetingAlignment.ts",
     "test:meeting-duration-v21": "tsx scripts/testMeetingDurationByLevel.ts",
     "test:step08-jp": "tsx scripts/testStep08JPIntegration.tsx",

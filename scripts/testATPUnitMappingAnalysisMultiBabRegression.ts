@@ -78,10 +78,8 @@ console.log('Testing Case A: Unmapped ATP -> ASSIGN_ATP_TO_UNIT...');
   const finding = analysis.atpFindings.find((f) => f.atpItemId === 'atp-1');
   assert.ok(finding, 'Finding for atp-1 must exist');
   assert.strictEqual(finding?.status, 'UNMAPPED');
-  assert.ok(finding?.action, 'Action must be present');
-  assert.strictEqual(finding.action?.type, 'ASSIGN_ATP_TO_UNIT');
-  assert.strictEqual(finding.action?.targetUnitId, 'unit-1');
-  assert.ok(Array.isArray(finding.action?.linkedTpIds) && finding.action.linkedTpIds.length > 0, 'linkedTpIds must be present');
+  assert.strictEqual(finding?.action, undefined, 'Keyword similarity alone cannot propose canonical relationships');
+  assert(analysis.materialFindings.some(m=>m.status==='MANUAL_REVIEW'));
   console.log('✅ Case A passed');
 }
 
@@ -126,9 +124,8 @@ console.log('Testing Case B & C: Z=0 deadlock prevention & multi-Bab subset TP..
   // Analyzer should recommend ASSIGN_ATP_TO_UNIT to unit-2 with subset TP (TP3).
   const finding = analysis.atpFindings.find((f) => f.atpItemId === 'atp-1');
   assert.ok(finding, 'Finding for atp-1 must exist');
-  assert.ok(finding?.action, 'Action recommending atp-1 to unit-2 must be present despite Z=0');
-  assert.strictEqual(finding.action?.targetUnitId, 'unit-2');
-  assert.ok(finding.action?.linkedTpIds.includes('TP3'), 'linkedTpIds should include TP3 relevant to pecahan');
+  assert.strictEqual(finding?.action, undefined, 'Z=0 must not force a lexical relationship');
+  assert(analysis.materialFindings.some(m=>m.unitId==='unit-2'&&m.status==='MANUAL_REVIEW'));
   console.log('✅ Case B & C passed');
 }
 
@@ -233,13 +230,8 @@ console.log('Testing Case I: True Z=0 deadlock prevention...');
   });
 
   const finding = analysis.atpFindings.find((f) => f.atpItemId === 'atp-1');
-  assert.ok(finding?.action, 'Analyzer must recommend assignment to unit-2 despite Z=0');
-  assert.strictEqual(finding.action?.targetUnitId, 'unit-2');
-  assert.deepStrictEqual(
-    finding.action?.linkedTpIds,
-    ['TP3'],
-    'Unit 2 must receive exactly TP3'
-  );
+  assert.strictEqual(finding?.action, undefined, 'Fallback must explain missing support instead of manufacturing TP3');
+  assert(analysis.materialFindings.some(m=>m.unitId==='unit-2'&&m.status==='MANUAL_REVIEW'));
   console.log('✅ Case I passed');
 }
 
@@ -327,7 +319,8 @@ console.log('Testing Case L: Regression Third Bab...');
   const analysis = fallbackAnalyzeMapping({ tpData: mockTPData, atpData: mockATPData, currentMapping: mapping });
   const findings = analysis.atpFindings.filter(f => f.atpItemId === 'atp-1');
   assert.strictEqual(findings.length, 1);
-  assert.strictEqual(findings[0].action?.targetUnitId, 'unit-3');
+  assert.strictEqual(findings[0].action, undefined);
+  assert(analysis.materialFindings.some(m=>m.unitId==='unit-3'&&m.status==='MANUAL_REVIEW'));
   console.log('✅ Case L passed');
 }
 
@@ -362,14 +355,12 @@ console.log('Testing Case M: Material Closure...');
   console.log('Status found:', matFinding?.status);
   assert.strictEqual(
     matFinding?.status,
-    'ALIGNABLE',
-    'Material Pecahan Sederhana must be deterministically alignable'
+    'MANUAL_REVIEW',
+    'Material title similarity requires pedagogical evidence and teacher review'
   );
-  assert.strictEqual(matFinding?.action?.type, 'ALIGN_EXISTING_MATERIAL');
-  assert.deepStrictEqual(matFinding?.action?.linkedAtpItemIds, ['atp-1']);
-  assert.deepStrictEqual(matFinding?.action?.linkedTpIds, ['TP3']);
+  assert.strictEqual(matFinding?.action, undefined);
 
-  // Simulate applying
+  // Explicit teacher decision, never an implicit fallback mutation.
   mapping.units[1].materials[0].linkedAtpItemIds = ['atp-1'];
   mapping.units[1].materials[0].linkedTpIds = ['TP3'];
 

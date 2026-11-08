@@ -717,6 +717,7 @@ export async function generatePdfDocument(
           'Satuan Pendidikan: ' + (school.name || '-'), 'NPSN: ' + (school.npsn || '-'),
           'Guru Mata Pelajaran: ' + (profile.name || '-'), 'NIP: ' + (profile.nip || '-'),
           'Tahun Ajaran: ' + academicYear, 'Topik / Materi: ' + (matchedPlan?.topic || matchedPlan?.title || '-'),
+          'Bab / Unit: ' + (projection.unitTitle || '-'),
           'Alokasi Waktu: ' + projection.resolvedAllocatedJP + ' JP',
         ].join('\n') });
         for (const section of projection.sections || []) {

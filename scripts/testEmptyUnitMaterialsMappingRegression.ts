@@ -22,6 +22,17 @@ function runTest(name: string, fn: () => void) {
   }
 }
 
+function evidenceBackedProposal(mapping: ATPUnitMappingData) {
+  return {materialFindings:mapping.units.map(unit => {
+    const material=unit.materials[0], title=material?.title || unit.title;
+    const ids=material?.linkedTpIds || unit.linkedTpIds;
+    return {unitId:unit.id,materialId:material?.id,status:material?'ALIGNABLE':'MISSING_MATERIAL',
+      reason:'Usulan fixture eksplisit: aktivitas dan kompetensi TP ditinjau guru sebelum penerapan.',
+      evidence:ids.map(tpId=>({tpId,tpQuote:tpDataPJOK.items.find(t=>t.id===tpId)!.statement,materialQuote:title})),
+      action:{type:material?'ALIGN_EXISTING_MATERIAL':'ADD_MATERIAL_TO_UNIT',targetUnitId:unit.id,targetMaterialId:material?.id,title,linkedTpIds:ids}};
+  })};
+}
+
 // Canonical Fixtures: PJOK SD/SMP
 const tpDataPJOK: TPData = {
   id: 'tp-pjok',
@@ -118,7 +129,7 @@ runTest('Test 1: Semua Bab kosong menghasilkan rekomendasi MISSING_MATERIAL deng
 
   const initialUnitsSnapshot = JSON.parse(JSON.stringify(mappingAllEmpty.units));
 
-  const result = fallbackAnalyzeMapping({
+  const result = sanitizeMappingAnalysisResult(evidenceBackedProposal(mappingAllEmpty), {
     tpData: tpDataPJOK,
     atpData: atpDataPJOK,
     currentMapping: mappingAllEmpty,
@@ -210,7 +221,7 @@ runTest('Test 2: Sebagian Bab kosong mempertahankan materi existing dan hanya me
     updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const result = fallbackAnalyzeMapping({
+  const result = sanitizeMappingAnalysisResult(evidenceBackedProposal(mappingPartial), {
     tpData: tpDataPJOK,
     atpData: atpDataPJOK,
     currentMapping: mappingPartial,
@@ -240,7 +251,7 @@ runTest('Test 2: Sebagian Bab kosong mempertahankan materi existing dan hanya me
 // =========================================================================
 // TEST 3: BAB TANPA LINEAGE (Empty Bab without lineage)
 // =========================================================================
-runTest('Test 3: Bab tanpa lineage dan tanpa materi menghasilkan rekomendasi berdasarkan keselarasan judul Bab', () => {
+runTest('Test 3: Bab tanpa lineage memerlukan tinjauan tanpa inferensi dari judul', () => {
   const mappingNoLineage: ATPUnitMappingData = {
     id: 'mapping-nolineage',
     academicSettingId: 'acad-pjok',
@@ -267,33 +278,15 @@ runTest('Test 3: Bab tanpa lineage dan tanpa materi menghasilkan rekomendasi ber
 
   const unitFindings = result.materialFindings.filter((f) => f.unitId === 'unit-imported');
   assert.strictEqual(unitFindings.length, 1, 'Harus menghasilkan tepat 1 rekomendasi materi');
-  assert.strictEqual(unitFindings[0].status, 'MISSING_MATERIAL');
-  assert.strictEqual(unitFindings[0].action?.type, 'ADD_MATERIAL_TO_UNIT');
-  assert.strictEqual(unitFindings[0].action?.targetUnitId, 'unit-imported');
-  assert.deepStrictEqual(unitFindings[0].action?.linkedAtpItemIds, ['atp-manip']);
-  assert.deepStrictEqual(unitFindings[0].action?.linkedTpIds, ['tp-manip']);
-  assert.strictEqual(unitFindings[0].action?.title, 'Variasi Gerak Manipulatif');
-
-  // Verify action passes validation in apply service
-  const fp = computeMappingFingerprint(mappingNoLineage.units, atpDataPJOK, tpDataPJOK);
-  const applyRes = applyATPMappingActions({
-    units: mappingNoLineage.units,
-    selectedActions: [{ id: unitFindings[0].id, ...unitFindings[0].action! }],
-    atp: atpDataPJOK,
-    tp: tpDataPJOK,
-    expectedFingerprint: fp,
-    currentFingerprint: fp,
-  });
-
-  assert.strictEqual(applyRes.success, true, 'Aksi penambahan materi pada Bab tanpa lineage harus valid');
-  assert.deepStrictEqual(applyRes.nextUnits?.[0].linkedAtpItemIds, ['atp-manip'], 'Bab induk memperoleh ATP lineage dari materi baru');
-  assert.deepStrictEqual(applyRes.nextUnits?.[0].linkedTpIds, ['tp-manip'], 'Bab induk memperoleh TP lineage dari materi baru');
+  assert.strictEqual(unitFindings[0].status, 'MANUAL_REVIEW');
+  assert.strictEqual(unitFindings[0].action, undefined, 'Judul Bab tidak boleh menciptakan materi/relasi hanya demi coverage');
+  assert.deepStrictEqual(mappingNoLineage.units[0].linkedTpIds, []);
 });
 
 // =========================================================================
 // TEST 4: HASIL AI TIDAK LENGKAP (Incomplete AI result)
 // =========================================================================
-runTest('Test 4: Hasil AI yang mengabaikan salah satu Bab kosong dipulihkan secara deterministik', () => {
+runTest('Test 4: Bab yang dilewatkan AI dilaporkan tanpa membuat materi fiktif', () => {
   const mappingTwoEmpty: ATPUnitMappingData = {
     id: 'mapping-two-empty',
     academicSettingId: 'acad-pjok',
@@ -333,6 +326,7 @@ runTest('Test 4: Hasil AI yang mengabaikan salah satu Bab kosong dipulihkan seca
         supportingAtpItemIds: ['atp-loko'],
         supportingTpIds: ['tp-loko'],
         reason: 'Saran AI untuk unit 1',
+        evidence: [{tpId:'tp-loko',tpQuote:tpDataPJOK.items[0].statement,materialQuote:'Variasi Gerak Lokomotor'}],
         action: {
           type: 'ADD_MATERIAL_TO_UNIT',
           targetUnitId: 'unit-1',
@@ -356,13 +350,11 @@ runTest('Test 4: Hasil AI yang mengabaikan salah satu Bab kosong dipulihkan seca
   assert.strictEqual(unit1Findings[0].id, 'ai-mat-1');
   assert.strictEqual(unit1Findings[0].status, 'MISSING_MATERIAL');
 
-  // Unit 2 (omitted by AI) is automatically recovered by deterministic empty unit handler
+  // Missing AI evidence stays visible without deterministic creation.
   const unit2Findings = sanitized.materialFindings.filter((f) => f.unitId === 'unit-2');
-  assert.strictEqual(unit2Findings.length, 1, 'Unit 2 yang dilewatkan AI harus memperoleh rekomendasi deterministik');
-  assert.strictEqual(unit2Findings[0].status, 'MISSING_MATERIAL');
-  assert.strictEqual(unit2Findings[0].action?.type, 'ADD_MATERIAL_TO_UNIT');
-  assert.strictEqual(unit2Findings[0].action?.targetUnitId, 'unit-2');
-  assert.deepStrictEqual(unit2Findings[0].action?.linkedAtpItemIds, ['atp-non']);
+  assert.strictEqual(unit2Findings.length, 1);
+  assert.strictEqual(unit2Findings[0].status, 'MANUAL_REVIEW');
+  assert.strictEqual(unit2Findings[0].action, undefined);
 });
 
 // =========================================================================

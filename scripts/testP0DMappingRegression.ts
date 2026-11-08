@@ -47,6 +47,9 @@ const initialUnits = [
         linkedAtpItemIds: ['atp-item-1'],
         linkedTpIds: ['tp-1'],
       },
+      // Keep both declared TP supported when mat-1 is replaced in Scenario 1.
+      { id: 'mat-support', title: 'Materi pendukung TP 1 dan 2', order: 2,
+        linkedAtpItemIds: ['atp-item-1', 'atp-item-2'], linkedTpIds: ['tp-1', 'tp-2'] },
     ],
   },
 ];
@@ -168,7 +171,7 @@ const initialFingerprint = computeMappingFingerprint(initialUnits, mockAtp, mock
     currentFingerprint: initialFingerprint,
   });
   assert.strictEqual(result.success, true, 'ADD valid material must pass');
-  assert.strictEqual(result.nextUnits?.[0].materials.length, 2);
+  assert.strictEqual(result.nextUnits?.[0].materials.length, initialUnits[0].materials.length + 1);
   console.log('PASS Scenario 5: ADD valid material passed');
 }
 
@@ -467,7 +470,12 @@ const initialFingerprint = computeMappingFingerprint(initialUnits, mockAtp, mock
       },
     ],
   }];
-  const analysis = sanitizeMappingAnalysisResult({ atpFindings: [], materialFindings: [], summary: {} }, {
+  const analysis = sanitizeMappingAnalysisResult({ materialFindings: oldUnits[0].materials.map((material, i) => ({
+    unitId: 'unit-old', materialId: material.id, status: 'ALIGNABLE',
+    reason: 'Usulan pemulihan referensi ATP dengan TP tersimpan dan kutipan sumber, untuk persetujuan guru.',
+    evidence: [{ tpId: mockTp.items[i].id, tpQuote: mockTp.items[i].statement, materialQuote: material.title }],
+    action: { type: 'ALIGN_EXISTING_MATERIAL', targetUnitId: 'unit-old', targetMaterialId: material.id, linkedTpIds: material.linkedTpIds },
+  })) }, {
     tpData: mockTp,
     atpData: mockAtp,
     currentMapping: {
@@ -492,7 +500,8 @@ const initialFingerprint = computeMappingFingerprint(initialUnits, mockAtp, mock
     currentFingerprint: fp,
   });
   assert.strictEqual(applied.success, true, 'Recovery actions must apply');
-  assert.ok(!JSON.stringify(applied.nextUnits).includes('atp-item-old'), 'Old ATP references must be removed after valid recovery');
+  const activeAtpIds = applied.nextUnits!.flatMap(unit => [...unit.linkedAtpItemIds, ...unit.materials.flatMap(material => material.linkedAtpItemIds)]);
+  assert.ok(!activeAtpIds.some(id => id.includes('atp-item-old')), 'Old ATP references must leave active lineage; audit history retains before/after');
   assert.ok(JSON.stringify(applied.nextUnits).includes('atp-item-1'), 'Current canonical ATP must be linked after recovery');
   assert.ok(JSON.stringify(applied.nextUnits).includes('atp-item-2'), 'Multiple material recovery actions must preserve each canonical ATP');
   console.log('PASS Scenario 14-16: Old ATP references recover atomically across multiple materials');

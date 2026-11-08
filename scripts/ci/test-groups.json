@@ -24,6 +24,7 @@
     "scripts/testMerdekaCanonicalWorkflowRegression.ts"
   ],
   "planning": [
+    "scripts/testStep07PedagogicalAlignment.tsx",
     "scripts/testMeetingAlignment.ts",
     "scripts/testCalendarBackendSearchProvider.ts",
     "scripts/testCalendarEndpointContract.ts",

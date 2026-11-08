@@ -26,7 +26,12 @@ const structure = (items: typeof units) => items.map(unit => ({ id: unit.id, tit
 const mapping: ATPUnitMappingData = { id: 'mapping', academicSettingId: 'year', atpId: atp.id, tpDataId: tp.id, updatedAt: tp.updatedAt, units };
 const params = { currentMapping: mapping, atpData: atp, tpData: tp };
 const before = JSON.stringify(mapping);
-const analysis = fallbackAnalyzeMapping(params);
+const raw = { materialFindings: units.map((unit,i)=>({ unitId:unit.id,materialId:unit.materials[0].id,status:'ALIGNABLE',
+  reason:'Kompetensi dan cakupan pada kutipan TP mendukung aktivitas materi; usulan untuk persetujuan guru.',
+  evidence:[{tpId:'t'+(i+1),tpQuote:tp.items[i].statement,materialQuote:unit.materials[0].title}],
+  action:{type:'ALIGN_EXISTING_MATERIAL',targetUnitId:unit.id,targetMaterialId:unit.materials[0].id,linkedTpIds:['t'+(i+1)],linkedAtpItemIds:['AI_FICTION']}})) };
+assert(fallbackAnalyzeMapping(params).materialFindings.every(f=>!f.action), 'Lexical similarity cannot create relations');
+const analysis = sanitizeMappingAnalysisResult(raw, params);
 const actions = extractSelectedMappingActions(analysis, new Set([...analysis.atpFindings,...analysis.materialFindings].filter(f=>f.action).map(f=>f.id)));
 assert.equal(analysis.materialFindings.filter(f=>f.status==='ALIGNABLE').length, 6);
 const fingerprint = computeMappingFingerprint(units, atp, tp);
@@ -50,8 +55,6 @@ const rejected = apply(incompleteBundle); assert(!rejected.success); assert(!rej
 assert(rejected.issues.some(issue=>issue.includes('SOURCE_LINEAGE_MISSING') || issue.includes('materi pendukung')));
 assert.equal(JSON.stringify(mapping),before);
 // AI-selected ATP IDs have no authority; TP selection determines exact parents.
-const raw = { materialFindings: units.map((unit,i)=>({ unitId:unit.id,materialId:unit.materials[0].id,status:'ALIGNABLE',
-  action:{type:'ALIGN_EXISTING_MATERIAL',targetUnitId:unit.id,targetMaterialId:unit.materials[0].id,linkedTpIds:['t'+(i+1)],linkedAtpItemIds:['AI_FICTION']}})) };
 const sanitized = sanitizeMappingAnalysisResult(raw,params);
 assert.deepEqual(sanitized.materialFindings.map(f=>f.supportingAtpItemIds), [['a1'],['a2'],['a1'],['a3'],['a3'],['a4']]);
 const manual = structuredClone(raw); manual.materialFindings[0].status='MANUAL_REVIEW';
@@ -89,7 +92,7 @@ mixedUnits[1].linkedTpIds = ['t2', 't3'];
 mixedUnits[1].linkedAtpItemIds = ['a2', 'a1'];
 const mixedMapping = { ...mapping, units: mixedUnits };
 const mixedBefore = JSON.stringify(mixedMapping);
-const mixedAnalysis = fallbackAnalyzeMapping({ ...params, currentMapping: mixedMapping });
+const mixedAnalysis = sanitizeMappingAnalysisResult(raw, { ...params, currentMapping: mixedMapping });
 const validBabActions = [...mixedAnalysis.atpFindings, ...mixedAnalysis.materialFindings]
   .filter(finding => finding.action?.targetUnitId === mixedUnits[0].id)
   .map(finding => ({ id: finding.id, ...finding.action! }));
@@ -113,7 +116,7 @@ for (const linkedTpIds of [[], undefined]) {
   const legacyBefore = JSON.stringify(legacyAtp);
   assert.deepEqual(deriveMappingAtpIds(['t1'], legacyAtp, legacyTp), { atpItemIds: ['a1'], issues: [] });
   const legacyMapping = { ...mapping, units: [units[0]] };
-  const legacyAnalysis = fallbackAnalyzeMapping({ currentMapping: legacyMapping, atpData: legacyAtp, tpData: legacyTp });
+  const legacyAnalysis = sanitizeMappingAnalysisResult(raw, { currentMapping: legacyMapping, atpData: legacyAtp, tpData: legacyTp });
   const legacyActions = [...legacyAnalysis.atpFindings, ...legacyAnalysis.materialFindings]
     .flatMap(finding => finding.action ? [{ id: finding.id, ...finding.action }] : []);
   assert(legacyActions.length > 0, 'Legacy ATP must support a real Bab-first bundle');

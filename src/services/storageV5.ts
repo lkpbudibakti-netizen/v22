@@ -1,6 +1,7 @@
 import { calendarGenerationFingerprint, prepareCalendarMeetingGeneration, validateCalendarMeetingCandidate } from './unitMeetingAllocationService';
 import { applyMeetingAlignment, type AlignmentCapacity, type MeetingAlignmentContext, type MeetingAlignmentApproval } from './meetingAlignmentService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
+import { versionMappingUpdate } from './mappingAlignmentService';
 import { resolveSemesterCapacityV5 } from './jpEngine';
 import { resolvePlannedMeetingCapacity, resolveEffectiveSubjectSlots } from './subjectScheduleService';
 import { resolveLearningPlanMeetingBudgets } from './learningPlanActivityMeetingService';
@@ -1372,9 +1373,17 @@ export function saveATPUnitMappingV5(
   if (!state.annualData.atpUnitMappings) {
     state.annualData.atpUnitMappings = [];
   }
-  upsertAnnualScopedEntry(state.annualData.atpUnitMappings, yearPlanId, value);
+  const previous = state.annualData.atpUnitMappings.find(entry => entry.yearPlanId === yearPlanId)?.value;
+  const next = versionMappingUpdate(previous, value);
+  if (previous && previous.updatedAt !== next.updatedAt) {
+    const semesterIds = new Set(state.semesterPlans.filter(sp => sp.yearPlanId === yearPlanId).map(sp => sp.id));
+    const workspaceIds = new Set(state.workspaces.filter(w => w.yearPlanId === yearPlanId).map(w => w.id));
+    for (const doc of state.documents) if (['PEMETAAN_ATP_UNIT','PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','JURNAL'].includes(doc.type) &&
+      (doc.academicSettingId === yearPlanId || semesterIds.has(doc.academicSettingId || '') || workspaceIds.has(doc.workspaceId || ''))) doc.status = 'draft';
+  }
+  upsertAnnualScopedEntry(state.annualData.atpUnitMappings, yearPlanId, next);
   saveStorageV5(state);
-  return value;
+  return next;
 }
 
 /** Read-only adapter over the existing capacity and meeting-ID stores. */
