@@ -1,4 +1,4 @@
-import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, mappingActionKind, suggestMappingCopyedit, buildMappingPedagogicalReport, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
+import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, mappingActionKind, isMappingActionAutomatic, hasTeacherMaterialSupport, suggestMappingCopyedit, buildMappingPedagogicalReport, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
 import type { AnalyzeATPUnitMappingServerParams, MappingAnalysisResult } from './mappingAnalysis';
 import { getMappingAtpTpIds, deriveMappingAtpIds } from '../src/services/atpMappingLineageService';
 
@@ -14,7 +14,7 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     if (!('action' in candidate)) return candidate;
     if (!candidate.action || typeof candidate.action !== 'object' || Array.isArray(candidate.action)) return { ...candidate, contractIssue: 'ACTION_SHAPE_INVALID: action harus berupa object.' };
     const merged = { ...candidate, ...candidate.action };
-    for (const key of ['type', 'targetUnitId', 'targetMaterialId', 'sourceUnitId', 'linkedTpIds', 'before', 'after', 'materialOrder', 'reason', 'evidence']) {
+    for (const key of ['type', 'targetUnitId', 'targetMaterialId', 'sourceUnitId', 'linkedTpIds', 'before', 'after', 'materialOrder', 'reason', 'evidence', 'replaceTpIds']) {
       if (candidate[key] !== undefined && candidate.action[key] !== undefined && JSON.stringify(candidate[key]) !== JSON.stringify(candidate.action[key])) {
         merged.contractIssue = `ACTION_ENVELOPE_CONFLICT: field '${key}' berbeda antara proposal dan action.`;
       }
@@ -22,6 +22,22 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     return merged;
   });
   const seen = new Set<string>();
+  for (const review of Array.isArray(raw?.materialReviews) ? raw.materialReviews.slice(0,200) : []) {
+    const material=mapping.units.find(unit=>unit.id===review?.unitId)?.materials.find(material=>material.id===review?.materialId);
+    for (const [index,candidate] of (Array.isArray(review?.candidates)?review.candidates.slice(0,20):[]).entries()) actions.push({
+      id:`review-${review.materialId}-${index}`,type:'LINK_TP',targetUnitId:review.unitId,targetMaterialId:review.materialId,before:material?.title,
+      linkedTpIds:candidate?.tpIds,reason:candidate?.reason,evidence:candidate?.evidence,
+      contractIssue: Array.isArray(candidate?.missingEvidence) && candidate.missingEvidence.length ? `NEEDS_REVIEW: ${candidate.missingEvidence.join('; ')}` : undefined,
+    });
+  }
+  for (const unit of mapping.units) for (const material of unit.materials) {
+    const parents = deriveMappingAtpIds(material.linkedTpIds, atp, tp);
+    if (hasTeacherMaterialSupport(unit, material, tp) && !parents.issues.length &&
+      (parents.atpItemIds.length !== material.linkedAtpItemIds.length || parents.atpItemIds.some(id => !material.linkedAtpItemIds.includes(id))) &&
+      !actions.some(a => a.targetMaterialId === material.id)) actions.push({id:`repair-parent-${material.id}`,type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,
+        before:material.title,linkedTpIds:material.linkedTpIds,reason:'Pulihkan hanya ATP induk dari TP yang telah disetujui guru; substansi, judul dan TP tetap.',
+        evidence:material.linkedTpIds.map(tpId=>({tpId,tpQuote:tp.items.find(t=>t.id===tpId)!.statement,materialQuote:material.title}))});
+  }
   for (const unit of mapping.units) for (const entity of [unit, ...unit.materials]) {
     const materialId = entity === unit ? undefined : entity.id;
     const after = suggestMappingCopyedit(entity.title);
@@ -34,6 +50,7 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     if (!candidate || typeof candidate !== 'object') continue;
     const action: AlignmentAction = {
       id: typeof candidate.id === 'string' ? candidate.id : '', type: candidate.type,
+      replaceTpIds:candidate.replaceTpIds===true,
       targetUnitId: typeof candidate.targetUnitId === 'string' ? candidate.targetUnitId : '',
       targetMaterialId: typeof candidate.targetMaterialId === 'string' ? candidate.targetMaterialId : undefined,
       sourceUnitId: typeof candidate.sourceUnitId === 'string' ? candidate.sourceUnitId : undefined,
@@ -50,13 +67,14 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
       ...preview.issues].filter((issue): issue is string => typeof issue === 'string' && !!issue);
     const validationStatus = validationIssues.length ? 'REJECTED' : unchanged ? 'ALREADY_APPLIED' : 'READY';
     const changeKind = mappingActionKind(action, mapping.units);
+    const automatic = isMappingActionAutomatic(action, mapping.units, tp);
     seen.add(action.id);
     proposals.push({ id: `minimal-${proposals.length}-${action.id}`, targetUnitId: action.targetUnitId,
       targetMaterialId: action.targetMaterialId, before: typeof action.before === 'string' ? action.before : '',
       after: action.type === 'RESTRUCTURE_UNIT' ? JSON.stringify(action.materialOrder || []) : typeof action.after === 'string' ? action.after : typeof action.before === 'string' ? action.before : '',
       tpIds: Array.isArray(action.linkedTpIds) ? action.linkedTpIds : [],
-      validationStatus, validationIssues, changeKind, approval: changeKind === 'COPYEDIT' || changeKind === 'RENAME' ? 'AUTOMATIC' : 'TEACHER', proposalType: typeof action.type === 'string' ? action.type : undefined,
-      reason: validationIssues.length ? validationIssues.join('; ') : unchanged ? 'Proposal sudah diterapkan; tidak ada perubahan tambahan.' : action.reason,
+      validationStatus, validationIssues, changeKind, approval: automatic ? 'AUTOMATIC' : 'TEACHER', executionClass:automatic?'AUTO_APPLY':'NEEDS_APPROVAL', proposalType: typeof action.type === 'string' ? action.type : undefined,
+      reason: validationIssues.length ? [action.reason,...validationIssues].filter(Boolean).join('; ') : unchanged ? 'Proposal sudah diterapkan; tidak ada perubahan tambahan.' : action.reason,
       action: validationStatus === 'READY' ? action : undefined,
       impact: { newlyCoveredTpIds: preview.coverage ? before.uncoveredTpIds.filter(id => !preview.coverage!.uncoveredTpIds.includes(id)) : [],
         newlyMappedAtpIds: preview.coverage ? before.unmappedAtpIds.filter(id => !preview.coverage!.unmappedAtpIds.includes(id)) : [] } });

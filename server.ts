@@ -3114,7 +3114,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
           }
         }
 
-        if (parsed && (Array.isArray(parsed.atpFindings) || Array.isArray(parsed.materialFindings) || Array.isArray(parsed.alignmentProposals))) {
+        if (parsed && (Array.isArray(parsed.atpFindings) || Array.isArray(parsed.materialFindings) || Array.isArray(parsed.alignmentProposals) || Array.isArray(parsed.materialReviews))) {
           const sanitized = sanitizeMappingAnalysisResult(parsed, serverParams);
           return res.json({
             success: true,
@@ -3130,6 +3130,9 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
 
   // Fallback deterministic analysis
   const fallbackResult = fallbackAnalyzeMapping(serverParams);
+  fallbackResult.analysisNotice = apiKey
+    ? 'AI_UNAVAILABLE_OR_INVALID: AI tidak memberikan respons yang dapat digunakan. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada rekomendasi semantik yang direkayasa.'
+    : 'AI_NOT_CONFIGURED: layanan AI belum dikonfigurasi. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada relasi yang dipaksakan.';
   return res.json({
     success: true,
     data: fallbackResult,

@@ -1280,6 +1280,7 @@ export async function generateCanonicalATPUnitMappingWithAI(
 }
 
 export interface MappingAnalysisResult {
+  analysisNotice?: string;
   pedagogicalFindings?: import('./mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('./mappingAlignmentService').AlignmentProposal[];
   gapFindings?: { kind: 'TP' | 'ATP' | 'MATERIAL'; id: string; proposalIds: string[]; reason: string }[];
@@ -1321,6 +1322,9 @@ export interface MappingAnalysisResult {
 
   materialFindings: Array<{
     id: string;
+    reviewAction?: { type:'REVIEW_AND_APPROVE'; targetUnitId:string; targetMaterialId:string; classification:'NEEDS_APPROVAL' };
+    linkedTpIds?: string[];
+    linkedAtpItemIds?: string[];
 
     status: 'SUPPORTED' | 'ALIGNABLE' | 'MISSING_MATERIAL' | 'MANUAL_REVIEW';
 

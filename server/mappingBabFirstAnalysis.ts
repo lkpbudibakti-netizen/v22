@@ -66,7 +66,7 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
         : [];
       const parents = deriveMappingAtpIds(tpIds, atp, tp);
       if (!tpIds.length && !geminiProposal) {
-        manual('Keselarasan TP belum dapat dipastikan: label tidak memuat kata kunci substansi yang cukup untuk TP pilihan.'); continue;
+        manual('NEEDS_REVIEW: keselarasan TP belum dapat dipastikan karena materi belum memiliki relasi TP dan analisis tidak memberikan usulan TP eksplisit. Ini bukan bukti materi tidak relevan; diperlukan usulan berbukti tentang kompetensi, aktivitas dan cakupan dalam konteks Bab. Relasi tidak dibuat dari kesamaan kata.'); continue;
       }
       if (parents.issues.length || !tpIds.length) {
         manual('Subset TP canonical tidak valid atau ATP induk belum tersedia. ' + parents.issues.join('; ')); continue;
@@ -155,7 +155,9 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
     const semantic = mappedUnits.every(unit => (unit.linkedTpIds || []).filter(id => canonicalTpIds.includes(id)).every(id =>
       unit.materials.some(material => material.linkedTpIds.includes(id) && materialFindings.some(finding =>
         finding.unitId === unit.id && finding.materialId === material.id && finding.status !== 'MANUAL_REVIEW' && finding.supportingTpIds.includes(id)))));
-    const aligned = mappedUnits.length > 0 && covered && semantic && rawFinding?.status !== 'REVIEW' &&
+    const approvedSupport = mappedUnits.every(unit => (unit.linkedTpIds || []).filter(id => canonicalTpIds.includes(id)).every(id =>
+      unit.materials.some(material => material.linkedTpIds.includes(id) && hasTeacherMaterialSupport(unit, material, tp))));
+    const aligned = mappedUnits.length > 0 && covered && semantic && approvedSupport && rawFinding?.status !== 'REVIEW' &&
       (!rawFinding?.currentUnitId || mappedUnits.some(unit => unit.id === rawFinding.currentUnitId)) &&
       !validation.issues.some(issue => issue.includes('ATP_PROGRESSION_REVERSED') && issue.includes("'"+item.id+"'"));
     const firstActionIndex = atpFindings.findIndex(finding => finding.atpItemId === item.id);
@@ -166,6 +168,12 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
   }
   const mappedAtp = atp.items.filter(item => units.some(unit => unit.linkedAtpItemIds.includes(item.id))).length;
   const finalAtpFindings = [...coverageFindings, ...atpFindings];
+  for (const finding of materialFindings) {
+    const material = units.find(unit => unit.id === finding.unitId)?.materials.find(material => material.id === finding.materialId);
+    finding.linkedTpIds = [...(material?.linkedTpIds || [])];
+    finding.linkedAtpItemIds = [...(material?.linkedAtpItemIds || [])];
+    if (material) finding.reviewAction={type:'REVIEW_AND_APPROVE',targetUnitId:finding.unitId,targetMaterialId:material.id,classification:'NEEDS_APPROVAL'};
+  }
   return { atpFindings: finalAtpFindings, materialFindings, summary: {
     totalAtp: atp.items.length, mappedAtp, unmappedAtp: atp.items.length - mappedAtp,
     alignedAtp: new Set(finalAtpFindings.filter(f => f.status === 'ALIGNED').map(f => f.atpItemId)).size,

@@ -5,6 +5,7 @@ import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEviden
 import { ALIGNMENT_PRIORITY, applyMinimalAlignment, recordMappingBatch, type AlignmentAction, type AlignmentActionType } from './mappingAlignmentService';
 
 export interface MappingActionItem {
+  replaceTpIds?: boolean;
   id: string;
   type: 'ASSIGN_ATP_TO_UNIT' | 'ADD_MATERIAL_TO_UNIT' | 'ALIGN_EXISTING_MATERIAL' | 'RECOVER_ATP_LINEAGE' | AlignmentActionType;
   atpItemId?: string;

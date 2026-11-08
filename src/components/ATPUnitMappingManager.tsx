@@ -39,7 +39,7 @@ import {
   MappingAnalysisResult,
 } from '../services/aiService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
-import { mappingCoverage, alignmentProposalStatus, mappingActionKind, applyMinimalAlignment, buildMappingPedagogicalReport, undoMappingTitle, recordMappingBatch } from '../services/mappingAlignmentService';
+import { mappingCoverage, alignmentProposalStatus, refreshAlignmentProposals, isMappingActionAutomatic, formatMappingUnitTitle, confirmMappingMaterialOrigin, applyMinimalAlignment, buildMappingPedagogicalReport, undoMappingTitle, undoMappingRelation, recordMappingBatch } from '../services/mappingAlignmentService';
 import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
 import {
   applyATPMappingActions,
@@ -613,7 +613,9 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       });
       const ids = [...new Set([...unit.linkedTpIds, ...materials.flatMap(material => material.linkedTpIds)])];
       const derived = deriveMappingAtpIds(ids, atp, tp);
-      return derived.issues.length ? unit : { ...unit, materials, linkedTpIds: ids, linkedAtpItemIds: derived.atpItemIds };
+      return derived.issues.length ? unit : { ...unit, materials, linkedTpIds: ids, linkedAtpItemIds: derived.atpItemIds,
+        actionHistory:[...(unit.actionHistory || []),{id:`manual-link-${materialId}-${Date.now()}`,at:new Date().toISOString(),kind:'REALIGN' as const,approval:'TEACHER' as const,unitId,materialId,
+          before:JSON.stringify(unit.materials.find(m=>m.id===materialId)?.linkedTpIds || []),after:JSON.stringify(materials.find(m=>m.id===materialId)?.linkedTpIds || []),reason:'Guru mengubah relasi melalui editor manual; analisis otomatis tidak boleh menimpa keputusan ini.'}] };
     }));
     setHasChanges(true); setSaveSuccessNotice(false); setSaveErrorNotice(null);
     setAnalysisResult(null); setSelectedAnalysisActionIds(new Set()); setAppliedNotice(null);
@@ -920,16 +922,16 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
     const analyzed = guardResult.result!;
     const automaticProposals = (analyzed.alignmentProposals || []).filter(p => p.action && alignmentProposalStatus(p) === 'READY' &&
-      ['COPYEDIT','RENAME'].includes(mappingActionKind(p.action, unitsRef.current)));
-    const automatic = automaticProposals.length ? applyMinimalAlignment(unitsRef.current, automaticProposals.map(p => p.action!), atpRef.current, tpRef.current) : undefined;
+      isMappingActionAutomatic(p.action, unitsRef.current, tpRef.current));
+    const automatic = automaticProposals.length ? applyMinimalAlignment(unitsRef.current, automaticProposals.map(p => p.action!), atpRef.current, tpRef.current, 'AUTOMATIC') : undefined;
     let freshUnits = unitsRef.current;
     if (automatic?.success && automatic.nextUnits) {
       freshUnits = automatic.nextUnits;
       setAlignmentRollback({ units: structuredClone(unitsRef.current), fingerprint: computeMappingFingerprint(freshUnits, atpRef.current, tpRef.current) });
       setUnits(freshUnits); unitsRef.current = freshUnits; setHasChanges(true);
       const applied = new Set(automaticProposals.map(p => p.id));
-      analyzed.alignmentProposals = analyzed.alignmentProposals?.map(p => applied.has(p.id) ? { ...p, action: undefined, validationStatus: 'ALREADY_APPLIED', reason: 'Redaksi setara diterapkan otomatis ke draf dan dicatat; dapat di-undo. Simpan Pemetaan untuk menyimpan.' } : p);
-      setAppliedNotice(`${automaticProposals.length} perbaikan redaksi otomatis tercatat. Substansi dan relasi TP/ATP tetap; simpan draf untuk menyimpan.`);
+      analyzed.alignmentProposals = analyzed.alignmentProposals?.map(p => applied.has(p.id) ? { ...p, action: undefined, validationStatus: 'ALREADY_APPLIED', reason: 'Tindakan aman diterapkan otomatis ke draf dan dicatat; dapat di-undo. Simpan Pemetaan untuk menyimpan.' } : p);
+      setAppliedNotice(`${automaticProposals.length} tindakan aman otomatis tercatat di draf: redaksi setara, relasi dengan proposisi lengkap yang ekuivalen, atau pemulihan induk ATP dari TP terverifikasi. Simpan Pemetaan untuk menyimpan.`);
     } else if (automatic && !automatic.success) setApplyIssues(automatic.issues);
     setAnalysisResult(analyzed);
     setLastAnalysisSnapshot(analyzed);
@@ -1791,7 +1793,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         </details>
         <p className="text-xs">Rekomendasi AI: {generationPreview.candidate.units.length} Bab. Cakupan tervalidasi: seluruh {atp.items.length} ATP dan {tp.items.length} TP, termasuk dukungan materi.</p>
         {generationPreview.candidate.units.map(unit => <div key={unit.id} className="border-t pt-2 text-xs">
-          <strong>Bab {unit.order}: {unit.title}</strong>
+          <strong>{formatMappingUnitTitle(unit)}</strong>
           <div>ATP: {unit.linkedAtpItemIds.join(', ')} · TP: {unit.linkedTpIds.map(id => tp.items.find(item => item.id === id)?.code || id).join(', ')}</div>
           <ul>{unit.materials.map(material => <li key={material.id}>{material.title} — TP: {material.linkedTpIds.map(id => tp.items.find(item => item.id === id)?.code || id).join(', ')}; ATP: {material.linkedAtpItemIds.join(', ')}</li>)}</ul>
         </div>)}
@@ -1813,7 +1815,26 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         <div className="bg-white rounded-2xl border-2 border-indigo-300 shadow-md p-5 space-y-5 animate-fadeIn">
             <div className="space-y-3">
               <h4 className="font-bold text-sm">Kesiapan dan rekomendasi penyelarasan pedagogis</h4>
+              {analysisResult.analysisNotice && <p role="status" className="text-sm text-amber-900">{analysisResult.analysisNotice}</p>}
               <AlignmentProposalReview proposals={analysisResult.alignmentProposals || []}
+                gaps={analysisResult.gapFindings}
+                onConfirmOrigin={(unitId,materialId,title)=>{try {setUnits(confirmMappingMaterialOrigin(unitsRef.current,unitId,materialId,title));setHasChanges(true);} catch(error) {setApplyIssues([error instanceof Error?error.message:String(error)]);}}}
+                onReviewMaterial={(unitId,materialId,title,tpIds,reason,newTitle,replace)=>{
+                  const material=unitsRef.current.find(u=>u.id===unitId)?.materials.find(m=>m.id===materialId);
+                  const selectedTpIds=tpIds.length?tpIds:(replace?[]:material?.linkedTpIds || []);
+                  const rename=newTitle!==title;
+                  if (replace && rename) {setApplyIssues(['Lakukan koreksi relasi dan perubahan judul dalam tindakan terpisah agar setiap dampak dapat ditinjau.']);return;}
+                  if ((!selectedTpIds.length && !rename && !replace) || !reason.trim()) {setApplyIssues(['Pilih TP atau perbaiki judul, lalu jelaskan bukti aktivitas/kompetensi sebelum ACC.']);return;}
+                  const current=unitsRef.current, before=computeMappingFingerprint(current,atpRef.current,tpRef.current);
+                  const result=applyATPMappingActions({units:current,atp:atpRef.current,tp:tpRef.current,expectedFingerprint:before,currentFingerprint:before,
+                    selectedActions:[{id:`teacher-review-${materialId}-${Date.now()}`,type:rename?'EDIT_MATERIAL':'LINK_TP',targetUnitId:unitId,targetMaterialId:materialId,before:title,after:rename?newTitle:undefined,replaceTpIds:replace,linkedTpIds:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])],reason:reason.trim(),
+                      evidence:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])].map(tpId=>({tpId,tpQuote:tpRef.current.items.find(t=>t.id===tpId)?.statement || '',materialQuote:title}))}]});
+                  if (!result.success || !result.nextUnits) {setApplyIssues(result.issues);return;}
+                  setAlignmentRollback({units:structuredClone(current),fingerprint:computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current)});
+                  setUnits(result.nextUnits);unitsRef.current=result.nextUnits;setHasChanges(true);setAnalysisFingerprint(computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current));setSelectedAnalysisActionIds(new Set());setApplyIssues([]);
+                  setAnalysisResult(previous=>previous?{...previous,alignmentProposals:refreshAlignmentProposals(previous.alignmentProposals || [],result.nextUnits!,atpRef.current,tpRef.current)}:previous);
+                  setAppliedNotice('Persetujuan dan alasan guru dicatat pada draf. Simpan Pemetaan untuk menyimpan atomik; Step 08 memakai data tersimpan terbaru.');
+                }}
                 readiness={mappingReadiness} findings={buildMappingPedagogicalReport(units, atp, tp)} units={units} atp={atp} tp={tp}
                 selectedIds={selectedAnalysisActionIds} onSelectionChange={ids => {
                   setSelectedAnalysisActionIds(ids); setApplyIssues([]);
@@ -1822,7 +1843,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 {analysisResult.gapFindings?.map(gap => <p key={gap.kind+gap.id} className="text-xs">{gap.kind} {gap.id}: {gap.reason}</p>)}
               </details>
             </div>
-          <details id="mapping-legacy-analysis-details"><summary>Detail sumber analisis dan temuan pendukung</summary>
+          <details id="mapping-legacy-analysis-details"><summary>Snapshot sumber analisis sebelum aksi (progres terkini tersedia di atas)</summary>
           {/* Analysis Header & Summary Metrics */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-indigo-100">
             <div>
@@ -1972,7 +1993,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
                               {targetUnit && (
                                 <div className="text-xs font-bold text-indigo-900 bg-indigo-50/80 px-2.5 py-1 rounded-lg inline-block border border-indigo-200">
-                                  Saran Bab: Bab {targetUnit.order}: {targetUnit.title}
+                                  Saran Bab: {formatMappingUnitTitle(targetUnit)}
                                 </div>
                               )}
                             </div>
@@ -2020,7 +2041,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                               </span>
                               {currentUnit && (
                                 <span className="text-xs text-slate-600 font-semibold">
-                                  (Saat ini di Bab {currentUnit.order}: {currentUnit.title})
+                                  (Saat ini di {formatMappingUnitTitle(currentUnit)})
                                 </span>
                               )}
                             </div>
@@ -2079,7 +2100,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                                 </span>
                                 {targetUnit && (
                                   <span className="text-xs text-slate-700 font-semibold">
-                                    untuk Bab {targetUnit.order}: {targetUnit.title}
+                                    untuk {formatMappingUnitTitle(targetUnit)}
                                   </span>
                                 )}
                               </div>
@@ -2150,7 +2171,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {targetUnit && (
                                     <span className="px-2 py-0.5 rounded-md bg-indigo-800 text-white font-bold text-[10px]">
-                                      Bab {targetUnit.order}: {targetUnit.title}
+                                      {formatMappingUnitTitle(targetUnit)}
                                     </span>
                                   )}
                                   <span className="font-bold text-xs text-slate-900">
@@ -2218,7 +2239,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                             <div className="flex items-center gap-2 flex-wrap">
                               {unit && (
                                 <span className="px-2 py-0.5 rounded-md bg-slate-800 text-white font-bold text-xs">
-                                  Bab {unit.order}: {unit.title}
+                                  {formatMappingUnitTitle(unit)}
                                 </span>
                               )}
                               <span className="font-bold text-xs text-slate-900">
@@ -2260,7 +2281,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                           </div>
                           {unit && (
                             <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              Bab {unit.order}: {unit.title}
+                              {formatMappingUnitTitle(unit)}
                             </span>
                           )}
                         </div>
@@ -2415,7 +2436,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
               if (!restored.success || !restored.nextUnits) { setApplyIssues(restored.issues); return; }
               setUnits(restored.nextUnits); setHasChanges(true); setAnalysisResult(null); setAnalysisFingerprint(null); setSelectedAnalysisActionIds(new Set());
             }}>Undo judul {entity.title}</button>}
-          {entity === unit && (unit.actionHistory || []).map(record => <details key={record.id}><summary>{record.kind}: {record.reason}</summary><p>Sebelum: {record.before}</p><p>Sesudah: {record.after}</p></details>)}
+          {entity === unit && (unit.actionHistory || []).map(record => <details key={record.id}><summary>{record.kind}: {record.reason}</summary>{record.kind === 'REALIGN' && record.beforeLinks && !(unit.actionHistory || []).some(h=>h.undoOf===record.id) && <button type="button" className="underline" onClick={()=>{const restored=undoMappingRelation(unitsRef.current,unit.id,record.id,atpRef.current,tpRef.current);if (!restored.success || !restored.nextUnits) {setApplyIssues(restored.issues);return;}setUnits(restored.nextUnits);setHasChanges(true);setAnalysisResult(null);setAnalysisFingerprint(null);setSelectedAnalysisActionIds(new Set());}}>Undo relasi materi</button>}<p>Sebelum: {record.before}</p><p>Sesudah: {record.after}</p></details>)}
         </div>))}
       </details>
       <div id="mapping-final-status" role="status" className="text-sm rounded-xl border p-3">
@@ -2441,6 +2462,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           return (
             <div
               key={unit.id || `unit-${bIdx}`}
+              id={`mapping-unit-${unit.id}`}
               className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden transition"
             >
               {/* Bab Container Header */}

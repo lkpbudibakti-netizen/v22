@@ -1,0 +1,442 @@
+{
+  "units": [
+    {
+      "id": "unit-import-1794142086126-1-rtunb",
+      "title": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+      "order": 1,
+      "linkedTpIds": [
+        "tp-item-1794141762016-3-6cdm"
+      ],
+      "linkedAtpItemIds": [
+        "atp-item-1794142056669-2-6295"
+      ],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-1-1-8d10f",
+          "title": "Melempar dan menangkap bola",
+          "order": 1,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-1-2-zlr1z",
+          "title": "Permainan Jaga Benteng",
+          "order": 2,
+          "linkedTpIds": [
+            "tp-item-1794141762016-3-6cdm"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-2-6295"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-1-3-r526l",
+          "title": "Lari berantai",
+          "order": 3,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-1-4-3913e",
+          "title": "Permainan Serang Gawang",
+          "order": 4,
+          "linkedTpIds": [
+            "tp-item-1794141762016-3-6cdm"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-2-6295"
+          ]
+        },
+        {
+          "id": "alignment-prop-11",
+          "title": "Merancang dan Memodifikasi Permainan untuk Fair Play dan Inklusivitas",
+          "order": 5,
+          "linkedTpIds": [
+            "tp-item-1794141762016-3-6cdm"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-2-6295"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-2-0s0vi",
+      "title": "Bab 2: Aktivitas Pola Gerak Dasar Permainan Net",
+      "order": 2,
+      "linkedTpIds": [
+        "tp-item-1794141762016-2-b41i",
+        "tp-item-1794141762016-1-rxjk"
+      ],
+      "linkedAtpItemIds": [
+        "atp-item-1794142056668-0-bvix",
+        "atp-item-1794142056669-1-dbf6"
+      ],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-2-1-41eqm",
+          "title": "Posisi kuda-kuda dan passing bawah",
+          "order": 1,
+          "linkedTpIds": [
+            "tp-item-1794141762016-2-b41i"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056668-0-bvix"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-2-2-0hcj7",
+          "title": "Passing atas dan bawah",
+          "order": 2,
+          "linkedTpIds": [
+            "tp-item-1794141762016-1-rxjk"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-1-dbf6"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-2-3-j53jm",
+          "title": "Servis dan permainan net",
+          "order": 3,
+          "linkedTpIds": [
+            "tp-item-1794141762016-1-rxjk"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-1-dbf6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-3-d7taq",
+      "title": "Bab 3: Aktivitas Pola Gerak Dasar Permainan Lapangan",
+      "order": 3,
+      "linkedTpIds": [
+        "tp-item-1794141762016-2-b41i",
+        "tp-item-1794141762016-1-rxjk"
+      ],
+      "linkedAtpItemIds": [
+        "atp-item-1794142056668-0-bvix",
+        "atp-item-1794142056669-1-dbf6"
+      ],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-3-1-3uv20",
+          "title": "Melempar bola lambung",
+          "order": 1,
+          "linkedTpIds": [
+            "tp-item-1794141762016-2-b41i"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056668-0-bvix"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-3-2-vmmzj",
+          "title": "Keterampilan permainan kasti atau rounders",
+          "order": 2,
+          "linkedTpIds": [
+            "tp-item-1794141762016-1-rxjk"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-1-dbf6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-4-jk9r2",
+      "title": "Bab 4: Aktivitas Bela Diri",
+      "order": 4,
+      "linkedTpIds": [],
+      "linkedAtpItemIds": [],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-4-1-sz91x",
+          "title": "Sikap kuda-kuda",
+          "order": 1,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-4-2-3dggm",
+          "title": "Teknik tendangan",
+          "order": 2,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-5-dg9vt",
+      "title": "Bab 5: Aktivitas Gerak Dominan Senam",
+      "order": 5,
+      "linkedTpIds": [],
+      "linkedAtpItemIds": [],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-5-1-un8m8",
+          "title": "Berjalan dengan tangan",
+          "order": 1,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-5-2-3zqde",
+          "title": "Lompat kelinci",
+          "order": 2,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-5-3-bvqri",
+          "title": "Gerak dasar senam",
+          "order": 3,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-6-tfts0",
+      "title": "Bab 6: Aktivitas Gerak Berirama",
+      "order": 6,
+      "linkedTpIds": [],
+      "linkedAtpItemIds": [],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-6-1-3bzxx",
+          "title": "Ayunan lengan",
+          "order": 1,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-6-2-6w4xo",
+          "title": "Langkah kaki",
+          "order": 2,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-6-3-a8qbu",
+          "title": "Rangkaian gerak berirama",
+          "order": 3,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-7-7lp8d",
+      "title": "Bab 7: Aktivitas Permainan dan Olahraga Air",
+      "order": 7,
+      "linkedTpIds": [],
+      "linkedAtpItemIds": [],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-7-1-m9an4",
+          "title": "Adaptasi air dan pernapasan",
+          "order": 1,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        },
+        {
+          "id": "mat-import-1794142086126-7-2-wojz7",
+          "title": "Teknik dasar meluncur",
+          "order": 2,
+          "linkedTpIds": [],
+          "linkedAtpItemIds": []
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-8-iwedc",
+      "title": "Bab 8: Aktivitas Kebugaran untuk Kesehatan",
+      "order": 8,
+      "linkedTpIds": [
+        "tp-item-1794141762016-4-bio5"
+      ],
+      "linkedAtpItemIds": [
+        "atp-item-1794142056669-3-mg8t"
+      ],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-8-1-lt3t0",
+          "title": "Daya tahan jantung dan paru-paru",
+          "order": 1,
+          "linkedTpIds": [
+            "tp-item-1794141762016-4-bio5"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-3-mg8t"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-8-2-wgtzx",
+          "title": "Latihan sirkuit",
+          "order": 2,
+          "linkedTpIds": [
+            "tp-item-1794141762016-4-bio5"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-3-mg8t"
+          ]
+        },
+        {
+          "id": "alignment-prop-47",
+          "title": "Manfaat Aktivitas Jasmani dan Pencegahan Perilaku Sedenter",
+          "order": 3,
+          "linkedTpIds": [
+            "tp-item-1794141762016-4-bio5"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-3-mg8t"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit-import-1794142086126-9-c00zt",
+      "title": "Bab 9: Gaya Hidup Sehat dan Pencegahan Risiko Kesehatan",
+      "order": 9,
+      "linkedTpIds": [
+        "tp-item-1794141762016-5-omch"
+      ],
+      "linkedAtpItemIds": [
+        "atp-item-1794142056669-4-67ax"
+      ],
+      "materials": [
+        {
+          "id": "mat-import-1794142086126-9-1-d4o5t",
+          "title": "Pengertian NAPZA",
+          "order": 1,
+          "linkedTpIds": [
+            "tp-item-1794141762016-5-omch"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-4-67ax"
+          ]
+        },
+        {
+          "id": "mat-import-1794142086126-9-2-gm855",
+          "title": "Bahaya dan pencegahan penyalahgunaan NAPZA",
+          "order": 2,
+          "linkedTpIds": [
+            "tp-item-1794141762016-5-omch"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-4-67ax"
+          ]
+        },
+        {
+          "id": "alignment-prop-50",
+          "title": "Pola Makan Sehat dan Kandungan Gizi",
+          "order": 3,
+          "linkedTpIds": [
+            "tp-item-1794141762016-5-omch"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-4-67ax"
+          ]
+        },
+        {
+          "id": "alignment-prop-51",
+          "title": "Penanganan Cedera dan Pertolongan Pertama",
+          "order": 4,
+          "linkedTpIds": [
+            "tp-item-1794141762016-5-omch"
+          ],
+          "linkedAtpItemIds": [
+            "atp-item-1794142056669-4-67ax"
+          ]
+        }
+      ]
+    }
+  ],
+  "tp": [
+    {
+      "id": "tp-item-1794141762016-1-rxjk",
+      "code": "E1-SKG-02",
+      "statement": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+      "competence": "menyesuaikan, mentransfer",
+      "contentScope": "keterampilan gerak, strategi gerak, berbagai situasi gerak",
+      "order": 1
+    },
+    {
+      "id": "tp-item-1794141762016-2-b41i",
+      "code": "E1-SKG-01",
+      "statement": "Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.",
+      "competence": "menginvestigasi",
+      "contentScope": "berbagai konsep gerak",
+      "order": 2
+    },
+    {
+      "id": "tp-item-1794141762016-3-6cdm",
+      "code": "E2-BMG-01",
+      "statement": "Peserta didik dapat menguji efektivitas penerapan strategi gerak, merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif, serta menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.",
+      "competence": "menguji, merancang, menjalankan peran",
+      "contentScope": "strategi gerak, peraturan alternatif, modifikasi permainan, fair play, partisipasi inklusif, peran kelompok/tim",
+      "order": 3
+    },
+    {
+      "id": "tp-item-1794141762016-4-bio5",
+      "code": "E3-BHA-01",
+      "statement": "Peserta didik mampu berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.",
+      "competence": "berpartisipasi, menjelaskan, mengidentifikasi",
+      "contentScope": "aktivitas jasmani, pengaruh aktivitas jasmani teratur terhadap kesehatan, rekomendasi aktivitas jasmani, pencegahan perilaku sedenter",
+      "order": 4
+    },
+    {
+      "id": "tp-item-1794141762016-5-omch",
+      "code": "E4-PHN-01",
+      "statement": "Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.",
+      "competence": "menghubungkan, menjelaskan, mempraktikkan",
+      "contentScope": "gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama",
+      "order": 5
+    }
+  ],
+  "atp": [
+    {
+      "id": "atp-item-1794142056668-0-bvix",
+      "focus": "Peserta didik menginvestigasi berbagai konsep gerak untuk meningkatkan capaian keterampilan gerak.",
+      "linkedTpIds": [
+        "tp-item-1794141762016-2-b41i"
+      ],
+      "stepNumber": 1
+    },
+    {
+      "id": "atp-item-1794142056669-1-dbf6",
+      "focus": "Peserta didik menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai dalam berbagai situasi gerak.",
+      "linkedTpIds": [
+        "tp-item-1794141762016-1-rxjk"
+      ],
+      "stepNumber": 2
+    },
+    {
+      "id": "atp-item-1794142056669-2-6295",
+      "focus": "Peserta didik menguji efektivitas strategi gerak, merancang peraturan alternatif serta modifikasi permainan yang mendukung fair play dan partisipasi inklusif, dan menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.",
+      "linkedTpIds": [
+        "tp-item-1794141762016-3-6cdm"
+      ],
+      "stepNumber": 3
+    },
+    {
+      "id": "atp-item-1794142056669-3-mg8t",
+      "focus": "Peserta didik berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.",
+      "linkedTpIds": [
+        "tp-item-1794141762016-4-bio5"
+      ],
+      "stepNumber": 4
+    },
+    {
+      "id": "atp-item-1794142056669-4-67ax",
+      "focus": "Peserta didik menghubungkan gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.",
+      "linkedTpIds": [
+        "tp-item-1794141762016-5-omch"
+      ],
+      "stepNumber": 5
+    }
+  ]
+}

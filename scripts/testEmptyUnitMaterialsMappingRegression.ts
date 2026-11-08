@@ -397,7 +397,7 @@ runTest('Test 5: Bab dengan keselarasan ambigu menghasilkan MANUAL_REVIEW tanpa 
   assert.strictEqual(genericFindings.length, 1);
   assert.strictEqual(genericFindings[0].status, 'MANUAL_REVIEW', 'Judul tanpa kata kunci substansi harus MANUAL_REVIEW');
   assert.strictEqual(genericFindings[0].action, undefined, 'MANUAL_REVIEW tidak boleh memiliki action fiktif');
-  assert.ok(genericFindings[0].reason.includes('tidak memuat kata kunci substansi'), 'Alasan harus jelas');
+  assert.ok(genericFindings[0].reason.includes('tidak memberikan usulan TP eksplisit'), 'Ketiadaan usulan berbeda dari ketidakrelevanan substansi');
 
   const unrelatedFindings = result.materialFindings.filter((f) => f.unitId === 'unit-unrelated-topic');
   assert.strictEqual(unrelatedFindings.length, 1);

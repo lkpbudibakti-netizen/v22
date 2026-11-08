@@ -6,6 +6,7 @@ import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEviden
 export const ALIGNMENT_PRIORITY = ['EDIT_UNIT_TITLE', 'LINK_TP', 'EDIT_MATERIAL', 'ADD_MATERIAL', 'MOVE_MATERIAL', 'RESTRUCTURE_UNIT'] as const;
 export type AlignmentActionType = typeof ALIGNMENT_PRIORITY[number];
 export interface AlignmentAction {
+  replaceTpIds?: boolean;
   id: string;
   type: AlignmentActionType;
   targetUnitId: string;
@@ -19,6 +20,7 @@ export interface AlignmentAction {
   evidence: { tpId: string; tpQuote: string; materialQuote: string }[];
 }
 export interface AlignmentProposal {
+  executionClass?: 'AUTO_APPLY' | 'NEEDS_APPROVAL';
   changeKind?: MappingChangeRecord['kind'];
   approval?: 'AUTOMATIC' | 'TEACHER';
   id: string;
@@ -143,6 +145,14 @@ export function buildMappingPedagogicalReport(units: ATPUnitMapping[], atp: ATPD
     recommendation: 'Pilihan guru: tautkan materi existing hanya bila cakupan dan kompetensinya sesuai; atau koreksi klaim TP Bab bila tidak relevan. Jika materi benar-benar belum ada, susun usulan cakupan secara eksplisit lalu tinjau. Tidak ada pilihan yang diterapkan otomatis.',
     impact: 'Data manual dipertahankan; Step 08 tetap terkunci sampai gap dituntaskan.', approval: 'TEACHER', status: 'OPEN' });
   const all = units.flatMap(unit => unit.materials.map(material => ({ unit, material })));
+  for (const unitId of result.unitsWithoutLineage) add({ id: `lineage-empty-${unitId}`, unitId, category: 'UNIT_LINEAGE', priority: 'P1',
+    actual: `Bab "${units.find(unit => unit.id === unitId)?.title || unitId}" belum memiliki lineage TP/ATP lengkap.`, evidence: 'Validator menemukan relasi TP/ATP Bab kosong meskipun coverage global mungkin sudah lengkap.',
+    recommendation: 'Tinjau kompetensi dan aktivitas materi dalam Bab, lalu setujui hanya relasi TP yang didukung substansi; ATP mengikuti induk TP kanonikal.',
+    impact: 'Bab tetap dipertahankan; Step 08 belum READY sampai lineage lengkap.', approval: 'TEACHER', status: 'NEEDS_REVIEW' });
+  for (const ref of result.materialsWithoutLineage) add({ id: `support-empty-${ref.unitId}-${ref.materialId}`, unitId: ref.unitId, materialId: ref.materialId, category: 'MATERIAL_SUPPORT', priority: 'P1',
+    actual: `Materi "${all.find(({ unit, material }) => unit.id === ref.unitId && material.id === ref.materialId)?.material.title || ref.materialId}" belum memiliki lineage TP/ATP lengkap.`, evidence: 'Validator menemukan relasi materi kosong; judul singkat atau tidak adanya keyword tidak membuktikan ketidakrelevanan.',
+    recommendation: 'Minta usulan TP dengan alasan kompetensi, aktivitas dan cakupan dalam konteks Bab. Untuk TP luas, jelaskan aktivitas yang menunjukkan kompetensinya; jangan menambah materi atau menautkan TP hanya demi coverage.',
+    impact: 'Materi manual dipertahankan; relasi baru memerlukan persetujuan guru dan validasi ulang.', approval: 'TEACHER', status: 'NEEDS_REVIEW' });
   for (const { unit, material } of all) {
     for (const id of material.linkedTpIds) {
       const objective = tp.items.find(t => t.id === id);
@@ -174,15 +184,97 @@ export function suggestMappingCopyedit(title: string): string {
 function reviewedTpFingerprint(ids: string[], tp: TPData): string {
   return JSON.stringify(tp.items.filter(t => ids.includes(t.id)).map(t => ({ id: t.id, statement: t.statement, competence: t.competence, contentScope: t.contentScope })).sort((a,b)=>a.id.localeCompare(b.id)));
 }
+function mappingProposition(text:string):string {
+  return mappingTitleMeaning(text.replace(/^peserta didik\s+(?:(?:mampu|dapat)\s+)?/i,'').trim());
+}
 export function hasTeacherMaterialSupport(unit: ATPUnitMapping, material: ATPUnitMapping['materials'][number], tp: TPData): boolean {
   const approved = new Set<string>();
-  for (const record of [...(unit.actionHistory || []), ...(material.titleHistory || [])]) {
-    if (record.approval !== 'TEACHER' || record.materialId !== material.id || !record.reviewedTitle || !record.reviewedTpIds ||
+  const history=[...(unit.actionHistory || []), ...(material.titleHistory || [])];
+  for (const record of history) {
+    if (record.kind==='UNDO' || history.some(h=>h.undoOf===record.id)) continue;
+    const independentAutomatic=record.approval==='AUTOMATIC' && record.kind==='REALIGN' && record.reviewedTpIds?.length===1 &&
+      tp.items.filter(t=>mappingProposition(t.statement)===mappingProposition(material.title)).length===1 &&
+      tp.items.some(t=>t.id===record.reviewedTpIds![0]&&mappingProposition(t.statement)===mappingProposition(material.title));
+    if ((record.approval !== 'TEACHER' && !independentAutomatic) || record.materialId !== material.id || !record.reviewedTitle || !record.reviewedTpIds ||
       mappingTitleMeaning(record.reviewedTitle) !== mappingTitleMeaning(material.title) ||
       record.reviewedTpFingerprint !== reviewedTpFingerprint(record.reviewedTpIds, tp)) continue;
     record.reviewedTpIds.forEach(id => approved.add(id));
   }
   return material.linkedTpIds.length > 0 && material.linkedTpIds.every(id => approved.has(id));
+}
+
+/** Independent authority: AI confidence cannot authorize a new TP relationship. */
+export function isMappingActionAutomatic(action: AlignmentAction, units: ATPUnitMapping[], tp: TPData): boolean {
+  if (['COPYEDIT','RENAME'].includes(mappingActionKind(action, units))) return true;
+  const unit = units.find(u => u.id === action.targetUnitId), material = unit?.materials.find(m => m.id === action.targetMaterialId);
+  if (action.type!=='LINK_TP' || !unit || !material || material.title!==action.before) return false;
+  if ([...(unit.actionHistory || [])].reverse().find(record=>record.materialId===material.id&&['UNDO','REALIGN'].includes(record.kind))?.kind==='UNDO') return false;
+  if (action.linkedTpIds.length === material.linkedTpIds.length && action.linkedTpIds.every(id => material.linkedTpIds.includes(id)) && hasTeacherMaterialSupport(unit, material, tp)) return true;
+  // Complete proposition equivalence, never keyword overlap or AI's confidence.
+  const equivalent=tp.items.filter(objective=>mappingProposition(objective.statement)===mappingProposition(material.title));
+  return !material.linkedTpIds.length && action.linkedTpIds.length===1 && equivalent.length===1 && equivalent[0].id===action.linkedTpIds[0] &&
+    !unit.actionHistory?.some(record=>record.materialId===material.id);
+}
+
+export function formatMappingUnitTitle(unit: Pick<ATPUnitMapping, 'order' | 'title'>): string {
+  const label = unit.title.replace(/^(?:\s*Bab\s+\d+\s*[:.\-]?\s*)+/i, '').trim();
+  return `Bab ${unit.order}${label ? `: ${label}` : ''}`;
+}
+
+export function mappingMaterialOrigin(unit: ATPUnitMapping, material: ATPUnitMapping['materials'][number]): 'TEACHER_APPROVED' | 'UNVERIFIED' | 'EXISTING' {
+  if (!material.id.startsWith('alignment-')) return 'EXISTING';
+  return unit.actionHistory?.some(record => record.materialId === material.id && record.kind === 'CONTENT_CHANGE' && record.approval === 'TEACHER' && record.after === material.title)
+    ? 'TEACHER_APPROVED' : 'UNVERIFIED';
+}
+
+export function confirmMappingMaterialOrigin(units: ATPUnitMapping[], unitId: string, materialId: string, expectedTitle: string): ATPUnitMapping[] {
+  const next = structuredClone(units), unit = next.find(u => u.id === unitId), material = unit?.materials.find(m => m.id === materialId);
+  if (!unit || !material || material.title !== expectedTitle) throw new Error('Materi berubah; tinjau ulang sebelum memberi persetujuan.');
+  if (mappingMaterialOrigin(unit, material) !== 'UNVERIFIED') return next;
+  unit.actionHistory = [...(unit.actionHistory || []), { id:`origin-${material.id}-${Date.now()}`, at:new Date().toISOString(), kind:'CONTENT_CHANGE', approval:'TEACHER', unitId, materialId,
+    before:'Otorisasi historis belum terbukti', after:material.title, reason:'Guru menyetujui keberadaan materi saat ini; tidak mengklaim otorisasi historis.' }];
+  return next;
+}
+
+export function undoMappingRelation(units:ATPUnitMapping[], unitId:string, recordId:string, atp:ATPData, tp:TPData) {
+  const next=structuredClone(units), unit=next.find(u=>u.id===unitId), record=unit?.actionHistory?.find(r=>r.id===recordId), material=unit?.materials.find(m=>m.id===record?.materialId);
+  if (!unit || !record?.beforeLinks || !record.afterLinks || !material || unit.actionHistory?.some(r=>r.undoOf===recordId)) return {success:false,issues:['Riwayat relasi yang dapat dibatalkan tidak tersedia.']};
+  const current={materialTpIds:material.linkedTpIds,materialAtpIds:material.linkedAtpItemIds,unitTpIds:unit.linkedTpIds,unitAtpIds:unit.linkedAtpItemIds};
+  if (JSON.stringify(current)!==JSON.stringify(record.afterLinks) || material.title!==record.reviewedTitle) return {success:false,issues:['Undo ditolak: relasi atau judul telah berubah setelah tindakan.']};
+  material.linkedTpIds=[...record.beforeLinks.materialTpIds];material.linkedAtpItemIds=[...record.beforeLinks.materialAtpIds];
+  unit.linkedTpIds=[...new Set([...record.beforeLinks.unitTpIds,...unit.materials.flatMap(m=>m.linkedTpIds)])];
+  unit.linkedAtpItemIds=[...new Set([...record.beforeLinks.unitAtpIds,...unit.materials.flatMap(m=>m.linkedAtpItemIds),...deriveMappingAtpIds(unit.linkedTpIds,atp,tp).atpItemIds])];
+  const validation=mappingCoverage(next,atp,tp);
+  if (!validation.isValid) return {success:false,issues:validation.issues};
+  unit.actionHistory=[...(unit.actionHistory||[]),{...record,id:`undo-${record.id}`,at:new Date().toISOString(),kind:'UNDO',approval:'TEACHER',undoOf:record.id,before:record.after,after:record.before,beforeLinks:record.afterLinks,afterLinks:{materialTpIds:material.linkedTpIds,materialAtpIds:material.linkedAtpItemIds,unitTpIds:unit.linkedTpIds,unitAtpIds:unit.linkedAtpItemIds}}];
+  return {success:true,issues:[],nextUnits:next};
+}
+
+export function buildMappingMaterialResolutions(units: ATPUnitMapping[], atp: ATPData, tp: TPData, proposals: AlignmentProposal[] = [], gaps: {kind:string;id:string;reason:string}[] = []) {
+  return units.flatMap(unit => unit.materials.map(material => {
+    const matches = proposals.filter(p => p.targetUnitId === unit.id && p.targetMaterialId === material.id);
+    const approved = hasTeacherMaterialSupport(unit, material, tp);
+    const parents=deriveMappingAtpIds(material.linkedTpIds, atp, tp);
+    const complete = material.linkedTpIds.length > 0 && !parents.issues.length && parents.atpItemIds.length===material.linkedAtpItemIds.length && parents.atpItemIds.every(id=>material.linkedAtpItemIds.includes(id)) && !checkMappingSemanticEvidence({label:material.title,tpItems:tp.items.filter(t=>material.linkedTpIds.includes(t.id))}).hardConflict;
+    const actionable = matches.filter(p => p.action && alignmentProposalStatus(p) === 'READY');
+    const origin = mappingMaterialOrigin(unit, material);
+    return { unitId:unit.id, materialId:material.id, title:material.title, origin,
+      linkedTpIds:[...material.linkedTpIds], linkedAtpItemIds:[...material.linkedAtpItemIds],
+      status: complete && approved && origin !== 'UNVERIFIED' ? 'RESOLVED' as const : actionable.length ? 'NEEDS_APPROVAL' as const : 'NEEDS_REVIEW' as const,
+      reason: complete && approved ? 'Relasi tersimpan memiliki bukti persetujuan guru atau kesetaraan proposisi lengkap yang diperiksa independen untuk judul dan TP saat ini.' :
+        gaps.find(g => g.kind === 'MATERIAL' && g.id === material.id)?.reason || matches.find(p => p.validationIssues?.length)?.reason ||
+        'Belum ada usulan semantik terverifikasi. Judul saja belum membuktikan kompetensi; guru perlu menjelaskan aktivitas dan cakupan.',
+      proposalIds:actionable.map(p => p.id),
+      candidates: tp.items.map(objective => {
+        const parents = deriveMappingAtpIds([objective.id], atp, tp), conflict = checkMappingSemanticEvidence({label:material.title,tpItems:[objective]});
+        const suggested = matches.find(p => p.tpIds.includes(objective.id));
+        return {tpId:objective.id,atpIds:parents.atpItemIds,code:objective.code,statement:objective.statement,competence:objective.competence,
+          materialQuote:material.title,reason:suggested?.reason || 'Opsi pembanding kanonikal, bukan rekomendasi relevansi. Jelaskan bagaimana aktivitas materi menunjukkan kompetensi TP sebelum menyetujui.',
+          blocked:parents.issues.length > 0 || conflict.hardConflict, issues:[...parents.issues,...(conflict.hardConflict?[conflict.reason]:[])],
+          suggested:!!suggested,needsEvidence:!!suggested && alignmentProposalStatus(suggested)!=='READY',impact:'Menambah relasi pada materi existing; ATP diturunkan dari TP. Tidak menambah materi atau mengubah TP kanonikal.'};
+      }),
+    };
+  }));
 }
 
 export function recordMappingBatch(units: ATPUnitMapping[], next: ATPUnitMapping[], reason: string, undo = false): ATPUnitMapping[] {
@@ -214,6 +306,16 @@ export function alignmentProposalStatus(proposal: AlignmentProposal): 'READY' | 
   return 'REJECTED';
 }
 
+export function refreshAlignmentProposals(proposals:AlignmentProposal[],units:ATPUnitMapping[],atp:ATPData,tp:TPData):AlignmentProposal[] {
+  return proposals.map(proposal=>{
+    if (!proposal.action) return proposal;
+    const preview=applyMinimalAlignment(units,[proposal.action],atp,tp);
+    if (!preview.success) return {...proposal,action:undefined,validationStatus:'REJECTED',validationIssues:preview.issues,reason:preview.issues.join('; ')};
+    if (JSON.stringify(preview.nextUnits)===JSON.stringify(units)) return {...proposal,action:undefined,validationStatus:'ALREADY_APPLIED',reason:'Sudah diterapkan dan divalidasi pada draf saat ini.'};
+    return proposal;
+  });
+}
+
 export function alignmentProposalDiagnostics(proposals: AlignmentProposal[]) {
   const reasons = new Map<string, number>();
   for (const proposal of proposals.filter(p => alignmentProposalStatus(p) === 'REJECTED')) {
@@ -239,7 +341,7 @@ export function mappingCoverage(units: ATPUnitMapping[], atp: ATPData, tp: TPDat
 }
 
 /** Mutate only a cloned draft, then validate the entire candidate. Existing incomplete data stays visible. */
-export function applyMinimalAlignment(units: ATPUnitMapping[], actions: AlignmentAction[], atp: ATPData, tp: TPData) {
+export function applyMinimalAlignment(units: ATPUnitMapping[], actions: AlignmentAction[], atp: ATPData, tp: TPData, approval: 'TEACHER' | 'AUTOMATIC' = 'TEACHER') {
   const next = structuredClone(units);
   const issues: string[] = [];
   const fail = (reason: string) => { issues.push(reason); };
@@ -248,6 +350,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
   for (const action of [...actions].sort((a, b) => ALIGNMENT_PRIORITY.indexOf(a?.type) - ALIGNMENT_PRIORITY.indexOf(b?.type))) {
     if (!action || !ALIGNMENT_PRIORITY.includes(action.type)) { fail('Tipe proposal tidak dikenal.'); continue; }
     if (!action.id || usedIds.has(action.id)) { fail('ID proposal kosong/duplikat.'); continue; }
+    if (approval === 'AUTOMATIC' && !isMappingActionAutomatic(action, units, tp)) { fail('AUTO_APPLY ditolak: otorisasi independen tidak tersedia.'); continue; }
     usedIds.add(action.id);
     const target = next.find(u => u.id === action.targetUnitId);
     const source = next.find(u => u.id === (action.sourceUnitId || action.targetUnitId));
@@ -287,7 +390,8 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
       titleEntity.title = action.after;
       continue;
     }
-    if (!Array.isArray(action.linkedTpIds) || !action.linkedTpIds.length || new Set(action.linkedTpIds).size !== action.linkedTpIds.length) { fail('Subset TP wajib eksplisit, tidak kosong/duplikat.'); continue; }
+    const teacherClearing=approval==='TEACHER' && action.type==='LINK_TP' && action.replaceTpIds;
+    if (!Array.isArray(action.linkedTpIds) || (!action.linkedTpIds.length && !teacherClearing) || new Set(action.linkedTpIds).size !== action.linkedTpIds.length) { fail('Subset TP wajib eksplisit, tidak kosong/duplikat.'); continue; }
     const parents = deriveMappingAtpIds(action.linkedTpIds, atp, tp);
     if (parents.issues.length) { issues.push(...parents.issues); continue; }
     const alreadyMoved = action.type === 'MOVE_MATERIAL' && !material && target.materials.find(m => m.id === action.targetMaterialId);
@@ -337,7 +441,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
           material!.titleHistory = [...(material!.titleHistory || []), { id: `title-${action.id}`, at: new Date().toISOString(), kind: 'CONTENT_CHANGE', approval: 'TEACHER', unitId: target.id, materialId: material!.id, before: material!.title, after: title!, reason: action.reason }];
           material!.title = title;
         }
-        material!.linkedTpIds = [...new Set([...material!.linkedTpIds, ...action.linkedTpIds])];
+        material!.linkedTpIds = [...new Set(action.type==='LINK_TP' && action.replaceTpIds ? action.linkedTpIds : [...material!.linkedTpIds, ...action.linkedTpIds])];
         const derived = deriveMappingAtpIds(material!.linkedTpIds, atp, tp);
         issues.push(...derived.issues);
         material!.linkedAtpItemIds = derived.atpItemIds;
@@ -358,18 +462,25 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
     // Preserve unrelated declared lineage; movement may remove only lineage supported by the moved material.
     for (const unit of new Set([source, target])) {
       const moved = action.type === 'MOVE_MATERIAL' && unit.id === source.id;
-      const declaredTp = moved ? unit.linkedTpIds.filter(id => !material!.linkedTpIds.includes(id)) : unit.linkedTpIds;
+      const replaced=action.type==='LINK_TP' && action.replaceTpIds && unit.id===target.id;
+      const declaredTp = moved ? unit.linkedTpIds.filter(id => !material!.linkedTpIds.includes(id)) : replaced ? unit.linkedTpIds.filter(id=>!original!.linkedTpIds.includes(id) || unit.materials.some(m=>m.linkedTpIds.includes(id))) : unit.linkedTpIds;
       unit.linkedTpIds = [...new Set([...declaredTp, ...unit.materials.flatMap(m => m.linkedTpIds)])];
       const derived = deriveMappingAtpIds(unit.linkedTpIds, atp, tp);
       issues.push(...derived.issues);
-      unit.linkedAtpItemIds = [...new Set([...(moved ? unit.linkedAtpItemIds.filter(id => !material!.linkedAtpItemIds.includes(id)) : unit.linkedAtpItemIds), ...derived.atpItemIds])];
+      unit.linkedAtpItemIds = [...new Set([...(moved ? unit.linkedAtpItemIds.filter(id => !material!.linkedAtpItemIds.includes(id)) : replaced ? unit.linkedAtpItemIds.filter(id=>!original!.linkedAtpItemIds.includes(id) || derived.atpItemIds.includes(id)) : unit.linkedAtpItemIds), ...derived.atpItemIds])];
     }
     const historyAfter = action.after || JSON.stringify([...action.linkedTpIds].sort());
     const reviewedMaterialId = action.type === 'ADD_MATERIAL' ? `alignment-${action.id}` : action.targetMaterialId;
     const reviewedMaterial = target.materials.find(m => m.id === reviewedMaterialId);
-    if (!target.actionHistory?.some(r => r.materialId === reviewedMaterialId && r.before === (action.before || '') && r.after === historyAfter && r.kind === mappingActionKind(action, units))) {
-      target.actionHistory = [...(target.actionHistory || []), { id: `action-${action.id}`, at: new Date().toISOString(), kind: mappingActionKind(action, units), approval: 'TEACHER', unitId: target.id, materialId: reviewedMaterialId, before: action.before || '', after: historyAfter, reason: action.reason,
+    const previousUnit=units.find(u=>u.id===target.id),previousMaterial=previousUnit?.materials.find(m=>m.id===reviewedMaterialId);
+    const relationChanged=previousMaterial && reviewedMaterial && JSON.stringify([previousMaterial.linkedTpIds,previousMaterial.linkedAtpItemIds])!==JSON.stringify([reviewedMaterial.linkedTpIds,reviewedMaterial.linkedAtpItemIds]);
+    if (relationChanged || !target.actionHistory?.some(r => !target.actionHistory?.some(h=>h.undoOf===r.id) && r.materialId === reviewedMaterialId && r.before === (action.before || '') && r.after === historyAfter && r.kind === mappingActionKind(action, units))) {
+      target.actionHistory = [...(target.actionHistory || []), { id: `action-${action.id}-${target.actionHistory?.length || 0}`, at: new Date().toISOString(), kind: mappingActionKind(action, units), approval, unitId: target.id, materialId: reviewedMaterialId, before: action.before || '', after: historyAfter, reason: action.reason,
         ...(reviewedMaterial ? { reviewedTitle: reviewedMaterial.title, reviewedTpIds: [...action.linkedTpIds], reviewedTpFingerprint: reviewedTpFingerprint(action.linkedTpIds, tp) } : {}) }];
+      if (action.type==='LINK_TP' && previousUnit && previousMaterial && reviewedMaterial) Object.assign(target.actionHistory.at(-1)!, {
+        beforeLinks:{materialTpIds:[...previousMaterial.linkedTpIds],materialAtpIds:[...previousMaterial.linkedAtpItemIds],unitTpIds:[...previousUnit.linkedTpIds],unitAtpIds:[...previousUnit.linkedAtpItemIds]},
+        afterLinks:{materialTpIds:[...reviewedMaterial.linkedTpIds],materialAtpIds:[...reviewedMaterial.linkedAtpItemIds],unitTpIds:[...target.linkedTpIds],unitAtpIds:[...target.linkedAtpItemIds]},
+      });
     }
   }
   const before = mappingCoverage(units, atp, tp), coverage = mappingCoverage(next, atp, tp);
@@ -380,6 +491,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
       fail(`SOURCE_LINEAGE_MISSING: perubahan menambah gap dukungan materi pada Bab '${gap.unitId}'.`);
     }
   }
-  if (coverage.uncoveredTpIds.some(id => !before.uncoveredTpIds.includes(id)) || coverage.unmappedAtpIds.some(id => !before.unmappedAtpIds.includes(id))) fail('COVERAGE_REGRESSION: perubahan menghilangkan cakupan canonical.');
+  const explicitTeacherReplacement=approval==='TEACHER' && actions.length>0 && actions.every(action=>action.type==='LINK_TP'&&action.replaceTpIds);
+  if (!explicitTeacherReplacement && (coverage.uncoveredTpIds.some(id => !before.uncoveredTpIds.includes(id)) || coverage.unmappedAtpIds.some(id => !before.unmappedAtpIds.includes(id)))) fail('COVERAGE_REGRESSION: perubahan menghilangkan cakupan canonical.');
   return issues.length ? { success: false, issues: [...new Set(issues)] } : { success: true, issues: [], nextUnits: next, rollbackUnits: structuredClone(units), coverage };
 }

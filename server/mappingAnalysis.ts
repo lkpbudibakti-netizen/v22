@@ -3,6 +3,7 @@ import { analyzeBabFirstMapping } from './mappingBabFirstAnalysis';
 import { TPData, ATPData, ATPUnitMappingData } from '../src/types';
 
 export interface MappingAnalysisResult {
+  analysisNotice?: string;
   pedagogicalFindings?: import('../src/services/mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('../src/services/mappingAlignmentService').AlignmentProposal[];
   gapFindings?: { kind: 'TP' | 'ATP' | 'MATERIAL'; id: string; proposalIds: string[]; reason: string }[];
@@ -43,6 +44,9 @@ export interface MappingAnalysisResult {
 
   materialFindings: Array<{
     id: string;
+    reviewAction?: { type:'REVIEW_AND_APPROVE'; targetUnitId:string; targetMaterialId:string; classification:'NEEDS_APPROVAL' };
+    linkedTpIds?: string[];
+    linkedAtpItemIds?: string[];
 
     status: 'SUPPORTED' | 'ALIGNABLE' | 'MISSING_MATERIAL' | 'MANUAL_REVIEW';
 
@@ -161,6 +165,8 @@ COPYEDIT: ejaan, kapitalisasi, tanda baca kosmetik. RENAME: makna dan cakupan te
 EDIT_UNIT_TITLE menyunting judul Bab; EDIT_MATERIAL menyunting judul materi. Perubahan makna/cakupan adalah CONTENT_CHANGE dan wajib persetujuan guru; perubahan relasi adalah REALIGN dan wajib persetujuan guru. Jangan terus mengganti judul yang sudah baik pada analisis ulang.
 Bab/Materi → pilih subset TP relevan → derive ATP canonical. Pertahankan stepNumber, focus, linkedTpIds ATP serta unit.order Bab.
 Jangan menjadikan overlap keyword sebagai authority relevansi. Analisis kompetensi, lingkup, progresi dan konteks secara menyeluruh.
+Evaluasi SETIAP materi, termasuk yang belum memiliki relasi meskipun coverage global sudah 100%. TP luas dapat relevan pada bela diri, senam, irama dan aktivitas air tanpa kata yang sama. Jelaskan aktivitas konkret yang membuktikan kompetensi TP (misalnya menginvestigasi konsep atau mentransfer strategi), bukan sekadar menyebut gerakan. Jangan mengarang aktivitas yang tidak ada di sumber; jika hanya judul belum cukup, beri kandidat TP dalam gapFindings dengan syarat bukti/aktivitas yang perlu dikonfirmasi guru. Ketiadaan keyword bukan alasan penolakan.
+Jangan menambah materi baru untuk menutup coverage sebelum menilai materi existing. ADD/MOVE/perluasan substansi selalu menunggu persetujuan guru. Kepercayaan AI bukan otorisasi AUTO_APPLY; server memeriksa sumber dan riwayat persetujuan secara independen.
 Untuk setiap gap pilih prioritas LINK_TP → EDIT_MATERIAL → ADD_MATERIAL → MOVE_MATERIAL → RESTRUCTURE_UNIT.
 LINK_TP: usulan hubungan materi existing tanpa mengubah teks. EDIT_MATERIAL/EDIT_UNIT_TITLE: before harus exact; after berupa judul yang bermakna jelas. Kutipan kata yang sama bukan bukti dukungan kompetensi.
 ADD_MATERIAL: boleh pada Bab yang SUDAH memiliki materi jika gap tidak dapat ditutup melalui materi existing. Jangan mengganti materi lama.
@@ -181,6 +187,7 @@ BAB/MATERI ASLI: ${JSON.stringify(unitsContext)}
 Kembalikan JSON:
 {
  "atpFindings": [], "materialFindings": [],
+ "materialReviews": [{"unitId":"exact","materialId":"exact","candidates":[{"tpIds":["exact"],"reason":"Jelaskan hubungan kompetensi, aktivitas, cakupan dan konteks Bab; kandidat bersyarat bukan klaim sudah selaras.","evidence":[{"tpId":"exact","tpQuote":"pernyataan TP asli utuh","materialQuote":"judul materi asli utuh"}],"missingEvidence":["Aktivitas/bukti yang belum tersedia dan perlu dikonfirmasi guru, kosong bila cukup untuk diusulkan ACC"]}]}],
  "alignmentProposals": [{"id":"unik", "type":"EDIT_UNIT_TITLE|LINK_TP|EDIT_MATERIAL|ADD_MATERIAL|MOVE_MATERIAL|RESTRUCTURE_UNIT",
  "targetUnitId":"exact", "sourceUnitId":"untuk MOVE", "targetMaterialId":"exact kecuali ADD",
  "linkedTpIds":["exact"], "before":"judul asli exact / JSON ID order untuk restructure", "after":"judul revisi/baru",

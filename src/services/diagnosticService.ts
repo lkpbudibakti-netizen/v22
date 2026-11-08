@@ -28,6 +28,8 @@ import {
 
 import { AIMeetingDiagnostic, MappingAnalysisResult } from './aiService';
 import { ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
+import { buildMappingPedagogicalReport, buildMappingMaterialResolutions, mappingMaterialOrigin } from './mappingAlignmentService';
+import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
 import { allocateUnitMeetings } from './unitMeetingAllocationService';
 
 export type DiagnosticScope =
@@ -924,6 +926,8 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
 
   const mappingUnits = mapping?.units || [];
   const z = (validation.unmappedAtpIds?.length || 0) + (validation.uncoveredTpIds?.length || 0);
+  const readiness = resolveATPUnitMappingReadiness(mapping || undefined, atp || undefined, tp || undefined, academicSetting);
+  const currentFindings = atp && tp ? buildMappingPedagogicalReport(mappingUnits, atp, tp) : [];
 
   // Map of unitId -> title
   const unitTitleMap = new Map<string, string>();
@@ -1001,6 +1005,8 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
             `  - materialId: ${m.id}`,
             `    order: ${m.order ?? '-'}`,
             `    title: ${m.title || '-'}`,
+            `    originAuthorization: ${mappingMaterialOrigin(u, m)}`,
+            `    actionHistory: ${JSON.stringify((u.actionHistory || []).filter(record => record.materialId === m.id))}`,
             `    linkedAtpItemIds: [${mAtpIds.join(', ')}]`,
             `    linkedTpIds: [${mTpIds.join(', ')}]`,
             `    lineageComplete: ${matLineageComplete}`
@@ -1040,6 +1046,7 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
       const matInfo = m.materialId ? materialTitleMap.get(m.materialId) : undefined;
       const matTitle = matInfo?.materialTitle || m.suggestedTitle || '-';
       const unitTitle = unitTitleMap.get(m.unitId) || '-';
+      const currentMaterial = mappingUnits.find(unit => unit.id === m.unitId)?.materials.find(material => material.id === m.materialId);
 
       materialFindingLines.push(
         `- materialId: ${m.materialId ? `${m.materialId} ("${matTitle}")` : `- ("${matTitle}")`}`,
@@ -1047,9 +1054,11 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
         `  status: ${m.status}`,
         `  strength: ${m.strength || '-'}`,
         `  reason: ${m.reason || '-'}`,
-        `  actionType: ${m.action?.type || '-'}`,
-        `  linkedAtpItemIds: [${((m.action as any)?.linkedAtpItemIds || []).join(', ')}]`,
-        `  linkedTpIds: [${(m.action?.linkedTpIds || []).join(', ')}]`
+        `  actionType: ${m.action?.type || m.reviewAction?.type || '-'}`,
+        `  linkedAtpItemIds: [${(currentMaterial?.linkedAtpItemIds || []).join(', ')}]`,
+        `  linkedTpIds: [${(currentMaterial?.linkedTpIds || []).join(', ')}]`,
+        `  proposedAtpItemIds: [${((m.action as any)?.linkedAtpItemIds || m.supportingAtpItemIds || []).join(', ')}]`,
+        `  proposedTpIds: [${(m.action?.linkedTpIds || m.supportingTpIds || []).join(', ')}]`
       );
     });
   } else {
@@ -1098,6 +1107,7 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
   if (analysisResult) {
     lastAnalysisLines.push(
       `engine: ${analysisResult.engine || '-'}`,
+      `analysisNotice: ${analysisResult.analysisNotice || '-'}`,
       `totalAtp: ${analysisResult.summary?.totalAtp ?? '-'}`,
       `mappedAtp: ${analysisResult.summary?.mappedAtp ?? '-'}`,
       `unmappedAtp: ${analysisResult.summary?.unmappedAtp ?? '-'}`,
@@ -1118,6 +1128,8 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
     '',
     'Build:',
     APP_BUILD_ID,
+    `buildSha: ${APP_BUILD_SHA || 'unknown'}`,
+    `buildDirty: ${APP_BUILD_DIRTY ?? 'unknown'}`,
     '',
     'GeneratedAt:',
     new Date().toISOString(),
@@ -1133,6 +1145,8 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
     `unitsCount: ${mappingUnits.length}`,
     `isValid: ${validation.isValid}`,
     `isComplete: ${validation.isComplete}`,
+    `readyStep08: ${readiness.canProceed}`,
+    'coverageNote: Coverage global ATP/TP dan Z=0 tidak membuktikan semua Bab/Materi memiliki lineage atau dukungan pedagogis.',
     `unitsWithoutLineage: ${unitsWithoutLineageFormatted.length > 0 ? `[${unitsWithoutLineageFormatted.join(', ')}]` : '[]'}`,
     `materialsWithoutLineage: ${materialsWithoutLineageFormatted.length > 0 ? `[${materialsWithoutLineageFormatted.join(', ')}]` : '[]'}`,
     `unmappedAtpIds: [${(validation.unmappedAtpIds || []).join(', ')}]`,
@@ -1158,6 +1172,21 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
     '',
     'MATERIAL FINDINGS:',
     ...materialFindingLines,
+    '',
+    'STEP 08 BLOCKERS (CURRENT):',
+    ...(readiness.blockers.length ? readiness.blockers.map(issue => `- ${issue}`) : ['- none']),
+    '',
+    'MINIMAL ALIGNMENT PROPOSALS (LAST ANALYSIS):',
+    JSON.stringify(analysisResult?.alignmentProposals || [], null, 2),
+    '',
+    'GAP FINDINGS (LAST ANALYSIS):',
+    JSON.stringify(analysisResult?.gapFindings || [], null, 2),
+    '',
+    'PEDAGOGICAL FINDINGS (CURRENT):',
+    JSON.stringify(currentFindings, null, 2),
+    '',
+    'MATERIAL RESOLUTIONS (CURRENT):',
+    JSON.stringify(atp && tp ? buildMappingMaterialResolutions(mappingUnits, atp, tp, analysisResult?.alignmentProposals, analysisResult?.gapFindings) : [], null, 2),
     '',
     'APPLIED ACTION IDS:',
     `[${appliedActionIds.join(', ')}]`,

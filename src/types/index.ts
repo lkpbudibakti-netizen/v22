@@ -514,6 +514,8 @@ export interface ATPData {
 }
 
 export interface MappingChangeRecord {
+  beforeLinks?: { materialTpIds:string[]; materialAtpIds:string[]; unitTpIds:string[]; unitAtpIds:string[] };
+  afterLinks?: { materialTpIds:string[]; materialAtpIds:string[]; unitTpIds:string[]; unitAtpIds:string[] };
   id: string;
   at: string;
   kind: 'COPYEDIT' | 'RENAME' | 'REALIGN' | 'CONTENT_CHANGE' | 'UNDO';
