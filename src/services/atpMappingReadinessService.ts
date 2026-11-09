@@ -1,6 +1,6 @@
 import { ATPUnitMappingData, ATPData, TPData, AcademicSetting } from '../types';
 import { validateATPUnitMappingCanonical, ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
-import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
+import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint, computeStep07VerifiedFingerprint } from './atpMappingActionApplyService';
 import { isUpstreamStale } from './workflowEngine';
 
 export interface MappingReadiness {
@@ -117,6 +117,8 @@ export function resolveATPUnitMappingReadiness(
   if (!validationResult.isComplete) {
     blockers.push('Pemetaan Unit/Bab belum lengkap.');
   }
+  const auto=mapping?.step07AutoRepair;
+  if(auto?.scope==='STEP07_AUTO_REPAIR'&&(auto.outcome!=='COMPLETE'||!atp||!tp||auto.verifiedFingerprint!==computeStep07VerifiedFingerprint(mapping!.units,atp,tp)))blockers.push('Auto-repair Step 07 belum terverifikasi untuk data terkini. Jalankan Analisis & Selaraskan hingga hasil lengkap tersimpan.');
 
   const canProceed =
     canSaveDraft &&

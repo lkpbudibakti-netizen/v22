@@ -1190,5 +1190,8 @@ export function buildATPUnitMappingDiagnosticReport(params: BuildATPUnitMappingD
     '',
     'APPLIED ACTION IDS:',
     `[${appliedActionIds.join(', ')}]`,
+    '',
+    'STEP 07 AUTO-REPAIR:',
+    JSON.stringify(mapping?.step07AutoRepair?{scope:mapping.step07AutoRepair.scope,runId:mapping.step07AutoRepair.runId,rounds:mapping.step07AutoRepair.rounds,outcome:mapping.step07AutoRepair.outcome,addedMaterialIds:mapping.step07AutoRepair.addedMaterialIds,hasBeforeSnapshot:true,issues:mapping.step07AutoRepair.issues}:null,null,2),
   ].join('\n');
 }

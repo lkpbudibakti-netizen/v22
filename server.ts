@@ -3066,7 +3066,7 @@ Format respons WAJIB berupa JSON murni dengan skema berikut:
 
 // Endpoint: AI Analyze ATP Unit Mapping (Read-Only Analysis)
 app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
-  const { subject, grade, phase, tpData, atpData, currentMapping } = req.body || {};
+  const { subject, grade, phase, tpData, atpData, currentMapping, step07Auto } = req.body || {};
 
   if (!tpData || !Array.isArray(tpData.items) || tpData.items.length === 0) {
     return res.status(400).json({ error: 'Data TP canonical diperlukan untuk analisis pemetaan.' });
@@ -3087,6 +3087,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
     tpData,
     atpData,
     currentMapping,
+    ...(step07Auto?.scope==='STEP07_AUTO_REPAIR'?{step07Auto}:{}),
   };
 
   const apiKey = resolveApiKey(req);
@@ -3114,7 +3115,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
           }
         }
 
-        if (parsed && (Array.isArray(parsed.atpFindings) || Array.isArray(parsed.materialFindings) || Array.isArray(parsed.alignmentProposals) || Array.isArray(parsed.materialReviews))) {
+        if (parsed && (Array.isArray(parsed.atpFindings) || Array.isArray(parsed.materialFindings) || Array.isArray(parsed.alignmentProposals) || Array.isArray(parsed.materialReviews) || (serverParams.step07Auto?.phase==='VERIFY'&&Array.isArray(parsed.step07SemanticChecks)))) {
           const sanitized = sanitizeMappingAnalysisResult(parsed, serverParams);
           return res.json({
             success: true,
@@ -3133,6 +3134,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
   fallbackResult.analysisNotice = apiKey
     ? 'AI_UNAVAILABLE_OR_INVALID: AI tidak memberikan respons yang dapat digunakan. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada rekomendasi semantik yang direkayasa.'
     : 'AI_NOT_CONFIGURED: layanan AI belum dikonfigurasi. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada relasi yang dipaksakan.';
+  if(serverParams.step07Auto?.scope==='STEP07_AUTO_REPAIR')fallbackResult.analysisNotice=apiKey?'AI_UNAVAILABLE_OR_INVALID: verifikasi semantik otomatis tidak tersedia. Gap dipertahankan; tidak ada relasi yang dipaksakan.':'AI_NOT_CONFIGURED: API key server/BYOK belum tersedia pada permintaan ini. Auto-repair tidak mengarang dukungan semantik atau memaksakan relasi.';
   return res.json({
     success: true,
     data: fallbackResult,

@@ -346,6 +346,13 @@ console.log('Testing Test 6: Verify ATPUnitMappingManager source bindings...');
     'selectedActions must be computed before render'
   );
 
+  if(componentSource.includes('runStep07AutoRepair({')) {
+    assert(componentSource.includes('onStatus:setAutoPhase'));
+    assert(componentSource.includes('save:onSaveMapping'));
+    assert(componentSource.includes('data-repair-color='));
+    assert(componentSource.includes('disabled={isAnalyzing || !mappingReadiness.canProceed || !autoReady || (!!autoRepair && hasChanges)}'));
+    assert(!componentSource.includes('{renderInlineAlignment(unit,mat.id)}'), 'Auto main flow must not mount ACC panels');
+  } else {
   // Contract 3 & 4: disabled based on real eligibility and clear reason near button
   assert.ok(
     componentSource.includes('disabled={!actionEligibility.canApply}'),
@@ -370,6 +377,8 @@ console.log('Testing Test 6: Verify ATPUnitMappingManager source bindings...');
   assert.ok(componentSource.includes('{actionEligibility.diagnosticWarning && ('), 'Informational warning must show even when Apply is enabled');
   for (const field of ['selectedFindingCount', 'executableActionCount', 'previewSuccess', 'previewIssues']) {
     assert.ok(componentSource.includes(`actionEligibility.${field}`), `UI must expose ${field}`);
+  }
+
   }
   const selectAll = componentSource.slice(componentSource.indexOf('const handleSelectAllActionable'), componentSource.indexOf('const handleDeselectAllActionable'));
   assert.ok(selectAll.includes('if (f.action)') && selectAll.includes('if (m.action)'), 'Select all must select actionable findings only');

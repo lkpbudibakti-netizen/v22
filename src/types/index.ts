@@ -514,6 +514,9 @@ export interface ATPData {
 }
 
 export interface MappingChangeRecord {
+  executionContext?: 'STEP07_AUTO_REPAIR';
+  semanticVerification?: Step07SemanticCheck;
+  reviewedUnitTitle?:string;
   beforeLinks?: { materialTpIds:string[]; materialAtpIds:string[]; unitTpIds:string[]; unitAtpIds:string[] };
   afterLinks?: { materialTpIds:string[]; materialAtpIds:string[]; unitTpIds:string[]; unitAtpIds:string[] };
   id: string;
@@ -554,6 +557,7 @@ export interface ATPUnitMapping {
 }
 
 export interface ATPUnitMappingData {
+  step07AutoRepair?: Step07AutoRepairRun;
   revisions?: { structure: number; substance: number; presentation: number };
   presentationUpdatedAt?: string;
   id: string;
@@ -566,6 +570,38 @@ export interface ATPUnitMappingData {
   basedOnTpFingerprint?: string;
   basedOnAtpFingerprint?: string;
   updatedAt: string;
+}
+
+export interface Step07SemanticCheck {
+  removedRelations?:Array<{tpId:string;tpQuote:string;materialQuote:string;reason:string}>;
+  actionId:string;
+  verdict:'SUPPORTED'|'NEEDS_REVIEW'|'CONFLICT';
+  reason:string;
+  missingEvidence?:string[];
+  additionNecessary?:boolean;
+  targetUnitQuote?:string;
+  evidence:Array<{tpId:string;tpQuote:string;materialQuote:string;competenceQuote:string;contextQuote:string}>;
+}
+export interface Step07AutoRequest {
+  scope:'STEP07_AUTO_REPAIR';
+  phase:'PROPOSE'|'VERIFY';
+  round:number;
+  focus:{unitIds:string[];materialIds:string[];tpIds:string[];atpIds:string[]};
+  actions?:import('../services/mappingAlignmentService').AlignmentAction[];
+}
+export interface Step07AutoRepairRun {
+  verifiedFingerprint?:string;
+  resultFingerprint?:string;
+  undone?:boolean;
+  scope:'STEP07_AUTO_REPAIR';
+  version:1;
+  runId:string;
+  beforeUnits:ATPUnitMapping[];
+  expectedStoredFingerprint:string;
+  addedMaterialIds:string[];
+  rounds:number;
+  outcome:'COMPLETE'|'INCOMPLETE'|'STAGNATED'|'TIMEOUT'|'SAVE_FAILED';
+  issues:string[];
 }
 
 export interface LearningMeeting {

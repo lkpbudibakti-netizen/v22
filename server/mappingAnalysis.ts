@@ -1,8 +1,10 @@
 import { attachMinimalAlignment } from './mappingMinimalAnalysis';
 import { analyzeBabFirstMapping } from './mappingBabFirstAnalysis';
 import { TPData, ATPData, ATPUnitMappingData } from '../src/types';
+import { hasTeacherMaterialSupport } from '../src/services/mappingAlignmentService';
 
 export interface MappingAnalysisResult {
+  step07SemanticChecks?: import('../src/types').Step07SemanticCheck[];
   analysisNotice?: string;
   pedagogicalFindings?: import('../src/services/mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('../src/services/mappingAlignmentService').AlignmentProposal[];
@@ -86,6 +88,7 @@ export interface MappingAnalysisResult {
 }
 
 export interface AnalyzeATPUnitMappingServerParams {
+  step07Auto?: import('../src/types').Step07AutoRequest;
   subject?: string;
   grade?: string;
   phase?: string;
@@ -150,6 +153,7 @@ export function buildMappingAnalysisPrompt(params: AnalyzeATPUnitMappingServerPa
         atpItemIds: (u.linkedAtpItemIds || []).filter(id => !(u.materials || []).some(m => (m.linkedAtpItemIds || []).includes(id))),
       },
       materials: (u.materials || []).map((m, mIdx) => ({
+        ...(params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?{requiresSemanticReview:!hasTeacherMaterialSupport(u,m,tpData)}:{}),
         materialId: m.id,
         order: m.order,
         title: m.title || '',
@@ -194,11 +198,23 @@ Kembalikan JSON:
  "materialOrder":["hanya untuk restructure"], "reason":"alasan pedagogis dan mengapa tindakan lebih kecil tidak cukup",
  "evidence":[{"tpId":"exact", "tpQuote":"kutipan TP exact", "materialQuote":"kutipan materi exact"}]}],
  "gapFindings":[{"kind":"TP|ATP|MATERIAL", "id":"exact", "reason":"alasan spesifik bila belum dapat diselaraskan"}]
-}`;
+}${params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?buildStep07AutoInstructions(params.step07Auto):''}`;
+}
+
+export function buildStep07AutoInstructions(request:import('../src/types').Step07AutoRequest):string {
+  return `\nKEBIJAKAN KHUSUS STEP07_AUTO_REPAIR, bukan perubahan approval global: pengguna mengotorisasi perbaikan substantif otomatis setelah verifikasi semantik dan validator. Jangan meminta ACC guru pada jalur ini. Data TP/ATP tetap immutable. Prioritaskan LINK_TP, lalu edit materi existing agar aktivitas dan kompetensi TP eksplisit sambil menjaga substansi/konteks asli; jangan mengubah judul yang sudah baik. Jangan menganggap kegiatan analitis telah dilakukan: ini rencana pembelajaran yang diusulkan. ADD hanya bila TP belum terwakili oleh materi existing, bukan untuk menghindari perbaikan 12 materi tanpa lineage. Tidak ada DELETE atau penghapusan materi manual otomatis.
+REQUEST: ${JSON.stringify(request)}
+Periksa juga materi yang sudah memiliki linked IDs tetapi requiresSemanticReview=true. Coverage global 5/5 bukan bukti semua materi mendukung kompetensi TP. Jika judul perlu penegasan aktivitas/kompetensi, usulkan edit pada materi existing, jangan menautkan tanpa dukungan. Materi yang sudah terverifikasi dan tidak memiliki gap harus dipertahankan persis; analisis ulang tanpa perubahan sumber tidak boleh menimbulkan edit baru.
+Koreksi relasi existing boleh memakai LINK_TP replaceTpIds:true hanya jika relasi yang dilepas memiliki konflik substansi eksplisit. Verifier harus menyertakan removedRelations:[{tpId:"ID TP lama",tpQuote:"pernyataan TP lama utuh",materialQuote:"judul materi sumber",reason:"konflik pedagogis spesifik"}]. Tanpa bukti negatif sumber yang jelas, pertahankan relasi manual. Jangan mengosongkan seluruh relasi atau menghapus materi. Validator canonical dan penjagaan coverage tetap berlaku.
+Putaran pertama menilai semua data; putaran berikutnya hanya usulkan tindakan pada focus yang tersisa, dengan seluruh data tetap sebagai konteks.
+Jika phase PROPOSE, gunakan alignmentProposals existing dengan sumber exact dan alasan pedagogis spesifik. Kompetensi harus eksplisit pada judul hasil yang diusulkan jika judul asli belum menunjukkan kompetensi itu. Jangan tautkan gerakan dasar ke TP investigasi/transfer hanya karena domain PJOK sama. Jika tidak ada dukungan, jelaskan gap dan jangan memaksakan relasi.
+Jika phase VERIFY, evaluasi actions secara independen dari confidence/alasan AI pengusul. Kembalikan alignmentProposals:[] serta step07SemanticChecks:[{actionId:"ID action exact",verdict:"SUPPORTED|NEEDS_REVIEW|CONFLICT",reason:"alasan pedagogis, kompetensi, cakupan dan konteks",missingEvidence:[],additionNecessary:false,targetUnitQuote:"judul Bab tujuan exact untuk ADD/MOVE",evidence:[{tpId:"exact",tpQuote:"pernyataan TP utuh exact",materialQuote:"judul ASLI utuh exact (ADD: judul after)",competenceQuote:"kata/frasa kompetensi TP exact yang JUGA terdapat pada judul hasil (LINK/MOVE: judul existing)",contextQuote:"potongan substansi asli >=8 karakter yang juga dipertahankan pada hasil; ADD: potongan judul Bab yang terdapat pada materi baru"}]}]. Semua TP action harus memiliki bukti, bukan keyword generik. SUPPORTED hanya jika makna, kompetensi dan cakupan yang diusulkan sesuai TP, konteks asli tetap, dan tidak ada bukti yang hilang. Jika tidak dapat dipastikan, gunakan NEEDS_REVIEW dengan alasan spesifik. Jangan mengarang kutipan atau id.`;
 }
 
 export function sanitizeMappingAnalysisResult(rawResult: any, params: AnalyzeATPUnitMappingServerParams): MappingAnalysisResult {
-  return attachMinimalAlignment(rawResult, params, analyzeBabFirstMapping(rawResult, params));
+  const result=attachMinimalAlignment(rawResult, params, analyzeBabFirstMapping(rawResult, params));
+  if(params.step07Auto?.scope==='STEP07_AUTO_REPAIR'&&params.step07Auto.phase==='VERIFY') result.step07SemanticChecks=Array.isArray(rawResult?.step07SemanticChecks)?rawResult.step07SemanticChecks:[];
+  return result;
 }
 
 export function fallbackAnalyzeMapping(params: AnalyzeATPUnitMappingServerParams): MappingAnalysisResult {

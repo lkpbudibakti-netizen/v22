@@ -1280,6 +1280,7 @@ export async function generateCanonicalATPUnitMappingWithAI(
 }
 
 export interface MappingAnalysisResult {
+  step07SemanticChecks?: import('../types').Step07SemanticCheck[];
   analysisNotice?: string;
   pedagogicalFindings?: import('./mappingAlignmentService').MappingPedagogicalFinding[];
   alignmentProposals?: import('./mappingAlignmentService').AlignmentProposal[];
@@ -1364,6 +1365,7 @@ export interface MappingAnalysisResult {
 }
 
 export interface AnalyzeATPUnitMappingParams {
+  step07Auto?: import('../types').Step07AutoRequest;
   subject?: string;
   grade?: string;
   phase?: string;
@@ -1373,10 +1375,12 @@ export interface AnalyzeATPUnitMappingParams {
 }
 
 export async function analyzeATPUnitMappingWithAI(
-  params: AnalyzeATPUnitMappingParams
+  params: AnalyzeATPUnitMappingParams,
+  options?:{signal?:AbortSignal}
 ): Promise<MappingAnalysisResult> {
   try {
     const res = await aiFetch('/api/ai/analyze-atp-unit-mapping', {
+      ...(options?.signal?{signal:options.signal}:{}),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),

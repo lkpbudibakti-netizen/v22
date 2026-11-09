@@ -2,6 +2,7 @@ import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, MappingChange
 import { deriveMappingAtpIds } from './atpMappingLineageService';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
+import { validateStep07AutoExecution, type Step07AutoPermit } from './step07AutoExecutionPolicy';
 
 export const ALIGNMENT_PRIORITY = ['EDIT_UNIT_TITLE', 'LINK_TP', 'EDIT_MATERIAL', 'ADD_MATERIAL', 'MOVE_MATERIAL', 'RESTRUCTURE_UNIT'] as const;
 export type AlignmentActionType = typeof ALIGNMENT_PRIORITY[number];
@@ -192,7 +193,8 @@ export function hasTeacherMaterialSupport(unit: ATPUnitMapping, material: ATPUni
   const history=[...(unit.actionHistory || []), ...(material.titleHistory || [])];
   for (const record of history) {
     if (record.kind==='UNDO' || history.some(h=>h.undoOf===record.id)) continue;
-    const independentAutomatic=record.approval==='AUTOMATIC' && record.kind==='REALIGN' && record.reviewedTpIds?.length===1 &&
+    const scopedAutomatic=record.approval==='AUTOMATIC'&&record.executionContext==='STEP07_AUTO_REPAIR'&&!!record.reviewedUnitTitle&&mappingTitleMeaning(record.reviewedUnitTitle)===mappingTitleMeaning(unit.title)&&record.semanticVerification?.verdict==='SUPPORTED'&&!record.semanticVerification.missingEvidence?.length;
+    const independentAutomatic=scopedAutomatic || record.approval==='AUTOMATIC' && record.kind==='REALIGN' && record.reviewedTpIds?.length===1 &&
       tp.items.filter(t=>mappingProposition(t.statement)===mappingProposition(material.title)).length===1 &&
       tp.items.some(t=>t.id===record.reviewedTpIds![0]&&mappingProposition(t.statement)===mappingProposition(material.title));
     if ((record.approval !== 'TEACHER' && !independentAutomatic) || record.materialId !== material.id || !record.reviewedTitle || !record.reviewedTpIds ||
@@ -221,8 +223,9 @@ export function formatMappingUnitTitle(unit: Pick<ATPUnitMapping, 'order' | 'tit
   return `Bab ${unit.order}${label ? `: ${label}` : ''}`;
 }
 
-export function mappingMaterialOrigin(unit: ATPUnitMapping, material: ATPUnitMapping['materials'][number]): 'TEACHER_APPROVED' | 'UNVERIFIED' | 'EXISTING' {
+export function mappingMaterialOrigin(unit: ATPUnitMapping, material: ATPUnitMapping['materials'][number]): 'TEACHER_APPROVED' | 'AUTO_VERIFIED' | 'UNVERIFIED' | 'EXISTING' {
   if (!material.id.startsWith('alignment-')) return 'EXISTING';
+  if(unit.actionHistory?.some(record=>record.materialId===material.id&&record.executionContext==='STEP07_AUTO_REPAIR'&&record.approval==='AUTOMATIC'&&record.semanticVerification?.verdict==='SUPPORTED'&&record.after===material.title))return 'AUTO_VERIFIED';
   return unit.actionHistory?.some(record => record.materialId === material.id && record.kind === 'CONTENT_CHANGE' && record.approval === 'TEACHER' && record.after === material.title)
     ? 'TEACHER_APPROVED' : 'UNVERIFIED';
 }
@@ -341,7 +344,11 @@ export function mappingCoverage(units: ATPUnitMapping[], atp: ATPData, tp: TPDat
 }
 
 /** Mutate only a cloned draft, then validate the entire candidate. Existing incomplete data stays visible. */
-export function applyMinimalAlignment(units: ATPUnitMapping[], actions: AlignmentAction[], atp: ATPData, tp: TPData, approval: 'TEACHER' | 'AUTOMATIC' = 'TEACHER') {
+export function applyMinimalAlignment(units: ATPUnitMapping[], actions: AlignmentAction[], atp: ATPData, tp: TPData, approval: 'TEACHER' | 'AUTOMATIC' | Step07AutoPermit = 'TEACHER') {
+  const scoped=typeof approval==='object';
+  if(scoped){const issues=validateStep07AutoExecution(units,actions,atp,tp,approval,action=>isMappingActionAutomatic(action,units,tp));if(issues.length)return {success:false,issues};}
+  const recordApproval=scoped?'AUTOMATIC':approval;
+  const authority=(action:AlignmentAction)=>scoped?{executionContext:'STEP07_AUTO_REPAIR' as const,semanticVerification:approval.checks.find(check=>check.actionId===action.id),reviewedUnitTitle:next.find(unit=>unit.id===action.targetUnitId)?.title}:{};
   const next = structuredClone(units);
   const issues: string[] = [];
   const fail = (reason: string) => { issues.push(reason); };
@@ -383,7 +390,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
       titleEntity.originalTitle ??= titleEntity.title;
       titleEntity.titleHistory = [...(titleEntity.titleHistory || []), {
         id: `title-${action.id}-${titleEntity.titleHistory?.length || 0}`, at: new Date().toISOString(), kind,
-        approval: kind === 'CONTENT_CHANGE' ? 'TEACHER' : 'AUTOMATIC', unitId: target.id, materialId: action.targetMaterialId,
+        approval: scoped?'AUTOMATIC':kind === 'CONTENT_CHANGE' ? 'TEACHER' : 'AUTOMATIC', ...authority(action), unitId: target.id, materialId: action.targetMaterialId,
         before: titleEntity.title, after: action.after, reason: action.reason,
         ...(kind === 'CONTENT_CHANGE' && action.targetMaterialId ? { reviewedTitle: action.after, reviewedTpIds: [...titleEntity.linkedTpIds], reviewedTpFingerprint: reviewedTpFingerprint(titleEntity.linkedTpIds, tp) } : {}),
       }];
@@ -438,7 +445,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
         }
         if (action.type === 'EDIT_MATERIAL') {
           material!.originalTitle ??= material!.title;
-          material!.titleHistory = [...(material!.titleHistory || []), { id: `title-${action.id}`, at: new Date().toISOString(), kind: 'CONTENT_CHANGE', approval: 'TEACHER', unitId: target.id, materialId: material!.id, before: material!.title, after: title!, reason: action.reason }];
+          material!.titleHistory = [...(material!.titleHistory || []), { id: `title-${action.id}`, at: new Date().toISOString(), kind: 'CONTENT_CHANGE', approval: scoped?'AUTOMATIC':'TEACHER', ...authority(action), unitId: target.id, materialId: material!.id, before: material!.title, after: title!, reason: action.reason }];
           material!.title = title;
         }
         material!.linkedTpIds = [...new Set(action.type==='LINK_TP' && action.replaceTpIds ? action.linkedTpIds : [...material!.linkedTpIds, ...action.linkedTpIds])];
@@ -474,8 +481,8 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
     const reviewedMaterial = target.materials.find(m => m.id === reviewedMaterialId);
     const previousUnit=units.find(u=>u.id===target.id),previousMaterial=previousUnit?.materials.find(m=>m.id===reviewedMaterialId);
     const relationChanged=previousMaterial && reviewedMaterial && JSON.stringify([previousMaterial.linkedTpIds,previousMaterial.linkedAtpItemIds])!==JSON.stringify([reviewedMaterial.linkedTpIds,reviewedMaterial.linkedAtpItemIds]);
-    if (relationChanged || !target.actionHistory?.some(r => !target.actionHistory?.some(h=>h.undoOf===r.id) && r.materialId === reviewedMaterialId && r.before === (action.before || '') && r.after === historyAfter && r.kind === mappingActionKind(action, units))) {
-      target.actionHistory = [...(target.actionHistory || []), { id: `action-${action.id}-${target.actionHistory?.length || 0}`, at: new Date().toISOString(), kind: mappingActionKind(action, units), approval, unitId: target.id, materialId: reviewedMaterialId, before: action.before || '', after: historyAfter, reason: action.reason,
+    if (relationChanged || !target.actionHistory?.some(r => (!scoped||r.reviewedUnitTitle===target.title) && !target.actionHistory?.some(h=>h.undoOf===r.id) && r.materialId === reviewedMaterialId && r.before === (action.before || '') && r.after === historyAfter && r.kind === mappingActionKind(action, units))) {
+      target.actionHistory = [...(target.actionHistory || []), { id: `action-${action.id}-${target.actionHistory?.length || 0}`, at: new Date().toISOString(), kind: mappingActionKind(action, units), approval:recordApproval, ...authority(action), unitId: target.id, materialId: reviewedMaterialId, before: action.before || '', after: historyAfter, reason: action.reason,
         ...(reviewedMaterial ? { reviewedTitle: reviewedMaterial.title, reviewedTpIds: [...action.linkedTpIds], reviewedTpFingerprint: reviewedTpFingerprint(action.linkedTpIds, tp) } : {}) }];
       if (action.type==='LINK_TP' && previousUnit && previousMaterial && reviewedMaterial) Object.assign(target.actionHistory.at(-1)!, {
         beforeLinks:{materialTpIds:[...previousMaterial.linkedTpIds],materialAtpIds:[...previousMaterial.linkedAtpItemIds],unitTpIds:[...previousUnit.linkedTpIds],unitAtpIds:[...previousUnit.linkedAtpItemIds]},

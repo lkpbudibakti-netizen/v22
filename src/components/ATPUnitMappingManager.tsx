@@ -1,3 +1,4 @@
+import { runStep07AutoRepair, step07RepairColor, step07VerificationKey, undoStep07AutoRepair } from '../services/step07AutoRepairService';
 import { AlignmentProposalReview, inlineMappingChanges } from './AlignmentProposalReview';
 import { deriveMappingAtpIds } from '../services/atpMappingLineageService';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -290,6 +291,8 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     createInitialUnits(mapping, atp.items || [])
   );
   const [hasChanges, setHasChanges] = useState(false);
+  const [autoRepair,setAutoRepair]=useState(mapping?.step07AutoRepair);
+  const [autoPhase,setAutoPhase]=useState('');
   const [rejectedProposalIds,setRejectedProposalIds]=useState<Set<string>>(new Set());
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
   const [saveErrorNotice, setSaveErrorNotice] = useState<string | null>(null);
@@ -300,6 +303,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     if (mapping && Array.isArray(mapping.units) && mapping.units.length > 0) {
       if (!hasChanges) {
         setUnits(createInitialUnits(mapping, atp.items || []));
+        setAutoRepair(mapping.step07AutoRepair);
       }
     }
   }, [mapping, hasChanges, atp.items]);
@@ -673,7 +677,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
   // Helper to build canonical ATPUnitMappingData from current live draft
   const buildCurrentMappingDraft = (): ATPUnitMappingData => {
-    return buildCurrentMappingDraftFromUnits(
+    const draft=buildCurrentMappingDraftFromUnits(
       units,
       mapping?.id,
       academicSetting?.id || atp.academicSettingId,
@@ -684,6 +688,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       computeTpSubstantiveFingerprint(tp),
       computeAtpSubstantiveFingerprint(atp)
     );
+    return {...mapping,...draft,step07AutoRepair:autoRepair};
   };
 
   // AI Analysis State
@@ -754,6 +759,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   }, [tp]);
 
   const analysisRequestIdRef = useRef(0);
+  useEffect(()=>()=>{analysisRequestIdRef.current++;},[]);
 
   // Import Bab & Materi State (Section 4, 5, 6)
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -866,80 +872,25 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   };
 
   const handleAnalyzeMapping = async () => {
-    setRejectedProposalIds(new Set());
-    setIsAnalyzing(true);
-    setAnalysisError(null);
-    setAppliedNotice(null);
-
-    const requestId = ++analysisRequestIdRef.current;
-    const snapshotUnits = JSON.parse(JSON.stringify(unitsRef.current));
-    const expectedFp = computeMappingFingerprint(snapshotUnits, atpRef.current, tpRef.current);
-
-    const currentDraft = buildCurrentMappingDraftFromUnits(
-      snapshotUnits,
-      mapping?.id,
-      academicSetting?.id || atpRef.current.academicSettingId,
-      atpRef.current.id,
-      tpRef.current.id || atpRef.current.tpDataId,
-      tpRef.current.updatedAt || atpRef.current.basedOnTpUpdatedAt,
-      atpRef.current.updatedAt,
-      computeTpSubstantiveFingerprint(tpRef.current),
-      computeAtpSubstantiveFingerprint(atpRef.current)
-    );
-
-    const guardResult = await runGuardedAnalysis({
-      requestId,
-      getCurrentRequestId: () => analysisRequestIdRef.current,
-      unitsGetter: () => unitsRef.current,
-      atpGetter: () => atpRef.current,
-      tpGetter: () => tpRef.current,
-      expectedFingerprint: expectedFp,
-      fetchFn: () => analyzeATPUnitMappingWithAI({
-        subject: academicSetting?.subject,
-        grade: academicSetting?.grade,
-        phase: academicSetting?.phase,
-        tpData: tpRef.current,
-        atpData: atpRef.current,
-        currentMapping: currentDraft,
-      }),
+    setIsAnalyzing(true);setAutoPhase('Menganalisis');setAnalysisError(null);setApplyIssues([]);setAppliedNotice(null);setSelectedAnalysisActionIds(new Set());
+    const requestId=++analysisRequestIdRef.current;
+    const source=generationContextRef.current;
+    const initial=buildCurrentMappingDraft();
+    const result=await runStep07AutoRepair({mapping:initial,persistedMapping:mapping,atp:atpRef.current,tp:tpRef.current,
+      isCurrent:()=>requestId===analysisRequestIdRef.current&&source===generationContextRef.current,
+      analyze:(draft,step07Auto,signal)=>analyzeATPUnitMappingWithAI({subject:academicSetting?.subject,grade:academicSetting?.grade,phase:academicSetting?.phase,tpData:tpRef.current,atpData:atpRef.current,currentMapping:draft,step07Auto},{signal}),
+      save:onSaveMapping,onStatus:setAutoPhase,
     });
-
-    if (requestId !== analysisRequestIdRef.current) {
-      return;
-    }
-
-    if (!guardResult.success) {
-      if (!guardResult.isStaleOrOutdated) {
-        setAnalysisError(guardResult.error || 'Gagal menganalisis pemetaan Bab & Lingkup Materi.');
-        setAnalysisResult(null);
-        setAnalysisFingerprint(null);
-      } else {
-        setAnalysisError(guardResult.error || 'Data Bab, ATP, atau TP berubah selama analisis. Jalankan analisis ulang.');
-        setAnalysisResult(null);
-        setAnalysisFingerprint(null);
-      }
-      setIsAnalyzing(false);
-      return;
-    }
-
-    const analyzed = guardResult.result!;
-    const automaticProposals = (analyzed.alignmentProposals || []).filter(p => p.action && alignmentProposalStatus(p) === 'READY' &&
-      isMappingActionAutomatic(p.action, unitsRef.current, tpRef.current));
-    const automatic = automaticProposals.length ? applyMinimalAlignment(unitsRef.current, automaticProposals.map(p => p.action!), atpRef.current, tpRef.current, 'AUTOMATIC') : undefined;
-    let freshUnits = unitsRef.current;
-    if (automatic?.success && automatic.nextUnits) {
-      freshUnits = automatic.nextUnits;
-      setAlignmentRollback({ units: structuredClone(unitsRef.current), fingerprint: computeMappingFingerprint(freshUnits, atpRef.current, tpRef.current) });
-      setUnits(freshUnits); unitsRef.current = freshUnits; setHasChanges(true);
-      const applied = new Set(automaticProposals.map(p => p.id));
-      analyzed.alignmentProposals = analyzed.alignmentProposals?.map(p => applied.has(p.id) ? { ...p, action: undefined, validationStatus: 'ALREADY_APPLIED', reason: 'Tindakan aman diterapkan otomatis ke draf dan dicatat; dapat di-undo. Simpan Pemetaan untuk menyimpan.' } : p);
-      setAppliedNotice(`${automaticProposals.length} tindakan aman otomatis tercatat di draf: redaksi setara, relasi dengan proposisi lengkap yang ekuivalen, atau pemulihan induk ATP dari TP terverifikasi. Simpan Pemetaan untuk menyimpan.`);
-    } else if (automatic && !automatic.success) setApplyIssues(automatic.issues);
-    setAnalysisResult(analyzed);
-    setLastAnalysisSnapshot(analyzed);
-    setAnalysisFingerprint(computeMappingFingerprint(freshUnits, atpRef.current, tpRef.current));
-    setSelectedAnalysisActionIds(new Set());
+    if(requestId!==analysisRequestIdRef.current)return;
     setIsAnalyzing(false);
+    if(result.stale){setAnalysisError('Data manual atau konteks berubah. Hasil lama tidak diterapkan.');return;}
+    setAlignmentRollback({units:structuredClone(initial.units),fingerprint:computeMappingFingerprint(result.mapping.units,atpRef.current,tpRef.current)});
+    setUnits(result.mapping.units);unitsRef.current=result.mapping.units;setAutoRepair(result.mapping.step07AutoRepair);
+    setHasChanges(!result.saved);setAnalysisResult(result.analysis || null);setLastAnalysisSnapshot(result.analysis || null);setLastAppliedActionIds(result.appliedActions);
+    setAnalysisFingerprint(computeMappingFingerprint(result.mapping.units,atpRef.current,tpRef.current));
+    setSaveSuccessNotice(result.saved);setAutoPhase(result.saved?'Selesai':'Belum selesai');
+    if(result.saved)setAppliedNotice('Selesai: hasil valid dan lengkap tersimpan atomik. Lanjut Step 08 tersedia.');
+    else {setAnalysisError(result.issues.join('\n') || 'Gap belum dapat diselesaikan secara pedagogis. Draft aman terakhir dipertahankan.');}
   };
 
   const handleToggleAction = (findingId: string) => {
@@ -1068,6 +1019,11 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     const finding=[...(analysisResult?.atpFindings || []),...(analysisResult?.materialFindings || [])].find(f=>f.id===id);
     return finding?.action?.targetUnitId===unit.id;
   }));
+  const repairBoxClass=(unitId:string,materialId?:string)=>{
+    const color=step07RepairColor(units,autoRepair,unitId,materialId);
+    return color==='red'?'bg-red-50 border-red-400':color==='pink'?'bg-pink-50 border-pink-400':color==='green'?'bg-emerald-50 border-emerald-400':'bg-white border-slate-200';
+  };
+  const autoReady=!autoRepair||(autoRepair.outcome==='COMPLETE'&&autoRepair.verifiedFingerprint===step07VerificationKey(units,atp,tp));
   const renderInlineAlignment=(unit:ATPUnitMapping,materialId?:string)=>(
     <div><AlignmentProposalReview proposals={analysisResult?.alignmentProposals || []} materialResolutions={materialResolutions} inlineScope={{unitId:unit.id,materialId}} baselineUnits={mapping?.units || []} analysis={analysisResult} rejectedIds={rejectedProposalIds}
                 onApproveProposal={(ids,amendment)=>handleApplySelectedActions(ids,amendment)} onRejectProposal={id=>{setRejectedProposalIds(previous=>new Set(previous).add(id));setSelectedAnalysisActionIds(previous=>new Set([...previous].filter(selected=>selected!==id)));setAppliedNotice('Usulan ditolak pada analisis ini. Data draf tidak diubah.');}}
@@ -1309,7 +1265,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           <div className="mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between gap-2 animate-fadeIn">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>Analisis Pemetaan gagal: {analysisError}</span>
+              <span>{autoRepair?'Auto-repair belum selesai. Draft aman terakhir dipertahankan; lihat Detail proses.':`Analisis Pemetaan gagal: ${analysisError}`}</span>
             </div>
             <button
               type="button"
@@ -1450,7 +1406,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             disabled={isAnalyzing || isGeneratingStructure || units.length === 0}
             className="flex items-center justify-center gap-2 w-full min-h-12 px-4 py-3 rounded-xl border border-indigo-700 bg-white hover:bg-indigo-50 text-indigo-900 text-sm font-bold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
             <Sparkles className={`w-5 h-5 shrink-0 ${isAnalyzing ? 'animate-spin' : ''}`} />
-            <span>{isAnalyzing ? 'Menganalisis...' : 'Analisis & Selaraskan'}</span>
+            <span>{isAnalyzing ? `${autoPhase}...` : 'Analisis & Selaraskan'}</span>
           </button>
         </div>
         <p className="text-xs text-slate-600">Susun dengan AI mengusulkan struktur baru dan jumlah Bab otomatis berdasarkan TP/ATP. Analisis &amp; Selaraskan menelaah struktur draf yang sudah ada.</p>
@@ -1817,7 +1773,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           <p>
             {hasSubstantiveManualMappingContent ? (
               <>
-                <strong>Authority Struktur Guru:</strong> Struktur Bab & Lingkup Materi manual adalah acuan utama. Analisis mengikuti Bab/Materi → TP relevan → ATP induk canonical. Setiap pilihan otomatis memilih satu bundle Bab lengkap. Fitur <em>Analisis Pemetaan</em> memberikan telaah keselarasan TP ↔ ATP dan saran opsional tanpa mengubah struktur Bab secara otomatis.
+                <strong>Auto-repair Step 07:</strong> Draft awal dan TP/ATP kanonikal menjadi acuan. Analisis &amp; Selaraskan memperbaiki draft otomatis setelah pemeriksaan semantik, maksimal tiga putaran. Hasil valid, lengkap dan terverifikasi disimpan; gap yang belum terbukti tidak dipaksakan. Snapshot dan histori tetap tersedia.
               </>
             ) : (
               <>
@@ -1857,28 +1813,21 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           setAlignmentRollback(null); setAppliedNotice('Batch terakhir dibatalkan; materi asli dipulihkan ke draf. Simpan Pemetaan untuk menyimpan.');
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
-      {analysisResult && <section id="mapping-inline-summary" className="rounded-xl border bg-white p-4 space-y-2" role="status">
-        <strong>Diperbaiki: {units.reduce((count,unit)=>count+Number(inlineMappingChanges(units,mapping?.units || [],unit.id).length>0)+unit.materials.reduce((sum,material)=>sum+Number(inlineMappingChanges(units,mapping?.units || [],unit.id,material.id).length>0),0),0)} · Perlu ACC: {(analysisResult.alignmentProposals || []).filter(p=>alignmentProposalStatus(p)==='READY'&&p.approval!=='AUTOMATIC'&&!rejectedProposalIds.has(p.id)).length+[...analysisResult.atpFindings,...analysisResult.materialFindings].filter(f=>f.action&&!rejectedProposalIds.has(f.id)).length} · Belum selesai: {mappingReadiness.validationResult?.materialsWithoutLineage.length || 0} materi, {new Set([...(mappingReadiness.validationResult?.unitsWithoutLineage || []),...(mappingReadiness.validationResult?.materialCoverageGaps || []).map(g=>g.unitId)]).size} Bab</strong>
-        <p className="text-sm">Tinjau perubahan dan setujui usulan langsung pada Bab atau Lingkup Materi di bawah. Perubahan draf perlu disimpan.</p>
-        {analysisResult.analysisNotice && <p className="text-sm">{analysisResult.analysisNotice}</p>}
-        <details id="mapping-analysis-details"><summary>Detail Analisis</summary>
-          <p>VALID: {mappingReadiness.validationResult?.isValid?'Ya':'Belum'} · COMPLETE: {mappingReadiness.validationResult?.isComplete?'Ya':'Belum'} · READY Step 08: {mappingReadiness.canProceed?'Ya':'Belum'}</p>
-          <ul>{mappingReadiness.blockers.map((issue,index)=><li key={index}>{issue}</li>)}</ul>
-          <p>Dipilih: {actionEligibility.selectedFindingCount}; aksi: {actionEligibility.executableActionCount}; preview: {String(actionEligibility.previewSuccess)}</p>
-          <ul>{actionEligibility.previewIssues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>
-          <button type="button" onClick={handleCopyDiagnostic} className="underline">Salin diagnostik lengkap</button>
-        </details>
+      {(isAnalyzing||autoRepair)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
+        <strong>{isAnalyzing?autoPhase:(!hasChanges&&mappingReadiness.canProceed&&autoReady?'Selesai':'Belum selesai')}</strong>
+        <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
+        {autoRepair&&!isAnalyzing&&<p className="text-sm">{autoRepair.rounds} putaran · {mappingReadiness.validationResult?.isValid?'Valid':'Belum valid'} · {mappingReadiness.validationResult?.isComplete?'Struktur lengkap':'Struktur belum lengkap'} · {hasChanges?'Draft belum tersimpan':'Tersimpan'}</p>}
+        <details><summary>Detail proses</summary><ul>{autoRepair?.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul><button type="button" className="underline" onClick={handleCopyDiagnostic}>Salin diagnostik</button></details>
       </section>}
-      {selectedAnalysisActionIds.size>0 && <div className="rounded-lg border p-3 space-y-2">
-        <button id="btn-apply-analysis-actions" type="button" onClick={()=>handleApplySelectedActions()} disabled={!actionEligibility.canApply} className="font-semibold underline disabled:opacity-40">Setujui pilihan ({selectedActions.length})</button>
-        {!actionEligibility.canApply&&<p id="apply-actions-disabled-reason">{actionEligibility.disabledReason}</p>}
-        {actionEligibility.diagnosticWarning && (<p id="apply-actions-diagnostic-warning">{actionEligibility.diagnosticWarning}</p>)}
-      </div>}
-      {applyIssues.length>0&&<div id="apply-actions-issues-panel" role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3"><ul>{applyIssues.map((issue,index)=><li key={index}>{issue}</li>)}</ul></div>}
 
       <details id="mapping-action-history" className="rounded-xl border bg-white p-4 text-sm">
         <summary>Riwayat tindakan dan perubahan redaksi sebelum/sesudah</summary>
         <p>Perubahan draf perlu disimpan. Undo ditolak jika judul sudah berubah setelah tindakan.</p>
+        {autoRepair&&!autoRepair.undone&&<button type="button" className="underline font-semibold" onClick={()=>{
+          const restored=undoStep07AutoRepair({...mapping,...buildCurrentMappingDraft(),units,step07AutoRepair:autoRepair},atp,tp,mapping || null);
+          if(!restored.success||!restored.mapping){setAnalysisError(restored.issues.join('; '));return;}
+          setUnits(restored.mapping.units);unitsRef.current=restored.mapping.units;setAutoRepair(restored.mapping.step07AutoRepair);setHasChanges(true);setAnalysisResult(null);setAnalysisFingerprint(null);
+        }}>Undo auto-repair terakhir</button>}
         {units.flatMap(unit => [unit, ...unit.materials].map(entity => <div key={`${unit.id}-${entity.id}`} className="mt-3">
           {(entity.titleHistory || []).map(record => <p key={record.id}>{record.at} · {record.kind} · {record.approval}: {record.before} → {record.after}</p>)}
           {(entity.titleHistory || []).some(record => record.kind !== 'UNDO' && !(entity.titleHistory || []).some(h => h.undoOf === record.id)) &&
@@ -1891,8 +1840,8 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         </div>))}
       </details>
       <div id="mapping-final-status" role="status" className="text-sm rounded-xl border p-3">
-        <strong>{mappingReadiness.canProceed ? 'READY untuk Step 08' : 'Belum READY untuk Step 08'}</strong>
-        <p>{mappingReadiness.canProceed ? 'Simpan perubahan draf sebelum melanjutkan. Tinjauan pedagogis yang belum memiliki bukti tetap ditampilkan.' : mappingReadiness.blockers[0]}</p>
+        <strong>{mappingReadiness.canProceed&&!isAnalyzing&&autoReady&&(!autoRepair||!hasChanges) ? 'READY untuk Step 08' : 'Belum READY untuk Step 08'}</strong>
+        <p>{autoRepair&&(hasChanges||!autoReady)?'Hasil auto-repair belum tersimpan/terverifikasi untuk draft terkini. Jalankan Analisis & Selaraskan; Step 08 belum diaktifkan.':mappingReadiness.canProceed?'Pemetaan tersimpan dan siap dilanjutkan.':mappingReadiness.blockers[0]}</p>
       </div>
       {/* Overview Stat Bar */}
       <div className="flex items-center justify-between text-xs text-slate-500 px-1">
@@ -1914,10 +1863,11 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             <div
               key={unit.id || `unit-${bIdx}`}
               id={`mapping-unit-${unit.id}`}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden transition"
+              data-repair-color={step07RepairColor(units,autoRepair,unit.id)}
+              className={`rounded-2xl border-2 shadow-xs overflow-hidden transition ${repairBoxClass(unit.id)}`}
             >
               {/* Bab Container Header */}
-              <div className="bg-slate-50/90 p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className={`p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 ${repairBoxClass(unit.id)}`}>
                 <div className="flex items-center gap-3 flex-1">
                   <span className="px-3 py-1 rounded-xl bg-blue-900 text-white font-bold text-xs shrink-0 shadow-2xs">
                     BAB {bIdx + 1}
@@ -1957,7 +1907,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 </div>
               </div>
 
-              <div className="px-4">{renderInlineAlignment(unit)}</div>
+
               {/* SECTION: Lingkup Materi (0..n per Bab) */}
               <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1990,7 +1940,8 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                       <div
                         key={mat.id}
                         data-mapping-material={mat.id}
-                        className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2.5"
+                        data-repair-color={step07RepairColor(units,autoRepair,unit.id,mat.id)}
+                        className={`p-3 rounded-xl border-2 shadow-2xs space-y-2.5 ${repairBoxClass(unit.id,mat.id)}`}
                       >
                         <div className="flex items-center gap-2">
                           <span className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
@@ -2033,7 +1984,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                           </div>
                         </div>
 
-                        {renderInlineAlignment(unit,mat.id)}
+
                         <details><summary className="text-xs cursor-pointer">Relasi TP/ATP saat ini</summary><div className="flex flex-wrap gap-2 text-xs">
                           {(tp.items || []).map(item => <label key={item.id} className="flex items-start gap-1 p-1 border rounded">
                             <input type="checkbox" checked={mat.linkedTpIds.includes(item.id)} onChange={() => handleToggleMaterialTp(unit.id, mat.id, item.id)} />
@@ -2086,7 +2037,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             className="border border-amber-300 bg-amber-50 text-amber-900 rounded-lg p-3 text-sm space-y-2">
             <p className="font-semibold">Belum dapat lanjut Step 08</p>
             <ul className="list-disc pl-5 space-y-1">{mappingReadiness.blockers.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
-            <p>Lengkapi relasi pada Lingkup Materi yang sesuai dengan TP/ATP Bab. Gunakan Analisis &amp; Selaraskan untuk meninjau saran, lalu simpan draf.</p>
+            <p>Gunakan Analisis &amp; Selaraskan untuk memperbaiki dan menyimpan hasil yang terverifikasi. Jika bukti belum cukup, periksa Detail proses atau lengkapi draft; Step 08 tetap terkunci.</p>
             <button type="button" className="font-semibold text-blue-800 underline" onClick={() => {
               const unitId = mappingReadiness.validationResult?.materialCoverageGaps[0]?.unitId || units[0]?.id;
               const input = document.getElementById(`bab-title-input-${unitId}`);
@@ -2096,6 +2047,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           {(saveErrorNotice || localValidationNotice) && <p role="alert" className="text-sm text-red-700">{saveErrorNotice || localValidationNotice}</p>}
           <button
             id="btn-next-to-annual-planning"
+            disabled={isAnalyzing || !mappingReadiness.canProceed || !autoReady || (!!autoRepair && hasChanges)}
             type="button"
             onClick={handleProceedNext}
             aria-describedby={!mappingReadiness.canProceed ? 'mapping-proceed-blockers' : undefined}

@@ -2,7 +2,7 @@ import { deriveMappingAtpIds } from './atpMappingLineageService';
 import type { ATPData, TPData, ATPUnitMapping, ATPUnitMaterial, ATPUnitMappingData } from '../types';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
-import { ALIGNMENT_PRIORITY, applyMinimalAlignment, recordMappingBatch, type AlignmentAction, type AlignmentActionType } from './mappingAlignmentService';
+import { ALIGNMENT_PRIORITY, applyMinimalAlignment, recordMappingBatch, mappingRevisionKeys, type AlignmentAction, type AlignmentActionType } from './mappingAlignmentService';
 
 export interface MappingActionItem {
   replaceTpIds?: boolean;
@@ -113,6 +113,11 @@ export function computeTpSubstantiveFingerprint(tp: TPData | undefined): string 
     competence: t.competence,
     contentScope: t.contentScope,
   })).sort((a, b) => a.id.localeCompare(b.id)));
+}
+
+export function computeStep07VerifiedFingerprint(units:ATPUnitMapping[],atp:ATPData,tp:TPData):string {
+  const keys=mappingRevisionKeys(units);
+  return JSON.stringify({structure:keys.structure,substance:keys.substance,atp:computeAtpSubstantiveFingerprint(atp),tp:computeTpSubstantiveFingerprint(tp)});
 }
 
 // Imported legacy snapshots retain the source ID ordering after IDs are remapped.
