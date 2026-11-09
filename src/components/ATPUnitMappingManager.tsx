@@ -1,4 +1,4 @@
-import { AlignmentProposalReview } from './AlignmentProposalReview';
+import { AlignmentProposalReview, inlineMappingChanges } from './AlignmentProposalReview';
 import { deriveMappingAtpIds } from '../services/atpMappingLineageService';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
@@ -39,7 +39,7 @@ import {
   MappingAnalysisResult,
 } from '../services/aiService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
-import { mappingCoverage, alignmentProposalStatus, refreshAlignmentProposals, isMappingActionAutomatic, formatMappingUnitTitle, confirmMappingMaterialOrigin, applyMinimalAlignment, buildMappingPedagogicalReport, undoMappingTitle, undoMappingRelation, recordMappingBatch } from '../services/mappingAlignmentService';
+import { mappingCoverage, alignmentProposalStatus, refreshAlignmentProposals, isMappingActionAutomatic, formatMappingUnitTitle, confirmMappingMaterialOrigin, applyMinimalAlignment, buildMappingMaterialResolutions, undoMappingTitle, undoMappingRelation, recordMappingBatch } from '../services/mappingAlignmentService';
 import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
 import {
   applyATPMappingActions,
@@ -290,6 +290,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     createInitialUnits(mapping, atp.items || [])
   );
   const [hasChanges, setHasChanges] = useState(false);
+  const [rejectedProposalIds,setRejectedProposalIds]=useState<Set<string>>(new Set());
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
   const [saveErrorNotice, setSaveErrorNotice] = useState<string | null>(null);
   const [localValidationNotice, setLocalValidationNotice] = useState<string | null>(null);
@@ -865,6 +866,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   };
 
   const handleAnalyzeMapping = async () => {
+    setRejectedProposalIds(new Set());
     setIsAnalyzing(true);
     setAnalysisError(null);
     setAppliedNotice(null);
@@ -1010,19 +1012,26 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     currentFingerprint,
   ]);
 
-  const handleApplySelectedActions = () => {
-    if (!analysisResult || selectedAnalysisActionIds.size === 0) return;
+  const handleApplySelectedActions = (requestedIds?:Set<string>,amendment?:{id:string;after:string;reason:string}) => {
+    const actionIds=requestedIds || selectedAnalysisActionIds;
+    const actions=(requestedIds?extractSelectedMappingActions(analysisResult,actionIds):selectedActions).map(action=>{
+      const proposal=analysisResult?.alignmentProposals?.find(p=>p.id===amendment?.id&&p.action?.id===action.id);
+      if (!proposal||!amendment||!['ADD_MATERIAL','EDIT_MATERIAL','EDIT_UNIT_TITLE'].includes(action.type)) return action;
+      return {...action,after:amendment.after,reason:amendment.reason,evidence:action.type==='ADD_MATERIAL'?action.evidence?.map(e=>({...e,materialQuote:amendment.after})):action.evidence};
+    });
+    const eligibility=requestedIds?resolveApplyActionsEligibility({selectedCount:actionIds.size,selectedActions:actions,units,atp,tp,expectedFingerprint:analysisFingerprint,currentFingerprint}):actionEligibility;
+    if (!analysisResult || actionIds.size === 0) return;
 
-    if (!actionEligibility.canApply) {
-      if (actionEligibility.issues.length > 0) {
-        setApplyIssues(actionEligibility.issues);
+    if (!eligibility.canApply) {
+      if (eligibility.issues.length > 0) {
+        setApplyIssues(eligibility.issues);
       }
       return;
     }
 
     const result = applyATPMappingActions({
       units,
-      selectedActions,
+      selectedActions:actions,
       atp,
       tp,
       mappingId: mapping?.id,
@@ -1042,15 +1051,52 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     setAlignmentRollback({ units: result.rollbackUnits || structuredClone(units), fingerprint: computeMappingFingerprint(result.nextUnits, atp, tp) });
     setUnits(result.nextUnits);
     setHasChanges(true);
-    setLastAppliedActionIds([...selectedAnalysisActionIds]);
+    setLastAppliedActionIds([...actionIds]);
     setSelectedAnalysisActionIds(new Set());
     setApplyIssues([]);
-    setAnalysisResult(null);
+    setAnalysisResult({...analysisResult,alignmentProposals:refreshAlignmentProposals(analysisResult.alignmentProposals || [],result.nextUnits,atp,tp).map(p=>actionIds.has(p.id)?{...p,after:amendment?.id===p.id?amendment.after:p.after,action:undefined,validationStatus:'ALREADY_APPLIED' as const}:p),atpFindings:analysisResult.atpFindings.map(f=>actionIds.has(f.id)?{...f,action:undefined}:f),materialFindings:analysisResult.materialFindings.map(f=>actionIds.has(f.id)?{...f,action:undefined}:f)});
     setSaveSuccessNotice(false);
-    setAnalysisFingerprint(null);
+    setAnalysisFingerprint(computeMappingFingerprint(result.nextUnits,atp,tp));
     const actualCoverage = mappingCoverage(result.nextUnits, atp, tp);
     setAppliedNotice(`Saran diterapkan ke draf. Sisa ATP belum dipetakan: ${actualCoverage.unmappedAtpIds.length}; TP belum tercakup: ${actualCoverage.uncoveredTpIds.length}. Klik Simpan Pemetaan untuk menyimpan.`);
   };
+
+  const materialResolutions=useMemo(()=>buildMappingMaterialResolutions(units,atp,tp,analysisResult?.alignmentProposals,analysisResult?.gapFindings),[units,atp,tp,analysisResult]);
+  const selectedForUnit=(unit:ATPUnitMapping)=>new Set([...selectedAnalysisActionIds].filter(id=>{
+    const proposal=analysisResult?.alignmentProposals?.find(p=>p.id===id);
+    if(proposal) return proposal.targetUnitId===unit.id||unit.materials.some(material=>material.id===proposal.targetMaterialId);
+    const finding=[...(analysisResult?.atpFindings || []),...(analysisResult?.materialFindings || [])].find(f=>f.id===id);
+    return finding?.action?.targetUnitId===unit.id;
+  }));
+  const renderInlineAlignment=(unit:ATPUnitMapping,materialId?:string)=>(
+    <div><AlignmentProposalReview proposals={analysisResult?.alignmentProposals || []} materialResolutions={materialResolutions} inlineScope={{unitId:unit.id,materialId}} baselineUnits={mapping?.units || []} analysis={analysisResult} rejectedIds={rejectedProposalIds}
+                onApproveProposal={(ids,amendment)=>handleApplySelectedActions(ids,amendment)} onRejectProposal={id=>{setRejectedProposalIds(previous=>new Set(previous).add(id));setSelectedAnalysisActionIds(previous=>new Set([...previous].filter(selected=>selected!==id)));setAppliedNotice('Usulan ditolak pada analisis ini. Data draf tidak diubah.');}}
+                gaps={analysisResult?.gapFindings}
+                onConfirmOrigin={(unitId,materialId,title)=>{try {setUnits(confirmMappingMaterialOrigin(unitsRef.current,unitId,materialId,title));setHasChanges(true);} catch(error) {setApplyIssues([error instanceof Error?error.message:String(error)]);}}}
+                onReviewMaterial={(unitId,materialId,title,tpIds,reason,newTitle,replace)=>{
+                  const material=unitsRef.current.find(u=>u.id===unitId)?.materials.find(m=>m.id===materialId);
+                  const selectedTpIds=tpIds.length?tpIds:(replace?[]:material?.linkedTpIds || []);
+                  const rename=newTitle!==title;
+                  if (replace && rename) {setApplyIssues(['Lakukan koreksi relasi dan perubahan judul dalam tindakan terpisah agar setiap dampak dapat ditinjau.']);return;}
+                  if ((!selectedTpIds.length && !rename && !replace) || !reason.trim()) {setApplyIssues(['Pilih TP atau perbaiki judul, lalu jelaskan bukti aktivitas/kompetensi sebelum ACC.']);return;}
+                  const current=unitsRef.current, before=computeMappingFingerprint(current,atpRef.current,tpRef.current);
+                  const result=applyATPMappingActions({units:current,atp:atpRef.current,tp:tpRef.current,expectedFingerprint:before,currentFingerprint:before,
+                    selectedActions:[{id:`teacher-review-${materialId}-${Date.now()}`,type:rename?'EDIT_MATERIAL':'LINK_TP',targetUnitId:unitId,targetMaterialId:materialId,before:title,after:rename?newTitle:undefined,replaceTpIds:replace,linkedTpIds:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])],reason:reason.trim(),
+                      evidence:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])].map(tpId=>({tpId,tpQuote:tpRef.current.items.find(t=>t.id===tpId)?.statement || '',materialQuote:title}))}]});
+                  if (!result.success || !result.nextUnits) {setApplyIssues(result.issues);return;}
+                  setAlignmentRollback({units:structuredClone(current),fingerprint:computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current)});
+                  setUnits(result.nextUnits);unitsRef.current=result.nextUnits;setHasChanges(true);setAnalysisFingerprint(computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current));setSelectedAnalysisActionIds(new Set());setApplyIssues([]);
+                  setAnalysisResult(previous=>previous?{...previous,alignmentProposals:refreshAlignmentProposals(previous.alignmentProposals || [],result.nextUnits!,atpRef.current,tpRef.current)}:previous);
+                  setAppliedNotice('Persetujuan dan alasan guru dicatat pada draf. Simpan Pemetaan untuk menyimpan atomik; Step 08 memakai data tersimpan terbaru.');
+                }}
+                readiness={mappingReadiness} units={units} atp={atp} tp={tp}
+                selectedIds={selectedAnalysisActionIds} onSelectionChange={ids => {
+                  setSelectedAnalysisActionIds(ids); setApplyIssues([]);
+                }} />
+      {!materialId&&selectedForUnit(unit).size>0&&<button type="button" className="text-xs font-semibold underline my-2" onClick={()=>handleApplySelectedActions(selectedForUnit(unit))}>Setujui pilihan pada Bab ini ({selectedForUnit(unit).size})</button>}
+    </div>
+
+  );
 
   const handleCopyDiagnostic = async () => {
     try {
@@ -1811,619 +1857,24 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           setAlignmentRollback(null); setAppliedNotice('Batch terakhir dibatalkan; materi asli dipulihkan ke draf. Simpan Pemetaan untuk menyimpan.');
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
-      {analysisResult && (
-        <div className="bg-white rounded-2xl border-2 border-indigo-300 shadow-md p-5 space-y-5 animate-fadeIn">
-            <div className="space-y-3">
-              <h4 className="font-bold text-sm">Kesiapan dan rekomendasi penyelarasan pedagogis</h4>
-              {analysisResult.analysisNotice && <p role="status" className="text-sm text-amber-900">{analysisResult.analysisNotice}</p>}
-              <AlignmentProposalReview proposals={analysisResult.alignmentProposals || []}
-                gaps={analysisResult.gapFindings}
-                onConfirmOrigin={(unitId,materialId,title)=>{try {setUnits(confirmMappingMaterialOrigin(unitsRef.current,unitId,materialId,title));setHasChanges(true);} catch(error) {setApplyIssues([error instanceof Error?error.message:String(error)]);}}}
-                onReviewMaterial={(unitId,materialId,title,tpIds,reason,newTitle,replace)=>{
-                  const material=unitsRef.current.find(u=>u.id===unitId)?.materials.find(m=>m.id===materialId);
-                  const selectedTpIds=tpIds.length?tpIds:(replace?[]:material?.linkedTpIds || []);
-                  const rename=newTitle!==title;
-                  if (replace && rename) {setApplyIssues(['Lakukan koreksi relasi dan perubahan judul dalam tindakan terpisah agar setiap dampak dapat ditinjau.']);return;}
-                  if ((!selectedTpIds.length && !rename && !replace) || !reason.trim()) {setApplyIssues(['Pilih TP atau perbaiki judul, lalu jelaskan bukti aktivitas/kompetensi sebelum ACC.']);return;}
-                  const current=unitsRef.current, before=computeMappingFingerprint(current,atpRef.current,tpRef.current);
-                  const result=applyATPMappingActions({units:current,atp:atpRef.current,tp:tpRef.current,expectedFingerprint:before,currentFingerprint:before,
-                    selectedActions:[{id:`teacher-review-${materialId}-${Date.now()}`,type:rename?'EDIT_MATERIAL':'LINK_TP',targetUnitId:unitId,targetMaterialId:materialId,before:title,after:rename?newTitle:undefined,replaceTpIds:replace,linkedTpIds:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])],reason:reason.trim(),
-                      evidence:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])].map(tpId=>({tpId,tpQuote:tpRef.current.items.find(t=>t.id===tpId)?.statement || '',materialQuote:title}))}]});
-                  if (!result.success || !result.nextUnits) {setApplyIssues(result.issues);return;}
-                  setAlignmentRollback({units:structuredClone(current),fingerprint:computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current)});
-                  setUnits(result.nextUnits);unitsRef.current=result.nextUnits;setHasChanges(true);setAnalysisFingerprint(computeMappingFingerprint(result.nextUnits,atpRef.current,tpRef.current));setSelectedAnalysisActionIds(new Set());setApplyIssues([]);
-                  setAnalysisResult(previous=>previous?{...previous,alignmentProposals:refreshAlignmentProposals(previous.alignmentProposals || [],result.nextUnits!,atpRef.current,tpRef.current)}:previous);
-                  setAppliedNotice('Persetujuan dan alasan guru dicatat pada draf. Simpan Pemetaan untuk menyimpan atomik; Step 08 memakai data tersimpan terbaru.');
-                }}
-                readiness={mappingReadiness} findings={buildMappingPedagogicalReport(units, atp, tp)} units={units} atp={atp} tp={tp}
-                selectedIds={selectedAnalysisActionIds} onSelectionChange={ids => {
-                  setSelectedAnalysisActionIds(ids); setApplyIssues([]);
-                }} />
-              <details><summary>Gap yang masih memerlukan penyelarasan</summary>
-                {analysisResult.gapFindings?.map(gap => <p key={gap.kind+gap.id} className="text-xs">{gap.kind} {gap.id}: {gap.reason}</p>)}
-              </details>
-            </div>
-          <details id="mapping-legacy-analysis-details"><summary>Snapshot sumber analisis sebelum aksi (progres terkini tersedia di atas)</summary>
-          {/* Analysis Header & Summary Metrics */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-indigo-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-700" />
-                <h4 className="text-sm font-bold text-slate-900">
-                  Hasil Analisis Pemetaan Manual ↔ TP ↔ ATP
-                </h4>
-                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 text-[11px] font-bold border border-indigo-200">
-                  Analisis dengan riwayat perubahan
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Tinjau temuan keselarasan di bawah. Pilih saran yang ingin diterapkan ke draft, lalu klik <strong>Terapkan Pilihan</strong>.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSelectAllActionable}
-                className="text-xs font-bold text-indigo-700 hover:underline cursor-pointer"
-              >
-                Pilih Semua Saran
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                type="button"
-                onClick={handleDeselectAllActionable}
-                className="text-xs font-bold text-slate-600 hover:underline cursor-pointer"
-              >
-                Kosongkan Pilihan
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                type="button"
-                onClick={() => setAnalysisResult(null)}
-                className="text-xs font-bold text-slate-500 hover:underline cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-
-          {/* Metrics Overview Pills */}
-          <div className={`grid grid-cols-2 gap-3 ${analysisResult.summary.missingMaterialSuggestions > 0 ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-5'}`}>
-            <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3">
-              <div className="text-[11px] font-bold text-emerald-800 uppercase">Selaras berdasarkan bukti</div>
-              <div className="text-lg font-extrabold text-emerald-900 mt-0.5">
-                {analysisResult.summary.alignedAtp} <span className="text-xs font-normal text-emerald-700">Langkah</span>
-              </div>
-            </div>
-
-            <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3">
-              <div className="text-[11px] font-bold text-amber-800 uppercase">ATP Belum Dipetakan</div>
-              <div className="text-lg font-extrabold text-amber-900 mt-0.5">
-                {analysisResult.summary.unmappedAtp} <span className="text-xs font-normal text-amber-700">Langkah</span>
-              </div>
-            </div>
-
-            <div className="bg-rose-50/80 border border-rose-200 rounded-xl p-3">
-              <div className="text-[11px] font-bold text-rose-800 uppercase">ATP Perlu Ditinjau</div>
-              <div className="text-lg font-extrabold text-rose-900 mt-0.5">
-                {analysisResult.summary.reviewAtp} <span className="text-xs font-normal text-rose-700">Langkah</span>
-              </div>
-            </div>
-
-            <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3">
-              <div className="text-[11px] font-bold text-indigo-800 uppercase">Materi Dapat Diselaraskan</div>
-              <div className="text-lg font-extrabold text-indigo-900 mt-0.5">
-                {analysisResult.summary.alignableMaterials} <span className="text-xs font-normal text-indigo-700">Materi</span>
-              </div>
-            </div>
-
-            {analysisResult.summary.missingMaterialSuggestions > 0 && (
-              <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3">
-                <div className="text-[11px] font-bold text-blue-800 uppercase">Saran Materi Baru</div>
-                <div className="text-lg font-extrabold text-blue-900 mt-0.5">
-                  {analysisResult.summary.missingMaterialSuggestions} <span className="text-xs font-normal text-blue-700">Saran</span>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3">
-              <div className="text-[11px] font-bold text-slate-700 uppercase">Materi Perlu Ditinjau</div>
-              <div className="text-lg font-extrabold text-slate-900 mt-0.5">
-                {analysisResult.summary.manualMaterialReview} <span className="text-xs font-normal text-slate-600">Materi</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Findings Detail List */}
-          <div className="space-y-4 pt-1">
-            {/* 1. Unmapped ATP Findings with Suggestions */}
-            {analysisResult.atpFindings.filter((f) => f.status === 'UNMAPPED').length > 0 && (
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-amber-700" />
-                  <span>Saran Pemetaan Langkah ATP yang Belum Terpetakan</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {analysisResult.atpFindings
-                    .filter((f) => f.status === 'UNMAPPED')
-                    .map((finding) => {
-                      const atpItem = atpItemMap.get(finding.atpItemId);
-                      const targetUnit = units.find((u) => u.id === finding.suggestedUnitId);
-                      const isSelected = selectedAnalysisActionIds.has(finding.id);
-
-                      return (
-                        <div
-                          key={finding.id}
-                          className={`p-3.5 rounded-xl border transition flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                            isSelected
-                              ? 'bg-amber-50/90 border-amber-400 ring-1 ring-amber-300'
-                              : 'bg-white border-slate-200 hover:border-amber-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 flex-1">
-                            {finding.action && (
-                              <input
-                                id={`check-${finding.id}`}
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleAction(finding.id)}
-                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 mt-1 cursor-pointer"
-                              />
-                            )}
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-800 text-white font-bold text-xs">
-                                  Langkah {atpItem?.stepNumber || '?'}
-                                </span>
-                                {atpItem?.focus && (
-                                  <span className="font-semibold text-xs text-slate-800">
-                                    {atpItem.focus}
-                                  </span>
-                                )}
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                  Kekuatan: {finding.strength === 'STRONG' ? 'Kuat' : finding.strength === 'LOW' ? 'Rendah' : 'Sedang'}
-                                </span>
-                              </div>
-
-                              <p className="text-xs text-slate-600 leading-relaxed">
-                                {finding.reason}
-                              </p>
-
-                              {targetUnit && (
-                                <div className="text-xs font-bold text-indigo-900 bg-indigo-50/80 px-2.5 py-1 rounded-lg inline-block border border-indigo-200">
-                                  Saran Bab: {formatMappingUnitTitle(targetUnit)}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {finding.action && (
-                            <label
-                              htmlFor={`check-${finding.id}`}
-                              className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 shrink-0 cursor-pointer text-center"
-                            >
-                              {isSelected ? '✓ Terpilih' : 'Terapkan saran ini'}
-                            </label>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* 2. Review ATP Findings */}
-            {analysisResult.atpFindings.filter((f) => f.status === 'REVIEW').length > 0 && (
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-rose-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-rose-700" />
-                  <span>Perlu tinjauan keselarasan</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {analysisResult.atpFindings
-                    .filter((f) => f.status === 'REVIEW')
-                    .map((finding) => {
-                      const atpItem = atpItemMap.get(finding.atpItemId);
-                      const currentUnit = units.find((u) => u.id === finding.currentUnitId);
-
-                      return (
-                        <div
-                          key={finding.id}
-                          className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-200 flex flex-col md:flex-row md:items-center justify-between gap-3"
-                        >
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="px-2 py-0.5 rounded-md bg-rose-800 text-white font-bold text-xs">
-                                Langkah {atpItem?.stepNumber || '?'}
-                              </span>
-                              {currentUnit && (
-                                <span className="text-xs text-slate-600 font-semibold">
-                                  (Saat ini di {formatMappingUnitTitle(currentUnit)})
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-rose-900 leading-relaxed">
-                              {finding.reason}
-                            </p>
-                          </div>
-                          <span className="text-[11px] font-bold text-rose-700 bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-300 shrink-0">
-                            Perlu tinjauan keselarasan
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* 3. Missing Material Findings */}
-            {analysisResult.materialFindings.filter((m) => m.status === 'MISSING_MATERIAL').length > 0 && (
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-blue-700" />
-                  <span>Saran Penambahan Lingkup Materi</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {analysisResult.materialFindings
-                    .filter((m) => m.status === 'MISSING_MATERIAL')
-                    .map((finding) => {
-                      const targetUnit = units.find((u) => u.id === finding.unitId);
-                      const isSelected = selectedAnalysisActionIds.has(finding.id);
-
-                      return (
-                        <div
-                          key={finding.id}
-                          className={`p-3.5 rounded-xl border transition flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                            isSelected
-                              ? 'bg-blue-50/90 border-blue-400 ring-1 ring-blue-300'
-                              : 'bg-white border-slate-200 hover:border-blue-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 flex-1">
-                            {finding.action && (
-                              <input
-                                id={`check-${finding.id}`}
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleAction(finding.id)}
-                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 mt-1 cursor-pointer"
-                              />
-                            )}
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-blue-800 text-white font-bold text-xs">
-                                  + {finding.suggestedTitle || (finding.action?.type === 'ADD_MATERIAL_TO_UNIT' ? finding.action.title : '')}
-                                </span>
-                                {targetUnit && (
-                                  <span className="text-xs text-slate-700 font-semibold">
-                                    untuk {formatMappingUnitTitle(targetUnit)}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed">
-                                {finding.reason}
-                              </p>
-                            </div>
-                          </div>
-
-                          {finding.action && (
-                            <label
-                              htmlFor={`check-${finding.id}`}
-                              className="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 shrink-0 cursor-pointer text-center"
-                            >
-                              {isSelected ? '✓ Terpilih' : 'Tambahkan materi ini'}
-                            </label>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* 3.5. Aligned Existing Material Suggestions */}
-            {analysisResult.materialFindings.filter((m) => m.status === 'ALIGNABLE').length > 0 && (
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-700" />
-                  <span>Materi yang Dapat Diselaraskan</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {analysisResult.materialFindings
-                    .filter((m) => m.status === 'ALIGNABLE')
-                    .map((finding) => {
-                      const targetUnit = units.find((u) => u.id === finding.unitId);
-                      const targetMat = (targetUnit?.materials || []).find((mat) => mat.id === finding.materialId);
-                      const isSelected = selectedAnalysisActionIds.has(finding.id);
-
-                      const recAtpId = finding.action?.type === 'ALIGN_EXISTING_MATERIAL' || finding.action?.type === 'RECOVER_ATP_LINEAGE' ? finding.action.linkedAtpItemIds[0] : null;
-                      const recAtpItem = recAtpId ? atpItemMap.get(recAtpId) : null;
-
-                      const recTpIds = finding.action?.type === 'ALIGN_EXISTING_MATERIAL' || finding.action?.type === 'RECOVER_ATP_LINEAGE' ? finding.action.linkedTpIds : [];
-                      const recTps = recTpIds.map((tpId) => (tp.items || []).find((t) => t.id === tpId)).filter(Boolean);
-
-                      return (
-                        <div
-                          key={finding.id}
-                          className={`p-3.5 rounded-xl border transition flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                            isSelected
-                              ? 'bg-indigo-50/90 border-indigo-400 ring-1 ring-indigo-300'
-                              : 'bg-white border-slate-200 hover:border-indigo-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 flex-1">
-                            {finding.action && (
-                              <input
-                                id={`check-${finding.id}`}
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleAction(finding.id)}
-                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 mt-1 cursor-pointer"
-                              />
-                            )}
-                            <div className="space-y-1 flex-1">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {targetUnit && (
-                                    <span className="px-2 py-0.5 rounded-md bg-indigo-800 text-white font-bold text-[10px]">
-                                      {formatMappingUnitTitle(targetUnit)}
-                                    </span>
-                                  )}
-                                  <span className="font-bold text-xs text-slate-900">
-                                    Materi manual: {targetMat?.title || '(Tanpa Judul)'}
-                                  </span>
-                                </div>
-                                {recAtpItem && (
-                                  <div className="text-[11px] text-slate-700">
-                                    <span className="font-semibold">Saran ATP:</span> Langkah {recAtpItem.stepNumber || '?'}: {recAtpItem.focus || 'Fokus ATP'}
-                                  </div>
-                                )}
-                                {recTps.length > 0 && (
-                                  <div className="text-[11px] text-slate-700 flex flex-wrap gap-1.5 items-center">
-                                    <span className="font-semibold">Saran TP:</span>
-                                    {recTps.map((t) => (
-                                      <span key={t?.id} className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-slate-800 font-medium text-[10px] border border-slate-200">
-                                        {t?.code || 'TP'}: {t?.statement}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                                {finding.reason}
-                              </p>
-                            </div>
-                          </div>
-
-                          {finding.action && (
-                            <label
-                              htmlFor={`check-${finding.id}`}
-                              className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 shrink-0 cursor-pointer text-center"
-                            >
-                              {isSelected ? '✓ Terpilih' : 'Selaraskan materi ini'}
-                            </label>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* 4. Manual Material Review Findings */}
-            {analysisResult.materialFindings.filter((m) => m.status === 'MANUAL_REVIEW').length > 0 && (
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-slate-600" />
-                  <span>Perlu tinjauan guru</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {analysisResult.materialFindings
-                    .filter((m) => m.status === 'MANUAL_REVIEW')
-                    .map((finding) => {
-                      const unit = units.find((u) => u.id === finding.unitId);
-                      const mat = (unit?.materials || []).find((m) => m.id === finding.materialId);
-
-                      return (
-                        <div
-                          key={finding.id}
-                          className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3"
-                        >
-                          <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {unit && (
-                                <span className="px-2 py-0.5 rounded-md bg-slate-800 text-white font-bold text-xs">
-                                  {formatMappingUnitTitle(unit)}
-                                </span>
-                              )}
-                              <span className="font-bold text-xs text-slate-900">
-                                Materi: {mat?.title || finding.suggestedTitle || '(Tanpa Judul)'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                              {finding.reason}
-                            </p>
-                          </div>
-
-                          <span className="text-[11px] font-bold text-slate-700 bg-slate-200/80 px-2.5 py-1 rounded-lg border border-slate-300 shrink-0">
-                            Perlu ditinjau guru
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* 5. Aligned ATP List (Collapsed overview) */}
-            {analysisResult.atpFindings.filter((f) => f.status === 'ALIGNED').length > 0 && (
-              <details className="bg-slate-50/70 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
-                <summary className="font-bold text-emerald-800 cursor-pointer hover:underline">
-                  Lihat {analysisResult.summary.alignedAtp} Langkah ATP Selaras berdasarkan bukti yang tersedia
-                </summary>
-                <div className="space-y-1.5 pt-2">
-                  {analysisResult.atpFindings
-                    .filter((f) => f.status === 'ALIGNED')
-                    .map((finding) => {
-                      const atpItem = atpItemMap.get(finding.atpItemId);
-                      const unit = units.find((u) => u.id === finding.currentUnitId);
-                      return (
-                        <div key={finding.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900">Langkah {atpItem?.stepNumber || '?'}:</span>
-                            <span>{atpItem?.focus || 'Fokus ATP'}</span>
-                          </div>
-                          {unit && (
-                            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              {formatMappingUnitTitle(unit)}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              </details>
-            )}
-
-            {/* 6. Supported Materials List (Collapsed overview) */}
-            {analysisResult.materialFindings.filter((m) => m.status === 'SUPPORTED').length > 0 && (
-              <details className="bg-slate-50/70 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
-                <summary className="font-bold text-emerald-800 cursor-pointer hover:underline">
-                  Lihat {analysisResult.materialFindings.filter((m) => m.status === 'SUPPORTED').length} Materi selaras berdasarkan bukti yang tersedia
-                </summary>
-                <div className="space-y-1.5 pt-2">
-                  {analysisResult.materialFindings
-                    .filter((m) => m.status === 'SUPPORTED')
-                    .map((finding) => {
-                      const unit = units.find((u) => u.id === finding.unitId);
-                      const mat = (unit?.materials || []).find((m) => m.id === finding.materialId);
-                      return (
-                        <div key={finding.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900">Bab {unit?.order || '?'}:</span>
-                            <span>{mat?.title || 'Materi'}</span>
-                          </div>
-                          <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            Selaras berdasarkan bukti
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </details>
-            )}
-          </div>
-
-          {/* Informative warnings also remain visible when executable actions can be applied. */}
-          {actionEligibility.diagnosticWarning && (
-            <div
-              id="apply-actions-diagnostic-warning"
-              className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2.5 animate-fadeIn"
-            >
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold text-amber-950">Diagnostik Pilihan Saran:</p>
-                <p className="leading-relaxed">
-                  {actionEligibility.diagnosticWarning || `Anda telah memilih ${selectedAnalysisActionIds.size} saran, namun pilihan tersebut tidak memiliki tindakan otomatis (action) yang valid untuk diterapkan ke draft. Saran ini bersifat tinjauan atau rekomendasi manual.`}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Stale Analysis Warning */}
-          {selectedAnalysisActionIds.size > 0 && selectedActions.length > 0 && actionEligibility.disabledReason === 'hasil analisis stale/kedaluwarsa' && (
-            <div
-              id="apply-actions-stale-warning"
-              className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2.5 animate-fadeIn"
-            >
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold text-amber-950">Hasil Analisis Kedaluwarsa:</p>
-                <p className="leading-relaxed">
-                  {actionEligibility.diagnosticWarning || 'Hasil analisis sudah kedaluwarsa karena struktur Bab atau data telah berubah setelah analisis. Jalankan analisis ulang.'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Issues Panel on Apply Failure: Contract 6 */}
-          {applyIssues.length > 0 && (
-            <div
-              id="apply-actions-issues-panel"
-              className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs space-y-2 animate-fadeIn"
-            >
-              <div className="flex items-center gap-2 font-bold text-rose-950">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>Gagal Menerapkan Pilihan ({applyIssues.length} kendala terdeteksi):</span>
-              </div>
-              <ul className="list-disc list-inside space-y-1 pl-1 text-rose-800 font-medium">
-                {applyIssues.map((issue, idx) => (
-                  <li key={idx} className="leading-relaxed">{issue}</li>
-                ))}
-              </ul>
-              <p className="text-[11px] text-rose-700 font-semibold">
-                Silakan sesuaikan pilihan saran atau lakukan analisis ulang untuk memperbarui rekomendasi.
-              </p>
-            </div>
-          )}
-
-          </details>
-          {/* Action Footer inside Panel */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-indigo-100">
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <div className="text-xs text-slate-500">
-                Terpilih: <strong className="text-slate-800">{selectedAnalysisActionIds.size}</strong> saran{' '}
-                <span className="text-slate-400">({selectedActions.length} action valid)</span>
-              </div>
-              <details id="apply-actions-preview-diagnostics" className="text-xs text-slate-500">
-                <summary className="cursor-pointer">Detail pemeriksaan pilihan</summary>
-                <div>selectedFindingCount: {actionEligibility.selectedFindingCount}</div>
-                <div>executableActionCount: {actionEligibility.executableActionCount}</div>
-                <div>previewSuccess: {String(actionEligibility.previewSuccess)}</div>
-                <div>previewIssues:</div>
-                <ul>{actionEligibility.previewIssues.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
-              </details>
-              {!actionEligibility.canApply && actionEligibility.disabledReason && (
-                <div
-                  id="apply-actions-disabled-reason"
-                  className="flex items-center gap-1.5 text-xs text-amber-800 font-medium bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200"
-                >
-                  <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Alasan tombol nonaktif: <strong>{actionEligibility.disabledReason}</strong></span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setAnalysisResult(null)}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200 transition cursor-pointer"
-              >
-                Tutup Hasil
-              </button>
-
-              {selectedActions.length > 0 && <button
-                id="btn-apply-analysis-actions"
-                type="button"
-                onClick={handleApplySelectedActions}
-                disabled={!actionEligibility.canApply}
-                title={actionEligibility.disabledReason || 'Terapkan pilihan saran ke draf'}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-800 hover:bg-indigo-900 disabled:bg-slate-200 disabled:text-slate-400 transition cursor-pointer shadow-xs disabled:cursor-not-allowed"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Terapkan Pilihan ({selectedActions.length})</span>
-              </button>}
-            </div>
-          </div>
-        </div>
-      )}
+      {analysisResult && <section id="mapping-inline-summary" className="rounded-xl border bg-white p-4 space-y-2" role="status">
+        <strong>Diperbaiki: {units.reduce((count,unit)=>count+Number(inlineMappingChanges(units,mapping?.units || [],unit.id).length>0)+unit.materials.reduce((sum,material)=>sum+Number(inlineMappingChanges(units,mapping?.units || [],unit.id,material.id).length>0),0),0)} · Perlu ACC: {(analysisResult.alignmentProposals || []).filter(p=>alignmentProposalStatus(p)==='READY'&&p.approval!=='AUTOMATIC'&&!rejectedProposalIds.has(p.id)).length+[...analysisResult.atpFindings,...analysisResult.materialFindings].filter(f=>f.action&&!rejectedProposalIds.has(f.id)).length} · Belum selesai: {mappingReadiness.validationResult?.materialsWithoutLineage.length || 0} materi, {new Set([...(mappingReadiness.validationResult?.unitsWithoutLineage || []),...(mappingReadiness.validationResult?.materialCoverageGaps || []).map(g=>g.unitId)]).size} Bab</strong>
+        <p className="text-sm">Tinjau perubahan dan setujui usulan langsung pada Bab atau Lingkup Materi di bawah. Perubahan draf perlu disimpan.</p>
+        {analysisResult.analysisNotice && <p className="text-sm">{analysisResult.analysisNotice}</p>}
+        <details id="mapping-analysis-details"><summary>Detail Analisis</summary>
+          <p>VALID: {mappingReadiness.validationResult?.isValid?'Ya':'Belum'} · COMPLETE: {mappingReadiness.validationResult?.isComplete?'Ya':'Belum'} · READY Step 08: {mappingReadiness.canProceed?'Ya':'Belum'}</p>
+          <ul>{mappingReadiness.blockers.map((issue,index)=><li key={index}>{issue}</li>)}</ul>
+          <p>Dipilih: {actionEligibility.selectedFindingCount}; aksi: {actionEligibility.executableActionCount}; preview: {String(actionEligibility.previewSuccess)}</p>
+          <ul>{actionEligibility.previewIssues.map((issue,index)=><li key={index}>{issue}</li>)}</ul>
+          <button type="button" onClick={handleCopyDiagnostic} className="underline">Salin diagnostik lengkap</button>
+        </details>
+      </section>}
+      {selectedAnalysisActionIds.size>0 && <div className="rounded-lg border p-3 space-y-2">
+        <button id="btn-apply-analysis-actions" type="button" onClick={()=>handleApplySelectedActions()} disabled={!actionEligibility.canApply} className="font-semibold underline disabled:opacity-40">Setujui pilihan ({selectedActions.length})</button>
+        {!actionEligibility.canApply&&<p id="apply-actions-disabled-reason">{actionEligibility.disabledReason}</p>}
+        {actionEligibility.diagnosticWarning && (<p id="apply-actions-diagnostic-warning">{actionEligibility.diagnosticWarning}</p>)}
+      </div>}
+      {applyIssues.length>0&&<div id="apply-actions-issues-panel" role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3"><ul>{applyIssues.map((issue,index)=><li key={index}>{issue}</li>)}</ul></div>}
 
       <details id="mapping-action-history" className="rounded-xl border bg-white p-4 text-sm">
         <summary>Riwayat tindakan dan perubahan redaksi sebelum/sesudah</summary>
@@ -2496,7 +1947,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                     <button
                       type="button"
                       title="Hapus Bab Kosong Ini"
-                      onClick={() => handleRemoveBab(unit.id)}
+                      onClick={() => {if(window.confirm(`Hapus Bab "${unit.title}" beserta lingkup materinya dari draf?`))handleRemoveBab(unit.id);}}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold transition cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -2506,6 +1957,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 </div>
               </div>
 
+              <div className="px-4">{renderInlineAlignment(unit)}</div>
               {/* SECTION: Lingkup Materi (0..n per Bab) */}
               <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between">
@@ -2537,6 +1989,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                     {unit.materials.map((mat, mIdx) => (
                       <div
                         key={mat.id}
+                        data-mapping-material={mat.id}
                         className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2.5"
                       >
                         <div className="flex items-center gap-2">
@@ -2571,7 +2024,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleRemoveMaterial(unit.id, mat.id)}
+                              onClick={() => {if(window.confirm(`Hapus lingkup materi "${mat.title}" dari draf?`))handleRemoveMaterial(unit.id, mat.id);}}
                               className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
                               title="Hapus lingkup materi"
                             >
@@ -2580,17 +2033,20 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 text-xs">
+                        {renderInlineAlignment(unit,mat.id)}
+                        <details><summary className="text-xs cursor-pointer">Relasi TP/ATP saat ini</summary><div className="flex flex-wrap gap-2 text-xs">
                           {(tp.items || []).map(item => <label key={item.id} className="flex items-start gap-1 p-1 border rounded">
                             <input type="checkbox" checked={mat.linkedTpIds.includes(item.id)} onChange={() => handleToggleMaterialTp(unit.id, mat.id, item.id)} />
                             <span>[{item.code}] {item.statement}</span>
                           </label>)}
                         </div>
 
+                        </details>
                       </div>
                     ))}
                   </div>
                 )}
+                {(mapping?.units.find(previous=>previous.id===unit.id)?.materials || []).filter(previous=>!units.some(current=>current.materials.some(material=>material.id===previous.id))).map(previous=><div key={previous.id} data-change-badge="Dihapus" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs"><strong>Dihapus dari draf</strong> · <del>{previous.title}</del><p>Materi tidak lagi ada pada draf. Perubahan belum disimpan; kesiapan Step 08 tetap mengikuti validator.</p></div>)}
               </div>
 
               <div className="p-4 space-y-3">
@@ -2609,6 +2065,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           );
         })}
 
+        {(mapping?.units || []).filter(previous=>!units.some(unit=>unit.id===previous.id)).map(previous=><div key={previous.id} data-change-badge="Dihapus" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm"><strong>Bab dihapus dari draf</strong> · <del>{previous.title}</del><p>{previous.materials.length} lingkup materi pada Bab ini tidak lagi tampil dalam draf. Perubahan belum disimpan.</p></div>)}
         {unassignedItems.length > 0 && <p className="p-4 text-xs text-amber-900 bg-amber-50 rounded-xl">ATP belum tercakup: {unassignedItems.map(item => 'Tahap '+item.stepNumber).join(', ')}. Pilih TP relevan pada Bab/Materi; induk ATP diturunkan otomatis tanpa memindahkan ATP dari Bab lain.</p>}
       </div>
 

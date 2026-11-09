@@ -26,6 +26,7 @@
   "planning": [
     "scripts/testStep07PedagogicalAlignment.tsx",
     "scripts/testStep07SemanticExecution.ts",
+    "scripts/testStep07InlineAlignment.tsx",
     "scripts/testMeetingAlignment.ts",
     "scripts/testCalendarBackendSearchProvider.ts",
     "scripts/testCalendarEndpointContract.ts",
