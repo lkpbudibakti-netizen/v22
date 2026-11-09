@@ -588,8 +588,22 @@ export interface Step07AutoRequest {
   round:number;
   focus:{unitIds:string[];materialIds:string[];tpIds:string[];atpIds:string[]};
   actions?:import('../services/mappingAlignmentService').AlignmentAction[];
+  validation?: { canProceed:boolean; issues:Step07ReadinessIssue[]; rejectedActions:string[] };
 }
+export interface Step07ReadinessIssue {
+  id:string;
+  message:string;
+  unitId?:string;
+  materialId?:string;
+  tpIds?:string[];
+  atpIds?:string[];
+}
+export interface Step07RepairProgress { initial:number; resolved:number; remaining:number; }
 export interface Step07AutoRepairRun {
+  initialIssueIds?:string[];
+  progress?:Step07RepairProgress;
+  requests?:number;
+  inputCharacters?:number;
   verifiedFingerprint?:string;
   resultFingerprint?:string;
   undone?:boolean;
@@ -600,7 +614,7 @@ export interface Step07AutoRepairRun {
   expectedStoredFingerprint:string;
   addedMaterialIds:string[];
   rounds:number;
-  outcome:'COMPLETE'|'INCOMPLETE'|'STAGNATED'|'TIMEOUT'|'SAVE_FAILED';
+  outcome:'COMPLETE'|'INCOMPLETE'|'STAGNATED'|'TIMEOUT'|'SAVE_FAILED'|'BUDGET_LIMIT'|'REPEATED_ISSUES';
   issues:string[];
 }
 

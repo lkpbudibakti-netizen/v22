@@ -350,7 +350,7 @@ console.log('Testing Test 6: Verify ATPUnitMappingManager source bindings...');
     assert(componentSource.includes('onStatus:setAutoPhase'));
     assert(componentSource.includes('save:onSaveMapping'));
     assert(componentSource.includes('data-repair-color='));
-    assert(componentSource.includes('disabled={isAnalyzing || !mappingReadiness.canProceed || !autoReady || (!!autoRepair && hasChanges)}'));
+    assert(componentSource.includes('disabled={isAnalyzing || !mappingReadiness.canProceed || (!!autoRepair && hasChanges)}'));
     assert(!componentSource.includes('{renderInlineAlignment(unit,mat.id)}'), 'Auto main flow must not mount ACC panels');
   } else {
   // Contract 3 & 4: disabled based on real eligibility and clear reason near button
