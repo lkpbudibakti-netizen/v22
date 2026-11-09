@@ -1,4 +1,6 @@
 import { runStep07AutoRepair, step07RepairColor, undoStep07AutoRepair } from '../services/step07AutoRepairService';
+import { resolveStep07CheckpointContext,readStep07Checkpoint,type Step07WorkStatus } from '../services/step07CheckpointService';
+import { copyCPAnalysisDiagnosis } from '../services/cpAnalysisAIDiagnostics';
 import { AlignmentProposalReview, inlineMappingChanges } from './AlignmentProposalReview';
 import { deriveMappingAtpIds } from '../services/atpMappingLineageService';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -293,6 +295,9 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [autoRepair,setAutoRepair]=useState(mapping?.step07AutoRepair);
   const [repairProgress,setRepairProgress]=useState(mapping?.step07AutoRepair?.progress);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [checkpointWork,setCheckpointWork]=useState<Step07WorkStatus>();
+  const [manualDiagnostic,setManualDiagnostic]=useState('');
   const [autoPhase,setAutoPhase]=useState('');
   const [rejectedProposalIds,setRejectedProposalIds]=useState<Set<string>>(new Set());
   const [saveSuccessNotice, setSaveSuccessNotice] = useState(false);
@@ -302,13 +307,22 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   // Sync state if canonical mapping prop updates
   useEffect(() => {
     if (mapping && Array.isArray(mapping.units) && mapping.units.length > 0) {
-      if (!hasChanges) {
+      if (!hasChanges&&!isAnalyzing) {
         setUnits(createInitialUnits(mapping, atp.items || []));
         setAutoRepair(mapping.step07AutoRepair);
         setRepairProgress(mapping.step07AutoRepair?.progress);
       }
     }
-  }, [mapping, hasChanges, atp.items]);
+  }, [mapping, hasChanges, atp.items,isAnalyzing]);
+  useEffect(()=>{
+    if(isAnalyzing||!mapping)return;
+    setCheckpointWork(undefined);
+    try{
+      const checkpoint=readStep07Checkpoint(resolveStep07CheckpointContext(mapping.academicSettingId));
+      const id=checkpoint?.activeUnitId,point=id?checkpoint?.units[id]:undefined;
+      if(checkpoint&&point&&id)setCheckpointWork({mode:checkpoint.mode,activeUnitId:id,stage:point.stage,completed:Object.entries(checkpoint.units).filter(([key,p])=>key!=='GLOBAL'&&p.status==='DONE').length,total:mapping.units.length,checkpointStatus:'Checkpoint tersedia untuk dilanjutkan'});
+    }catch{/* A corrupt/unavailable checkpoint is reported when repair or diagnostics is invoked. */}
+  },[mapping,isAnalyzing]);
 
   // Canonical mapping existence and unsaved draft checks
   const hasCanonicalMapping = Boolean(
@@ -695,7 +709,6 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   };
 
   // AI Analysis State
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<MappingAnalysisResult | null>(null);
   const [lastAnalysisSnapshot, setLastAnalysisSnapshot] = useState<MappingAnalysisResult | null>(null);
   const [lastAppliedActionIds, setLastAppliedActionIds] = useState<string[]>([]);
@@ -879,7 +892,10 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     const requestId=++analysisRequestIdRef.current;
     const source=generationContextRef.current;
     const initial=buildCurrentMappingDraft();
+    let checkpointContext;
+    try{checkpointContext=resolveStep07CheckpointContext(initial.academicSettingId);}catch(error){setIsAnalyzing(false);setAnalysisError(error instanceof Error?error.message:String(error));return;}
     const result=await runStep07AutoRepair({mapping:initial,persistedMapping:mapping,atp:atpRef.current,tp:tpRef.current,
+      checkpointContext,onWork:setCheckpointWork,
       isCurrent:()=>requestId===analysisRequestIdRef.current&&source===generationContextRef.current,
       analyze:(draft,step07Auto,signal)=>analyzeATPUnitMappingWithAI({subject:academicSetting?.subject,grade:academicSetting?.grade,phase:academicSetting?.phase,tpData:tpRef.current,atpData:atpRef.current,currentMapping:draft,step07Auto},{signal}),
       save:onSaveMapping,onStatus:setAutoPhase,onProgress:setRepairProgress,
@@ -1060,7 +1076,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     try {
       const currentDraft = buildCurrentMappingDraft();
       const validation = validateATPUnitMappingCanonical(currentDraft, atp, tp);
-      const report = buildATPUnitMappingDiagnosticReport({
+      let report = buildATPUnitMappingDiagnosticReport({
         academicSetting,
         mapping: currentDraft,
         atp,
@@ -1070,13 +1086,15 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         appliedActionIds: lastAppliedActionIds,
       });
 
-      await navigator.clipboard.writeText(report);
-      setCopyDiagnosticNotice('Diagnosis berhasil disalin.');
+      try{const checkpoint=readStep07Checkpoint(resolveStep07CheckpointContext(currentDraft.academicSettingId));report+='\n\nSTEP07 PERSISTENT CHECKPOINT\n'+JSON.stringify(checkpoint || null,null,2);}catch(error){report+='\nCHECKPOINT_DIAGNOSTIC_ERROR: '+String(error);}
+      const copied=await copyCPAnalysisDiagnosis(report);
+      setManualDiagnostic(copied==='manual'?report:'');
+      setCopyDiagnosticNotice(copied==='copied'?'Diagnosis berhasil disalin.':'Clipboard ditolak. Pilih dan salin laporan pada kotak di bawah.');
       setTimeout(() => {
         setCopyDiagnosticNotice((prev) => (prev === 'Diagnosis berhasil disalin.' ? null : prev));
       }, 3500);
-    } catch {
-      setCopyDiagnosticNotice('Gagal menyalin diagnosis ke clipboard.');
+    } catch(error) {
+      setCopyDiagnosticNotice('Diagnosis gagal dibuat/disalin: '+(error instanceof Error?error.message:String(error)));
       setTimeout(() => {
         setCopyDiagnosticNotice((prev) => (prev === 'Gagal menyalin diagnosis ke clipboard.' ? null : prev));
       }, 3500);
@@ -1267,7 +1285,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           <div className="mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between gap-2 animate-fadeIn">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{autoRepair?'Auto-repair belum selesai. Draft aman terakhir dipertahankan; lihat Detail proses.':`Analisis Pemetaan gagal: ${analysisError}`}</span>
+              <span>{autoRepair?'Auto-repair belum selesai: '+analysisError.split('\n')[0]:`Analisis Pemetaan gagal: ${analysisError}`}</span>
             </div>
             <button
               type="button"
@@ -1287,15 +1305,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{localValidation.summaryMessage}</span>
               </div>
-              <button
-                type="button"
-                onClick={handleCopyDiagnostic}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-100 text-[11px] font-bold shadow-2xs transition cursor-pointer shrink-0"
-                title="Salin laporan diagnosis pemetaan ke clipboard"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>Salin Diagnosis</span>
-              </button>
+
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
@@ -1304,15 +1314,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                   <Info className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>{localValidation.summaryMessage}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopyDiagnostic}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 text-[11px] font-bold shadow-2xs transition cursor-pointer shrink-0"
-                  title="Salin laporan diagnosis pemetaan ke clipboard"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Salin Diagnosis</span>
-                </button>
+
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6">
                 <div className="text-[10px] flex items-center gap-1.5">
@@ -1412,6 +1414,8 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           </button>
         </div>
         <p className="text-xs text-slate-600">Susun dengan AI mengusulkan struktur baru dan jumlah Bab otomatis berdasarkan TP/ATP. Analisis &amp; Selaraskan menelaah struktur draf yang sudah ada.</p>
+        <button id="btn-copy-mapping-diagnostic" type="button" onClick={handleCopyDiagnostic} className="text-xs underline">Salin Diagnostik</button>
+        {manualDiagnostic&&<textarea aria-label="Laporan diagnostik untuk disalin manual" readOnly value={manualDiagnostic} onFocus={event=>event.currentTarget.select()} className="w-full h-40 border rounded-lg p-2 text-xs"/>}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Target Count Input & Add Bab */}
           <div className="flex items-center gap-3 flex-wrap">
@@ -1815,13 +1819,14 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           setAlignmentRollback(null); setAppliedNotice('Batch terakhir dibatalkan; materi asli dipulihkan ke draf. Simpan Pemetaan untuk menyimpan.');
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
-      {(isAnalyzing||autoRepair)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
+      {(isAnalyzing||autoRepair||checkpointWork)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
         <strong>{isAnalyzing?autoPhase:(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
+        {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {checkpointWork.completed}/{checkpointWork.total} · {checkpointWork.checkpointStatus}</p>}
         {(isAnalyzing?repairProgress:autoRepair?.progress)&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {(isAnalyzing?repairProgress:autoRepair?.progress)!.initial} · Selesai: {(isAnalyzing?repairProgress:autoRepair?.progress)!.resolved} · Tersisa: {(isAnalyzing?repairProgress:autoRepair?.progress)!.remaining}</p>}
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
         {autoRepair&&!isAnalyzing&&<p className="text-sm">{autoRepair.rounds} putaran · {mappingReadiness.validationResult?.isValid?'Valid':'Belum valid'} · {mappingReadiness.validationResult?.isComplete?'Struktur lengkap':'Struktur belum lengkap'} · {hasChanges?'Draft belum tersimpan':'Tersimpan'}</p>}
-        <details><summary>Detail proses</summary><ul>{autoRepair?.issues.map((issue,index)=><li key={index}>{issue}</li>)}</ul><button type="button" className="underline" onClick={handleCopyDiagnostic}>Salin diagnostik</button></details>
-        {autoRepair&&!isAnalyzing&&!mappingReadiness.canProceed&&<button id="btn-resume-step07-repair" type="button" onClick={handleAnalyzeMapping} disabled={isGeneratingStructure||units.length===0} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Lanjutkan Perbaikan</button>}
+        <details><summary>Detail proses</summary><ul>{[...new Set([...(autoRepair?.issues || []),...(analysisError?.split('\n') || [])])].map((issue,index)=><li key={index}>{issue}</li>)}</ul></details>
+        {(autoRepair||checkpointWork)&&!isAnalyzing&&!mappingReadiness.canProceed&&<button id="btn-resume-step07-repair" type="button" onClick={handleAnalyzeMapping} disabled={isGeneratingStructure||units.length===0} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Lanjutkan Perbaikan</button>}
       </section>}
 
       <details id="mapping-action-history" className="rounded-xl border bg-white p-4 text-sm">

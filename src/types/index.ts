@@ -583,6 +583,7 @@ export interface Step07SemanticCheck {
   evidence:Array<{tpId:string;tpQuote:string;materialQuote:string;competenceQuote:string;contextQuote:string}>;
 }
 export interface Step07AutoRequest {
+  execution?:{mode:'INITIAL_MAPPING'|'REPAIR'|'VALIDATE';activeUnitId?:string;reconciliation:boolean;otherUnits:Array<{id:string;title:string;tpIds:string[];materialCount:number}>;deferredActions?:import('../services/mappingAlignmentService').AlignmentAction[]};
   scope:'STEP07_AUTO_REPAIR';
   phase:'PROPOSE'|'VERIFY';
   round:number;

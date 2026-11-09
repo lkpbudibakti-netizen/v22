@@ -28,6 +28,7 @@
     "scripts/testStep07SemanticExecution.ts",
     "scripts/testStep07InlineAlignment.tsx",
     "scripts/testStep07AutoRepair.ts",
+    "scripts/testStep07HybridCheckpoint.ts",
     "scripts/testMeetingAlignment.ts",
     "scripts/testCalendarBackendSearchProvider.ts",
     "scripts/testCalendarEndpointContract.ts",
