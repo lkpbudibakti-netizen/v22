@@ -141,7 +141,25 @@ export function buildMappingAnalysisPrompt(params: AnalyzeATPUnitMappingServerPa
   });
 
   // Prepare Teacher's Manual Units & Materials
+  const activeUnitId = params.step07Auto?.execution?.activeUnitId;
   const unitsContext = (currentMapping.units || []).map((u, idx) => {
+    const isTargetUnit = !activeUnitId || u.id === activeUnitId;
+    if (!isTargetUnit) {
+      return {
+        unitId: u.id,
+        order: u.order,
+        title: u.title,
+        assignedAtpItemIds: u.linkedAtpItemIds || [],
+        assignedTpIds: u.linkedTpIds || [],
+        materials: (u.materials || []).map((m) => ({
+          materialId: m.id,
+          order: m.order,
+          title: m.title || '',
+          linkedAtpItemIds: m.linkedAtpItemIds || [],
+          linkedTpIds: m.linkedTpIds || [],
+        })),
+      };
+    }
     return {
       unitId: u.id,
       order: u.order,
@@ -201,9 +219,27 @@ Kembalikan JSON:
 }${params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?buildStep07AutoInstructions(params.step07Auto):''}`;
 }
 
+function sanitizeStep07AutoRequestForPrompt(request: import('../src/types').Step07AutoRequest): any {
+  if (!request) return request;
+  const copy = structuredClone(request);
+  if (copy.repair?.failures) {
+    copy.repair.failures = copy.repair.failures.slice(-10).map((f: any) => ({
+      ...f,
+      reason: typeof f.reason === 'string' ? f.reason.slice(0, 200) : f.reason,
+    }));
+  }
+  if (copy.validation?.rejectedActions) {
+    copy.validation.rejectedActions = copy.validation.rejectedActions.slice(-10).map((a: string) =>
+      typeof a === 'string' ? a.slice(0, 200) : a
+    );
+  }
+  return copy;
+}
+
 export function buildStep07AutoInstructions(request:import('../src/types').Step07AutoRequest):string {
+  const sanitizedRequest = sanitizeStep07AutoRequestForPrompt(request);
   return `\nKEBIJAKAN KHUSUS STEP07_AUTO_REPAIR, bukan perubahan approval global: pengguna mengotorisasi perbaikan substantif otomatis setelah verifikasi semantik dan validator. Jangan meminta ACC guru pada jalur ini. Data TP/ATP tetap immutable. Prioritaskan LINK_TP, lalu edit materi existing agar aktivitas dan kompetensi TP eksplisit sambil menjaga substansi/konteks asli; jangan mengubah judul yang sudah baik. Jangan menganggap kegiatan analitis telah dilakukan: ini rencana pembelajaran yang diusulkan. ADD hanya bila TP belum terwakili oleh materi existing, bukan untuk menghindari perbaikan 12 materi tanpa lineage. Tidak ada DELETE atau penghapusan materi manual otomatis.
-REQUEST: ${JSON.stringify(request)}
+REQUEST: ${JSON.stringify(sanitizedRequest)}
 Jika execution.activeUnitId tersedia, proses hanya Bab aktif ini. execution.otherUnits hanya ringkasan konteks, bukan izin mengubah Bab lain. Usulkan tindakan lintas Bab pada rekonsiliasi global (execution.reconciliation=true), termasuk execution.deferredActions; jangan memindahkan/menghapus isi Bab lain saat pemrosesan lokal. INITIAL_MAPPING membangun relasi dari bukti materi dan TP, bukan menyalin semua TP. REPAIR mempertahankan relasi manual yang sah. VALIDATE cukup memeriksa kesiapan tanpa menulis ulang materi yang sudah baik.
 Periksa juga materi yang sudah memiliki linked IDs tetapi requiresSemanticReview=true. Coverage global 5/5 bukan bukti semua materi mendukung kompetensi TP. Jika judul perlu penegasan aktivitas/kompetensi, usulkan edit pada materi existing, jangan menautkan tanpa dukungan. Materi yang sudah terverifikasi dan tidak memiliki gap harus dipertahankan persis; analisis ulang tanpa perubahan sumber tidak boleh menimbulkan edit baru.
 Koreksi relasi existing boleh memakai LINK_TP replaceTpIds:true hanya jika relasi yang dilepas memiliki konflik substansi eksplisit. Verifier harus menyertakan removedRelations:[{tpId:"ID TP lama",tpQuote:"pernyataan TP lama utuh",materialQuote:"judul materi sumber",reason:"konflik pedagogis spesifik"}]. Tanpa bukti negatif sumber yang jelas, pertahankan relasi manual. Jangan mengosongkan seluruh relasi atau menghapus materi. Validator canonical dan penjagaan coverage tetap berlaku.

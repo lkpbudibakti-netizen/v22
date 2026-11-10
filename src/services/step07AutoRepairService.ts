@@ -70,7 +70,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   const diagnosticScope=options.diagnosticContext || {yearPlanId:initial.academicSettingId};
   const issues:string[]=[],appliedActions:string[]=[];
   let executionStage:Step07Stage='ANALYZE';
-  const deadline=Date.now()+Math.max(1,Math.min(options.timeoutMs ?? 120000,120000));
+  const deadline=Date.now()+Math.max(1,Math.min(options.timeoutMs ?? 180000, 300000));
   // Request/input/output ceilings are cost proxies, not a fixed iteration limit.
   // A deliberate continuation starts a fresh bounded budget on the stored draft.
   const maxRequests=Math.max(1,Math.min(60,Math.floor(options.maxRequests ?? 24)));
@@ -90,8 +90,9 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
     if(requests>=maxRequests||inputCharacters+size>maxInputCharacters)throw new Error('STEP07_BUDGET_LIMIT: anggaran permintaan/ukuran input tercapai. Lanjutkan Perbaikan untuk meneruskan progres aman.');
     requests++;inputCharacters+=size;
     const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
+    const callTimeout=Math.max(1,Math.min(options.callTimeoutMs ?? 60000,deadline-Date.now()));
     try{
-      const result=await Promise.race([options.analyze(structuredClone(aiMapping),request,controller.signal),new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('STEP07_TIMEOUT: batas waktu analisis terlampaui.'));},Math.max(1,Math.min(options.callTimeoutMs ?? 30000,deadline-Date.now())));})]);
+      const result=await Promise.race([options.analyze(structuredClone(aiMapping),request,controller.signal),new Promise<never>((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('STEP07_TIMEOUT: batas waktu analisis terlampaui.'));},callTimeout);})]);
       if(JSON.stringify(result).length>maxResponseCharacters)throw new Error('STEP07_BUDGET_LIMIT: respons AI melampaui batas ukuran; respons tidak diterapkan.');
       return result;
     }

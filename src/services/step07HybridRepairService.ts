@@ -51,7 +51,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     root.context=context;root.canonical=canonical;root.mode=detectStep07Mode(current,options);
     root.initialIssueIds ||= (assess(current,options).repairIssues || []).map(i=>i.id);
     const checkpoint:Step07Checkpoint=root;
-    const start=Date.now(),deadline=start+Math.min(options.timeoutMs ?? 120000,120000);
+    const start=Date.now(),deadline=start+Math.min(options.timeoutMs ?? 180000,300000);
     let calls=0,input=0;
     const maxCalls=Math.min(options.maxRequests ?? 24,60),maxInput=Math.min(options.maxInputCharacters ?? 2000000,4000000);
     const checkFresh=()=>{

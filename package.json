@@ -10,6 +10,7 @@
     "test:step07-auto": "tsx scripts/testStep07AutoRepair.ts",
     "test:step07-checkpoint": "tsx scripts/testStep07HybridCheckpoint.ts",
     "test:step07-diagnostics": "tsx scripts/testStep07Observability.ts",
+    "test:step07-timeout": "tsx scripts/testStep07TimeoutResilience.ts",
     "test:meeting-alignment": "tsx scripts/testMeetingAlignment.ts",
     "test:meeting-duration-v21": "tsx scripts/testMeetingDurationByLevel.ts",
     "test:step08-jp": "tsx scripts/testStep08JPIntegration.tsx",

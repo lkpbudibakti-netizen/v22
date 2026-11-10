@@ -3070,6 +3070,13 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
   const started=Date.now(),candidateId=req.get('X-Request-ID');
   const requestId=typeof candidateId==='string'&&/^[\w.:-]{1,100}$/.test(candidateId)?candidateId:`step07-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
   const respond=(status:number,payload:Record<string,unknown>,fallbackReason?:string)=>res.status(status).set('X-Request-ID',requestId).set('Server-Timing',`step07;dur=${Date.now()-started}`).json({...payload,diagnostic:{requestId,durationMs:Date.now()-started,fallback:Boolean(fallbackReason),fallbackReason}});
+  if (typeof req.on === 'function') {
+    req.on('close', () => {
+      if (!res.writableEnded) {
+        console.warn(`[AI Mapping Analysis ABORTED] ReqID: ${requestId} | Duration: ${Date.now() - started}ms`);
+      }
+    });
+  }
   const { subject, grade, phase, tpData, atpData, currentMapping, step07Auto } = req.body || {};
 
   if (!tpData || !Array.isArray(tpData.items) || tpData.items.length === 0) {
