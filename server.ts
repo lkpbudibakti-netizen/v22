@@ -1,6 +1,7 @@
 import { serveCP4Analysis } from './server/cpAnalysisDeadline';
 import { CP4_BACKEND_SERVICE, CP4_BACKEND_PROTOCOL } from './src/services/cpAnalysisBackend';
 import { isCP4RequestId } from './src/services/cpAnalysisRun';
+import { redactStep07Diagnostic } from './src/services/step07DiagnosticsService';
 import { assignGeneratedTPCodes, TP_CODE_FORMAT_DESCRIPTION } from './src/services/tpCodeContract';
 import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets } from './src/services/learningPlanActivityMeetingService';
 import express from 'express';
@@ -3066,18 +3067,21 @@ Format respons WAJIB berupa JSON murni dengan skema berikut:
 
 // Endpoint: AI Analyze ATP Unit Mapping (Read-Only Analysis)
 app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
+  const started=Date.now(),candidateId=req.get('X-Request-ID');
+  const requestId=typeof candidateId==='string'&&/^[\w.:-]{1,100}$/.test(candidateId)?candidateId:`step07-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
+  const respond=(status:number,payload:Record<string,unknown>,fallbackReason?:string)=>res.status(status).set('X-Request-ID',requestId).set('Server-Timing',`step07;dur=${Date.now()-started}`).json({...payload,diagnostic:{requestId,durationMs:Date.now()-started,fallback:Boolean(fallbackReason),fallbackReason}});
   const { subject, grade, phase, tpData, atpData, currentMapping, step07Auto } = req.body || {};
 
   if (!tpData || !Array.isArray(tpData.items) || tpData.items.length === 0) {
-    return res.status(400).json({ error: 'Data TP canonical diperlukan untuk analisis pemetaan.' });
+    return respond(400,{ error: 'Data TP canonical diperlukan untuk analisis pemetaan.' });
   }
 
   if (!atpData || !Array.isArray(atpData.items) || atpData.items.length === 0) {
-    return res.status(400).json({ error: 'Data ATP canonical diperlukan untuk analisis pemetaan.' });
+    return respond(400,{ error: 'Data ATP canonical diperlukan untuk analisis pemetaan.' });
   }
 
   if (!currentMapping || !Array.isArray(currentMapping.units) || currentMapping.units.length === 0) {
-    return res.status(400).json({ error: 'Data draft Bab / Unit diperlukan untuk analisis pemetaan.' });
+    return respond(400,{ error: 'Data draft Bab / Unit diperlukan untuk analisis pemetaan.' });
   }
 
   const serverParams = {
@@ -3091,6 +3095,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
   };
 
   const apiKey = resolveApiKey(req);
+  let fallbackReason=apiKey?'AI_PROVIDER_INVALID_RESPONSE':'AI_NOT_CONFIGURED';
   if (apiKey) {
     try {
       const ai = createAIClient(apiKey);
@@ -3109,6 +3114,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
         try {
           parsed = JSON.parse(response.text);
         } catch {
+          fallbackReason='AI_PROVIDER_INVALID_JSON';
           const jsonMatch = response.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
           if (jsonMatch && jsonMatch[1]) {
             parsed = JSON.parse(jsonMatch[1]);
@@ -3117,7 +3123,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
 
         if (parsed && (Array.isArray(parsed.atpFindings) || Array.isArray(parsed.materialFindings) || Array.isArray(parsed.alignmentProposals) || Array.isArray(parsed.materialReviews) || (serverParams.step07Auto?.phase==='VERIFY'&&Array.isArray(parsed.step07SemanticChecks)))) {
           const sanitized = sanitizeMappingAnalysisResult(parsed, serverParams);
-          return res.json({
+          return respond(200,{
             success: true,
             data: sanitized,
             engine: 'gemini_ai',
@@ -3125,7 +3131,8 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
         }
       }
     } catch (err: any) {
-      console.warn('[AI Mapping Analysis] AI call failed, falling back to deterministic analyzer:', err?.message || err);
+      fallbackReason=err instanceof SyntaxError?'AI_PROVIDER_INVALID_JSON':'AI_PROVIDER_ERROR';
+      console.warn('[AI Mapping Analysis]',requestId,fallbackReason,redactStep07Diagnostic(err?.message || err,300));
     }
   }
 
@@ -3135,11 +3142,11 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
     ? 'AI_UNAVAILABLE_OR_INVALID: AI tidak memberikan respons yang dapat digunakan. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada rekomendasi semantik yang direkayasa.'
     : 'AI_NOT_CONFIGURED: layanan AI belum dikonfigurasi. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada relasi yang dipaksakan.';
   if(serverParams.step07Auto?.scope==='STEP07_AUTO_REPAIR')fallbackResult.analysisNotice=apiKey?'AI_UNAVAILABLE_OR_INVALID: verifikasi semantik otomatis tidak tersedia. Gap dipertahankan; tidak ada relasi yang dipaksakan.':'AI_NOT_CONFIGURED: API key server/BYOK belum tersedia pada permintaan ini. Auto-repair tidak mengarang dukungan semantik atau memaksakan relasi.';
-  return res.json({
+  return respond(200,{
     success: true,
     data: fallbackResult,
     engine: 'pedagogical_engine',
-  });
+  },fallbackReason);
 });
 
 // 4. Endpoint: AI Refine / Polish any custom text

@@ -2,6 +2,7 @@ import type { ATPData,TPData,ATPUnitMappingData } from '../types';
 import type { MappingAnalysisResult } from './aiService';
 import { loadStorageV5 } from './storageV5';
 import { computeAtpSubstantiveFingerprint,computeTpSubstantiveFingerprint } from './atpMappingActionApplyService';
+import {recordStep07Diagnostic,step07ErrorCategory} from './step07DiagnosticsService';
 
 export type Step07Stage='ANALYZE'|'PROPOSE'|'VERIFY'|'FILTER'|'APPLY'|'VALIDATE'|'SAVE';
 export type Step07Mode='INITIAL_MAPPING'|'REPAIR'|'VALIDATE';
@@ -39,20 +40,25 @@ export const step07CanonicalKey=(atp:ATPData,tp:TPData)=>{
 };
 export const step07UnitKey=(unit:ATPUnitMappingData['units'][number])=>JSON.stringify(unit);
 export function readStep07Checkpoint(context:Step07CheckpointContext):Step07Checkpoint|undefined {
+  try{
   const raw=localStorage.getItem(step07CheckpointKey(context));if(!raw)return;
   let value:Step07Checkpoint;try{value=JSON.parse(raw);}catch{throw new Error('CHECKPOINT_CORRUPT: checkpoint tidak dapat dibaca; data mentah dipertahankan.');}
   if(value.schemaVersion!==1)throw new Error('CHECKPOINT_SCHEMA: versi checkpoint tidak didukung; data dipertahankan.');
   if(!Number.isInteger(value.revision)||!value.units||typeof value.units!=='object'||Array.isArray(value.units)||!Array.isArray(value.beforeUnits))throw new Error('CHECKPOINT_CORRUPT: struktur checkpoint tidak valid.');
   if(value.context?.profileId!==context.profileId||value.context?.schoolId!==context.schoolId||value.context?.yearPlanId!==context.yearPlanId)throw new Error('CHECKPOINT_CONTEXT: namespace profil/sekolah tidak sesuai.');
   if(Object.values(value.units).some(p=>!p||!Array.isArray(p.applied)||!Array.isArray(p.events)||typeof p.source!=='string'||typeof p.dependency!=='string'))throw new Error('CHECKPOINT_CORRUPT: tahap Bab tidak valid; data mentah dipertahankan.');
-  return value;
+  recordStep07Diagnostic(context,{kind:'CHECKPOINT_READ',unitId:value.activeUnitId,success:true,persisted:true,reason:`schema=${value.schemaVersion}; revision=${value.revision}`});return value;
+  }catch(error){recordStep07Diagnostic(context,{kind:'CHECKPOINT_READ',success:false,category:step07ErrorCategory(error),reason:'Checkpoint gagal dibaca; data mentah dipertahankan.'});throw error;}
 }
 export function writeStep07Checkpoint(value:Step07Checkpoint):void {
+  const started=Date.now();try{
   const key=step07CheckpointKey(value.context),previous=localStorage.getItem(key);
   if(previous){const stored=JSON.parse(previous) as Step07Checkpoint;if(stored.revision!==value.revision)throw new Error('CHECKPOINT_CONFLICT: checkpoint berubah pada proses lain.');if(previous===JSON.stringify(value))return;}
   const next={...value,revision:value.revision+1};
   try{localStorage.setItem(key,JSON.stringify(next));}catch{throw new Error('CHECKPOINT_SAVE_FAILED: penyimpanan lokal penuh/tidak tersedia. Proses dihentikan; draft tersimpan sebelumnya tetap aman.');}
   value.revision=next.revision;
+  recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,phase:value.activeUnitId?value.units[value.activeUnitId]?.stage:undefined,success:true,persisted:true,durationMs:Date.now()-started,reason:`revision=${value.revision}`});
+  }catch(error){recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,success:false,persisted:false,category:step07ErrorCategory(error),reason:'Checkpoint gagal dipersist; snapshot terakhir tidak direset.'});throw error;}
 }
 /** Web Locks provide cross-tab/process exclusion and release automatically after a crash.
  * Fail closed on unsupported surfaces rather than pretend localStorage read/write is a lock. */

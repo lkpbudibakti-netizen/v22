@@ -14,6 +14,9 @@ import {sanitizeMappingAnalysisResult} from '../server/mappingAnalysis';
 import {createReadyV21WorkflowFixture} from './fixtures/v21ReadyWorkflowFixture';
 import {saveStorageV5,loadStorageV5,saveATPUnitMappingV5,getATPUnitMappingV5} from '../src/services/storageV5';
 import {copyCPAnalysisDiagnosis} from '../src/services/cpAnalysisAIDiagnostics';
+import {analyzeATPUnitMappingWithAI} from '../src/services/aiService';
+import {buildStep07FullDiagnosticReport} from '../src/services/step07FullDiagnosticReport';
+import {readStep07Diagnostics} from '../src/services/step07DiagnosticsService';
 import type {ATPData,TPData,ATPUnitMappingData,Step07AutoRequest,Step07SemanticCheck} from '../src/types';
 import type {MappingAnalysisResult} from '../src/services/aiService';
 const raw=JSON.parse(readFileSync('scripts/fixtures/pjokClass6MappingDiagnostic.json','utf8'));
@@ -126,7 +129,7 @@ await test('Cross-tab exclusion is fail-closed; profile namespaces are independe
 await test('Single diagnostic control uses clipboard fallback and exposes selectable text when both APIs fail',async()=>{
   const f=seed(),html=renderToStaticMarkup(React.createElement(ATPUnitMappingManager,{...f,onSaveMapping:()=>true,onNextStep:()=>{},onBackToATP:()=>{}}));
   assert.equal((html.match(/id="btn-copy-mapping-diagnostic"/g)||[]).length,1);
-  const source=readFileSync('src/components/ATPUnitMappingManager.tsx','utf8');assert.equal((source.match(/onClick=\{handleCopyDiagnostic\}/g)||[]).length,1);assert(source.includes('setManualDiagnostic'));assert(source.includes('STEP07 PERSISTENT CHECKPOINT'));
+  const source=readFileSync('src/components/ATPUnitMappingManager.tsx','utf8');assert.equal((source.match(/onClick=\{handleCopyDiagnostic\}/g)||[]).length,1);assert(source.includes('setManualDiagnostic'));assert(source.includes('buildStep07FullDiagnosticReport'));
   const nav=globalThis.navigator as any;Object.defineProperty(nav,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('Denied');}}});
   const prior=(globalThis as any).document;let selected=false,removed=false;
   (globalThis as any).document={activeElement:null,createElement:()=>({style:{},setAttribute:()=>{},select:()=>{selected=true;},remove:()=>{removed=true;}}),body:{appendChild:()=>{}},execCommand:()=>true};
@@ -180,5 +183,22 @@ await test('ANALYZE timeout keeps legacy-complete data locked; SAVE wait timeout
   locked.add('v22:step07:v5-write');try{await assert.rejects(withStep07StorageWrite(()=>true,5),/STEP07_TIMEOUT/);}finally{locked.delete('v22:step07:v5-write');}
   const supported=navigator.locks;Object.defineProperty(navigator,'locks',{configurable:true,value:undefined});
   try{const blocked=await runStep07AutoRepair(options(f));assert(blocked.issues.some(i=>i.includes('CHECKPOINT_LOCK_UNAVAILABLE')));assert(!blocked.saved);}finally{Object.defineProperty(navigator,'locks',{configurable:true,value:supported});}
+});
+await test('5/9 Bab, 12 semantic issues, BLOCKED to GLOBAL PROPOSE and HTML response are fully diagnosable without resetting checkpoint',async()=>{
+  const f=seed(),mapping=structuredClone(completeFixture);mapping.units.slice(5).forEach(u=>{u.actionHistory=[];u.materials.forEach(m=>m.titleHistory=[]);});
+  const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=mapping;saveStorageV5(state);
+  const before=resolveATPUnitMappingReadiness(mapping,f.atp,f.tp,undefined,{evaluateRepair:true});assert.equal(before.repairIssues!.length,12);
+  const priorFetch=globalThis.fetch;globalThis.fetch=async()=>new Response('<!doctype html><html>API_KEY=DO_NOT_STORE</html>',{status:200,headers:{'content-type':'text/html','x-request-id':'req-global-html'}});
+  try{
+    const context=resolveStep07CheckpointContext('y');
+    const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>r.execution?.reconciliation?analyzeATPUnitMappingWithAI({currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r},{signal:s,diagnosticContext:context}):{summary:{} as any,atpFindings:[],materialFindings:[],alignmentProposals:[]}}));
+    assert(!result.saved);assert(result.issues.some(i=>i.includes('API_NON_JSON_RESPONSE')));
+    const cp=readStep07Checkpoint(context)!;assert.equal(Object.values(cp.units).filter(p=>p.status==='BLOCKED').length,4);
+    assert(readStep07Diagnostics(context).events.some(e=>e.kind==='GLOBAL_ENTER'&&e.category==='GLOBAL_WITH_BLOCKED'));
+    const rawBefore=memory.get(step07CheckpointKey(context)),report=buildStep07FullDiagnosticReport({mapping:result.mapping,atp:f.atp,tp:f.tp,context});
+    assert(report.includes('Bab selesai: 5/9; masalah tersisa: 12'));assert(report.includes('API_NON_JSON_RESPONSE'));assert(report.includes('req-global-html'));assert(report.includes('text/html'));assert(report.includes('GLOBAL'));
+    assert.equal(memory.get(step07CheckpointKey(context)),rawBefore,'copy does not reset/rewrite checkpoint');
+    assert(!report.includes('<!doctype'));assert(!JSON.stringify([...memory.values()]).includes('DO_NOT_STORE'));assert(!result.readiness.canProceed);
+  }finally{globalThis.fetch=priorFetch;}
 });
 console.log('PASS '+count+' hybrid checkpoint cases. Live Gemini NOT VERIFIED.');

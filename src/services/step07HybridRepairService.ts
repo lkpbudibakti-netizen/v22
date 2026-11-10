@@ -5,6 +5,7 @@ import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
 import { computeMappingFingerprint } from './atpMappingActionApplyService';
 import { step07PersistedKey } from './step07AutoExecutionPolicy';
 import { getATPUnitMappingV5,loadStorageV5 } from './storageV5';
+import {recordStep07Diagnostic,step07ErrorCategory,step07ProposalFingerprint} from './step07DiagnosticsService';
 import { readStep07Checkpoint,writeStep07Checkpoint,withStep07CheckpointLock,withStep07StorageWrite,resolveStep07CheckpointContext,step07CanonicalKey,step07UnitKey,type Step07Checkpoint,type Step07UnitCheckpoint,type Step07Stage,type Step07Mode } from './step07CheckpointService';
 
 type Pass=(options:Step07RepairOptions)=>Promise<Step07RepairResult>;
@@ -20,6 +21,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
   const allApplied=new Set<string>();
   const context=options.checkpointContext!,canonical=step07CanonicalKey(options.atp,options.tp);
   const fallback=(message:string):Step07RepairResult=>{
+    recordStep07Diagnostic(context,{kind:'RUN_ERROR',success:false,category:step07ErrorCategory(message),reason:message});
     const readiness=resolveATPUnitMappingReadiness(current,options.atp,options.tp),issues=[message,...(latest?.issues || [])];
     return {...latest,mapping:current,readiness,validation:readiness.validationResult!,progress:latest?.progress || {initial:assess(current,options).repairIssues?.length || 0,resolved:0,remaining:assess(current,options).repairIssues?.length || 0},outcome:'INCOMPLETE',saved:false,persisted:latest?.persisted || false,stale:latest?.stale || !options.isCurrent() || /CHECKPOINT_STALE|STEP07_STALE/.test(message),rounds:latest?.rounds || 0,issues,appliedActions:[...allApplied]};
   };
@@ -27,6 +29,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     let persisted=getATPUnitMappingV5(context.yearPlanId);
     let storedKey=persisted?step07PersistedKey(persisted,options.atp,options.tp):'NONE';
     let root=readStep07Checkpoint(context);
+    recordStep07Diagnostic(context,{kind:'RUN_START',unitId:root?.activeUnitId,phase:root?.activeUnitId?root.units[root.activeUnitId]?.stage:undefined,cache:root?'RESUME':'NEW',reason:root?`Checkpoint tersedia; revision=${root.revision}`:'Belum ada checkpoint.'});
     const sameIdentity=root?.context.identityFingerprint===context.identityFingerprint;
     // Restore a buffered stage only when no manual/persisted source has changed.
     if(root&&sameIdentity&&root.canonical===canonical&&root.baseStoredKey===storedKey&&root.workingMapping&&(!persisted||computeMappingFingerprint(current.units,options.atp,options.tp)===computeMappingFingerprint(persisted.units,options.atp,options.tp)))current=structuredClone(root.workingMapping);
@@ -82,6 +85,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       const exists=id==='GLOBAL'||current.units.some(u=>u.id===id);
       const expected=entry.status==='DONE'?dependency(id):canonical;
       if(!exists||entry.source!==source(id)||entry.dependency!==expected){
+        recordStep07Diagnostic(context,{kind:'INVALIDATION',unitId:id,phase:entry.stage,category:'SOURCE_CHANGED',cache:'INVALID',reason:!exists?'Bab tidak ada.':entry.source!==source(id)?'Struktur/redaksi/relasi/history Bab berubah.':'Dependensi TP/ATP berubah.'});
         checkpoint.invalidated ||= [];checkpoint.invalidated.push({unitId:id,reason:!exists?'Bab dihapus dari draft.':entry.source!==source(id)?'Struktur/redaksi/relasi Bab berubah.':'Dependensi TP/ATP berubah.',checkpoint:entry});
         if(exists&&id!=='GLOBAL'&&entry.source!==source(id)){
           const manual=current.units.find(u=>u.id===id)!;
@@ -102,6 +106,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       checkpoint.activeUnitId=id;
       const work=(stage:Step07Stage,status:string)=>options.onWork?.({mode:checkpoint.mode,activeUnitId:id,stage,completed:completed(),total:current.units.length,checkpointStatus:status});
       const event=(stage:Step07Stage,success:boolean,reason:string,actionId?:string)=>{
+        recordStep07Diagnostic(context,{kind:'STAGE',unitId:id,phase:stage,success,reason:(actionId?`action=${actionId}; `:'')+reason,category:success?'OK':step07ErrorCategory(reason)});
         if(!point.events.some(e=>e.stage===stage&&e.actionId===actionId&&e.success===success&&e.reason===reason))point.events.push({stage,success,reason,actionId});
       };
       const stage=(phase:Step07Stage,data?:Parameters<NonNullable<Step07RepairOptions['onCheckpoint']>>[1])=>{checkFresh();checkpoint.activeUnitId=id;point.stage=phase;work(phase,'Checkpoint tahap tersimpan');persist();options.onCheckpoint?.(phase,data || {mapping:current,analysis:point.analysis,success:true});};
@@ -118,12 +123,14 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
           else if(point.verification&&request.actions?.every(a=>point.verification!.step07SemanticChecks?.some(c=>c.actionId===a.id)))cached=point.verification;
         }
         if(cached){
+          recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase,cache:'HIT',success:true,reason:`Tahap dipakai kembali; applied IDs=${point.applied.length}`});
           if(phase==='PROPOSE'){
             point.proposal=cached;stage('PROPOSE');
             return {...structuredClone(cached),alignmentProposals:cached.alignmentProposals?.filter(p=>!point.applied.includes(p.id))};
           }
           stage('VERIFY');return structuredClone(cached);
         }
+        recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase,cache:'MISS',success:false,reason:!point.cacheUsable?'cacheUsable=false (baru atau dinonaktifkan setelah VALIDATE).':phase==='VERIFY'?'Bukti tersimpan tidak mencakup ID tindakan diminta.':'Respons tahap belum tersedia.'});
         const size=JSON.stringify({mapping:projection,request:enriched,atp:options.atp,tp:options.tp}).length;
         if(calls>=maxCalls||input+size>maxInput)throw new Error('STEP07_BUDGET_LIMIT: anggaran checkpoint tercapai; Lanjutkan Perbaikan tersedia.');
         if(Date.now()>=deadline)throw new Error('STEP07_TIMEOUT: batas waktu checkpoint tercapai.');
@@ -133,6 +140,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
         catch(error){if(!signal.aborted){event(phase,false,error instanceof Error?error.message:String(error));persist();}throw error;}
         point.responses ||= [];point.responses.push({phase,source:source(id),canonical,result:structuredClone(response)});
         if(phase==='PROPOSE'){
+          if(point.analysis&&step07ProposalFingerprint(point.analysis)===step07ProposalFingerprint(response))recordStep07Diagnostic(context,{kind:'PROPOSAL',unitId:id,phase,category:'REPEATED_PROPOSAL',reason:'Target, redaksi, dan relasi proposal sama dengan analisis sebelumnya; ID AI diabaikan saat pembandingan.'});
           point.analysis=response;point.proposal=undefined;point.verification=undefined;point.cacheUsable=true;point.applied=[];
           event('ANALYZE',true,'Analisis AI tersimpan.');stage('ANALYZE');
           point.proposal=response;event('PROPOSE',true,'Proposal tersimpan; belum diterapkan.');
@@ -141,7 +149,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
         }else{point.verification=response;event('VERIFY',true,'Hasil verifikasi tersimpan; otorisasi tetap diperiksa engine.');stage('VERIFY');}
         return response;
       };
-      const result=await pass({...options,checkpointContext:undefined,baselineUnits:checkpoint.beforeUnits,baselineIssueIds:checkpoint.initialIssueIds,activeUnitId:id==='GLOBAL'?undefined:id,isolatedActions:true,mapping:current,persistedMapping:persisted,saveInitialProgress:!persisted||computeMappingFingerprint(current.units,options.atp,options.tp)!==computeMappingFingerprint(persisted.units,options.atp,options.tp),
+      const result=await pass({...options,checkpointContext:undefined,diagnosticContext:context,baselineUnits:checkpoint.beforeUnits,baselineIssueIds:checkpoint.initialIssueIds,activeUnitId:id==='GLOBAL'?undefined:id,isolatedActions:true,mapping:current,persistedMapping:persisted,saveInitialProgress:!persisted||computeMappingFingerprint(current.units,options.atp,options.tp)!==computeMappingFingerprint(persisted.units,options.atp,options.tp),
         timeoutMs:Math.max(1,deadline-Date.now()),analyze,
         isCurrent:()=>{try{checkFresh();return true;}catch{return false;}},
         onCheckpoint:(phase,data)=>{
@@ -154,6 +162,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
             const done=id==='GLOBAL'?assess(current,options).canProceed:!(assess(current,options).repairIssues || []).some(i=>i.unitId===id);
             point.status=done?'DONE':'BLOCKED';point.dependency=done?dependency(id):canonical;
             point.cacheUsable=false;
+            recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase:'VALIDATE',cache:'DISABLED',reason:`Kebijakan existing: cache dinonaktifkan setelah VALIDATE; status=${point.status}. Tahap berikut dapat menghasilkan proposal baru untuk gap tersisa.`});
             for(const p of point.proposal?.alignmentProposals || [])if(p.action&&!point.applied.includes(p.id)&&!point.events.some(e=>e.actionId===p.id&&!e.success))event('FILTER',false,'Tidak lolos fokus/gap, redundan, atau belum diperlukan; tidak diterapkan.',p.id);
           }
           stage(phase,data);
@@ -168,6 +177,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
           event('SAVE',true,'Draft Bab tersimpan atomik di V5.');stage('SAVE');return true;
         },deadline-Date.now())});
       result.appliedActions.forEach(id=>allApplied.add(id));result.appliedActions=[...allApplied];latest=result;current=structuredClone(result.mapping);
+      recordStep07Diagnostic(context,{kind:'TERMINAL',unitId:id,phase:point.stage,category:result.outcome,success:result.saved||point.status==='DONE',persisted:result.persisted,reason:`checkpoint=${point.status}; remaining=${result.progress.remaining}; ${result.issues.join('; ')}`});
       if(result.persisted&&persisted)current=structuredClone(persisted);
       if(!result.persisted&&point.stage==='SAVE'&&persisted&&computeMappingFingerprint(persisted.units,options.atp,options.tp)===computeMappingFingerprint(current.units,options.atp,options.tp)){current=structuredClone(persisted);}
       event(point.stage,!result.stale,result.issues.join('; ') || result.outcome);persist();
@@ -184,6 +194,8 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       if(result.stale||['TIMEOUT','BUDGET_LIMIT','SAVE_FAILED'].includes(result.outcome)||result.issues.some(i=>i.includes('CHECKPOINT_')))return result;
     }
     // A full shared readiness check and cross-Bab reconciliation always finish the run.
+    const blocked=current.units.filter(u=>(assess(current,options).repairIssues || []).some(i=>i.unitId===u.id)).map(u=>u.id);
+    recordStep07Diagnostic(context,{kind:'GLOBAL_ENTER',unitId:'GLOBAL',phase:'PROPOSE',category:blocked.length?'GLOBAL_WITH_BLOCKED':'GLOBAL_VALIDATION',reason:`Bab lengkap=${current.units.length-blocked.length}/${current.units.length}; BLOCKED=[${blocked.join(', ')}]. Alur existing tetap ke GLOBAL setelah STAGNATED/REPEATED_ISSUES/INCOMPLETE; hanya stale, timeout, budget, save failure, atau CHECKPOINT error menghentikan antrean.`});
     return await execute('GLOBAL');
   });}catch(error){return fallback(error instanceof Error?error.message:String(error));}
 }

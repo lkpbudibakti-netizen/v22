@@ -29,6 +29,7 @@ import {
   normalizeAIResources,
 } from './learningPlanService';
 import { recordDiagnosticEvent } from './diagnosticService';
+import {recordStep07Diagnostic,readStep07AnalysisResponse,Step07AnalysisResponseError,step07ErrorCategory,type Step07DiagnosticEvent,type Step07DiagnosticScope} from './step07DiagnosticsService';
 import { assignGeneratedTPCodes, CANONICAL_MERDEKA_TP_CODE_REGEX } from './tpCodeContract';
 
 export interface CanonicalCPAnalysisResult {
@@ -256,6 +257,9 @@ export async function waitForAIBackendReady(
 
 export interface AIFetchPolicy {
   preferLocalKeyOnFirstRequest?: boolean;
+  requireJSONProbe?:boolean;
+  observe?:(event:{response?:Response;durationMs:number;attempt:number;error?:unknown})=>void;
+  observeProbe?:(event:{attempt:number;engine?:string;decision:string})=>void;
 }
 
 export async function aiFetch(
@@ -263,6 +267,8 @@ export async function aiFetch(
   options: RequestInit = {},
   policy: AIFetchPolicy = {}
 ): Promise<Response> {
+  let attempt=0;
+  const probe=(decision:string,body?:any)=>{try{policy.observeProbe?.({attempt,engine:typeof body?.engine==='string'?body.engine:undefined,decision});}catch{/* diagnostic only */}};
   const makeRequest = async (currentKey?: string | null): Promise<Response> => {
     const headers = new Headers(options.headers || {});
     if (currentKey && currentKey.trim()) {
@@ -270,10 +276,14 @@ export async function aiFetch(
     } else {
       headers.delete('X-Gemini-API-Key');
     }
-    return fetch(url, {
+    const started=Date.now();attempt++;
+    try{const response=await fetch(url, {
       ...options,
       headers,
     });
+      try{policy.observe?.({response,durationMs:Date.now()-started,attempt});}catch{/* diagnostic only */}
+      return response;
+    }catch(error){try{policy.observe?.({durationMs:Date.now()-started,attempt,error});}catch{/* diagnostic only */}throw error;}
   };
 
   const localKey = getGeminiApiKey();
@@ -290,10 +300,11 @@ export async function aiFetch(
   // 2. Jika response 200 adalah pedagogical_engine fallback DAN user punya local BYOK,
   // beri prioritas pada Gemini dengan retry TEPAT SATU KALI memakai key user.
   const activeLocalKey = getGeminiApiKey();
-  if (res.ok && activeLocalKey && activeLocalKey.trim()) {
+  if (res.ok && activeLocalKey && activeLocalKey.trim()&&(!policy.requireJSONProbe||responseMime(res.headers.get('content-type'))==='json')) {
     try {
       const cloned = typeof res.clone === 'function' ? res.clone() : res;
       const bodyJson = await cloned.json().catch(() => null);
+      if(policy.requireJSONProbe)probe(bodyJson?.engine==='pedagogical_engine'?'SERVER_FALLBACK':'FIRST_RESPONSE_PROBED',bodyJson);
       if (bodyJson && bodyJson.engine === 'pedagogical_engine') {
         try {
           const retryRes = await makeRequest(activeLocalKey.trim());
@@ -308,6 +319,7 @@ export async function aiFetch(
             if (contentType.toLowerCase().includes('application/json')) {
               const retryCloned = typeof retryRes.clone === 'function' ? retryRes.clone() : retryRes;
               const retryBody = await retryCloned.json().catch(() => null);
+              if(policy.requireJSONProbe)probe(retryBody?.engine==='gemini'?'RETRY_ENGINE_ACCEPTED':retryBody?'RETRY_ENGINE_MISMATCH':'RETRY_INVALID_JSON',retryBody);
               if (
                 retryBody &&
                 typeof retryBody === 'object' &&
@@ -356,9 +368,11 @@ export async function aiFetch(
           }
           // Jika retry menghasilkan text/html, 5xx, non-gemini, atau malformed JSON:
           // kembalikan fallback valid pertama
+          if(policy.requireJSONProbe)probe('FIRST_FALLBACK_RETAINED');
           return res;
         } catch {
           // Network / fetch failure on retry: gunakan fallback valid pertama
+          if(policy.requireJSONProbe)probe('RETRY_FAILED_FIRST_FALLBACK');
           return res;
         }
       }
@@ -1376,39 +1390,43 @@ export interface AnalyzeATPUnitMappingParams {
 
 export async function analyzeATPUnitMappingWithAI(
   params: AnalyzeATPUnitMappingParams,
-  options?:{signal?:AbortSignal}
+  options?:{signal?:AbortSignal;diagnosticContext?:Step07DiagnosticScope}
 ): Promise<MappingAnalysisResult> {
+  const scope=options?.diagnosticContext || {yearPlanId:params.currentMapping.academicSettingId};
+  const phase=params.step07Auto?.phase || 'ANALYZE',unitId=params.step07Auto?.execution?.activeUnitId || (params.step07Auto?.execution?.reconciliation?'GLOBAL':undefined);
+  const requestId='step07-'+(globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+  const started=Date.now();let metadata:Partial<Step07DiagnosticEvent>={phase,unitId,requestId};
   try {
     const res = await aiFetch('/api/ai/analyze-atp-unit-mapping', {
       ...(options?.signal?{signal:options.signal}:{}),
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json','X-Request-ID':requestId },
       body: JSON.stringify(params),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      if (errData.code === 'AI_NOT_CONFIGURED') {
-        throw new Error('Layanan AI belum dikonfigurasi pada server.');
-      }
-      throw new Error(errData.error || `Gagal menganalisis pemetaan Unit/Bab (Status ${res.status})`);
-    }
-
-    const data = await res.json();
+    },{requireJSONProbe:true,observeProbe:event=>recordStep07Diagnostic(scope,{kind:'HTTP_PROBE',phase,unitId,requestId,attempt:event.attempt,engine:event.engine,category:event.decision==='RETRY_ENGINE_MISMATCH'?'AI_RETRY_ENGINE_MISMATCH':event.decision,fallback:event.decision==='FIRST_FALLBACK_RETAINED'?'FIRST_VALID_FALLBACK':undefined,reason:event.decision}),observe:event=>{
+      const mime=event.response?.headers.get('content-type') || 'missing';
+      recordStep07Diagnostic(scope,{kind:'HTTP_ATTEMPT',phase,unitId,requestId:event.response?.headers.get('x-request-id') || requestId,attempt:event.attempt,durationMs:event.durationMs,httpStatus:event.response?.status,contentType:mime.split(';')[0],redirected:event.response?.redirected,success:event.response?.ok&&responseMime(mime)==='json',category:event.error?(options?.signal?.aborted?'API_ABORTED':'API_NETWORK_ERROR'):responseMime(mime)!=='json'?'API_NON_JSON_RESPONSE':event.response?.ok?'HTTP_JSON_RESPONSE':'API_HTTP_ERROR'});
+    }});
+    metadata={...metadata,requestId:res.headers.get('x-request-id') || requestId,httpStatus:res.status,contentType:res.headers.get('content-type') || 'missing',durationMs:Date.now()-started,redirected:res.redirected};
+    const data = await readStep07AnalysisResponse(res,metadata);
     if (
       !data.data ||
       typeof data.data.summary !== 'object' ||
       !Array.isArray(data.data.atpFindings) ||
       !Array.isArray(data.data.materialFindings)
     ) {
-      throw new Error('Hasil respon Analisis Pemetaan tidak memuat struktur data yang valid.');
+      throw new Step07AnalysisResponseError('API_INVALID_CONTRACT',metadata,'Hasil Analisis Pemetaan tidak memuat struktur data yang valid.');
     }
+    const fallback=data.engine==='pedagogical_engine';
+    recordStep07Diagnostic(scope,{...metadata,kind:'HTTP_RESULT',success:true,engine:data.engine,fallback:fallback?(data.diagnostic?.fallbackReason || 'DETERMINISTIC_FALLBACK'):'NONE',category:fallback?'AI_FALLBACK':'OK',durationMs:Date.now()-started});
     return {
       ...data.data,
       engine: data.engine,
     };
   } catch (err) {
-    throw new Error(formatAIErrorMessage(err, 'menganalisis pemetaan Bab & Lingkup Materi'));
+    const category=err instanceof Step07AnalysisResponseError?err.category:options?.signal?.aborted?'API_ABORTED':step07ErrorCategory(err)==='UNCLASSIFIED_ERROR'?'API_NETWORK_ERROR':step07ErrorCategory(err);
+    const safe=err instanceof Step07AnalysisResponseError?err:new Step07AnalysisResponseError(category,metadata,options?.signal?.aborted?'Permintaan dibatalkan atau timeout.':'Permintaan analisis gagal sebelum respons JSON valid.');
+    recordStep07Diagnostic(scope,{...metadata,...safe.metadata,kind:'HTTP_RESULT',phase,unitId,success:false,category,reason:safe.message,durationMs:Date.now()-started,fallback:'NONE_RESPONSE_REJECTED'});
+    throw safe;
   }
 }
 

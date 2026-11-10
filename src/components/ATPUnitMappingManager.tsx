@@ -1,6 +1,8 @@
 import { runStep07AutoRepair, step07RepairColor, undoStep07AutoRepair } from '../services/step07AutoRepairService';
 import { resolveStep07CheckpointContext,readStep07Checkpoint,type Step07WorkStatus } from '../services/step07CheckpointService';
 import { copyCPAnalysisDiagnosis } from '../services/cpAnalysisAIDiagnostics';
+import {buildStep07FullDiagnosticReport} from '../services/step07FullDiagnosticReport';
+import {redactStep07Diagnostic} from '../services/step07DiagnosticsService';
 import { AlignmentProposalReview, inlineMappingChanges } from './AlignmentProposalReview';
 import { deriveMappingAtpIds } from '../services/atpMappingLineageService';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -897,7 +899,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     const result=await runStep07AutoRepair({mapping:initial,persistedMapping:mapping,atp:atpRef.current,tp:tpRef.current,
       checkpointContext,onWork:setCheckpointWork,
       isCurrent:()=>requestId===analysisRequestIdRef.current&&source===generationContextRef.current,
-      analyze:(draft,step07Auto,signal)=>analyzeATPUnitMappingWithAI({subject:academicSetting?.subject,grade:academicSetting?.grade,phase:academicSetting?.phase,tpData:tpRef.current,atpData:atpRef.current,currentMapping:draft,step07Auto},{signal}),
+      analyze:(draft,step07Auto,signal)=>analyzeATPUnitMappingWithAI({subject:academicSetting?.subject,grade:academicSetting?.grade,phase:academicSetting?.phase,tpData:tpRef.current,atpData:atpRef.current,currentMapping:draft,step07Auto},{signal,diagnosticContext:checkpointContext}),
       save:onSaveMapping,onStatus:setAutoPhase,onProgress:setRepairProgress,
     });
     if(requestId!==analysisRequestIdRef.current)return;
@@ -1074,19 +1076,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
   const handleCopyDiagnostic = async () => {
     try {
-      const currentDraft = buildCurrentMappingDraft();
-      const validation = validateATPUnitMappingCanonical(currentDraft, atp, tp);
-      let report = buildATPUnitMappingDiagnosticReport({
-        academicSetting,
-        mapping: currentDraft,
-        atp,
-        tp,
-        validation,
-        analysisResult: lastAnalysisSnapshot || analysisResult,
-        appliedActionIds: lastAppliedActionIds,
-      });
-
-      try{const checkpoint=readStep07Checkpoint(resolveStep07CheckpointContext(currentDraft.academicSettingId));report+='\n\nSTEP07 PERSISTENT CHECKPOINT\n'+JSON.stringify(checkpoint || null,null,2);}catch(error){report+='\nCHECKPOINT_DIAGNOSTIC_ERROR: '+String(error);}
+      const report=buildStep07FullDiagnosticReport({mapping:buildCurrentMappingDraft(),atp,tp,work:checkpointWork,error:analysisError});
       const copied=await copyCPAnalysisDiagnosis(report);
       setManualDiagnostic(copied==='manual'?report:'');
       setCopyDiagnosticNotice(copied==='copied'?'Diagnosis berhasil disalin.':'Clipboard ditolak. Pilih dan salin laporan pada kotak di bawah.');
@@ -1094,7 +1084,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         setCopyDiagnosticNotice((prev) => (prev === 'Diagnosis berhasil disalin.' ? null : prev));
       }, 3500);
     } catch(error) {
-      setCopyDiagnosticNotice('Diagnosis gagal dibuat/disalin: '+(error instanceof Error?error.message:String(error)));
+      setCopyDiagnosticNotice('Diagnosis gagal dibuat/disalin: '+redactStep07Diagnostic(error instanceof Error?error.message:String(error)));
       setTimeout(() => {
         setCopyDiagnosticNotice((prev) => (prev === 'Gagal menyalin diagnosis ke clipboard.' ? null : prev));
       }, 3500);
@@ -1414,7 +1404,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           </button>
         </div>
         <p className="text-xs text-slate-600">Susun dengan AI mengusulkan struktur baru dan jumlah Bab otomatis berdasarkan TP/ATP. Analisis &amp; Selaraskan menelaah struktur draf yang sudah ada.</p>
-        <button id="btn-copy-mapping-diagnostic" type="button" onClick={handleCopyDiagnostic} className="text-xs underline">Salin Diagnostik</button>
+        <button id="btn-copy-mapping-diagnostic" type="button" onClick={handleCopyDiagnostic} className="text-xs underline">Salin Diagnostik Lengkap</button>
         {manualDiagnostic&&<textarea aria-label="Laporan diagnostik untuk disalin manual" readOnly value={manualDiagnostic} onFocus={event=>event.currentTarget.select()} className="w-full h-40 border rounded-lg p-2 text-xs"/>}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Target Count Input & Add Bab */}

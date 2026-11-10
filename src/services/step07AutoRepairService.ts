@@ -10,8 +10,10 @@ import { runHybridStep07Repair } from './step07HybridRepairService';
 import type { Step07CheckpointContext,Step07Stage,Step07WorkStatus } from './step07CheckpointService';
 import type { ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
 import type { MappingReadiness } from './atpMappingReadinessService';
+import {recordStep07Diagnostic,type Step07DiagnosticScope} from './step07DiagnosticsService';
 
 export interface Step07RepairOptions {
+  diagnosticContext?:Step07DiagnosticScope;
   checkpointContext?:Step07CheckpointContext;
   activeUnitId?:string;
   isolatedActions?:boolean;
@@ -62,6 +64,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   reportProgress();
   const seenStates=new Set([computeMappingFingerprint(current.units,options.atp,options.tp)]);
   let outcome:Step07AutoRepairRun['outcome']='INCOMPLETE';
+  const diagnosticScope=options.diagnosticContext || {yearPlanId:initial.academicSettingId};
   const issues:string[]=[],appliedActions:string[]=[];
   let executionStage:Step07Stage='ANALYZE';
   const deadline=Date.now()+Math.max(1,Math.min(options.timeoutMs ?? 120000,120000));
@@ -196,6 +199,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
     try{if(!fresh())throw new Error('STEP07_STALE');if(!await (options.persist?options.persist(structuredClone(current)):options.save(structuredClone(current))))throw new Error('Penyimpanan atomik ditolak.');persisted=true;saved=outcome==='COMPLETE';if(saved)options.onStatus?.('Selesai');}
     catch(error){outcome='SAVE_FAILED';meta.outcome=outcome;const message=error instanceof Error?error.message:String(error);meta.issues.push(message);if(fresh())try{options.onCheckpoint?.('SAVE',{mapping:current,issues:[message],success:false});}catch(logError){meta.issues.push(String(logError));}}
   }
+  recordStep07Diagnostic(diagnosticScope,{kind:'PASS_RESULT',unitId:options.activeUnitId || 'GLOBAL',phase:executionStage,category:outcome,success:saved,persisted,reason:`rounds=${rounds}; initial=${progress!.initial}; resolved=${progress!.resolved}; remaining=${progress!.remaining}; ${meta.issues.join('; ')}`});
   return {mapping:current,analysis,validation,readiness:resolveATPUnitMappingReadiness(current,options.atp,options.tp),progress:progress!,outcome,saved,persisted,stale,rounds,issues:meta.issues,appliedActions};
 }
 
