@@ -1,4 +1,4 @@
-import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, Step07SemanticCheck } from '../types';
+import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, Step07SemanticCheck, MappingChangeRecord } from '../types';
 import type { AlignmentAction } from './mappingAlignmentService';
 import type {MappingAnalysisResult} from './aiService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
@@ -69,13 +69,34 @@ export function step07PersistedKey(mapping:ATPUnitMappingData,atp:ATPData,tp:TPD
 const normalized=(value:string)=>value.normalize('NFC').toLocaleLowerCase('id').trim().replace(/\s+/g,' ');
 const contains=(text:string,quote:unknown,min:number)=>typeof quote==='string'&&quote.trim().length>=Math.min(min,text.trim().length)&&!!quote.trim()&&normalized(text).includes(normalized(quote));
 
+/** Source citations are not a pedagogical explanation. The independent verifier
+ * must explain the activity-to-competence relationship for implicit short titles. */
+export function hasStep07LinkRationale(evidence:Step07SemanticCheck['evidence'][number]):boolean {
+  return typeof evidence.relationshipReason==='string' && evidence.relationshipReason.trim().length>=24;
+}
+
+/** Recheck persisted proof against current canonical sources; IDs or a verdict alone
+ * are insufficient to unlock scoped readiness after reload. */
+export function hasStep07StoredSemanticSupport(record:MappingChangeRecord,material:ATPUnitMapping['materials'][number],tp:TPData):boolean {
+  const check=record.semanticVerification;
+  if(!check||check.verdict!=='SUPPORTED'||typeof check.reason!=='string'||!check.reason.trim()||(check.missingEvidence!==undefined&&(!Array.isArray(check.missingEvidence)||check.missingEvidence.length>0))||!Array.isArray(check.evidence)||!record.reviewedTpIds?.length)return false;
+  return record.reviewedTpIds.every(id=>{
+    const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id);
+    if(!objective||entries.length!==1)return false;
+    const e=entries[0],original=record.kind==='REALIGN'?material.title:(record.before || material.title);
+    if(!contains(objective.statement,e.tpQuote,12)||!contains(original,e.materialQuote,8)||!contains(objective.statement,e.competenceQuote,4)||!contains(original,e.contextQuote,8)||!contains(material.title,e.contextQuote,8))return false;
+    if(!(objective.competence || '').split(/[,;]/).some(v=>v.trim()&&normalized(e.competenceQuote).includes(normalized(v.trim()))))return false;
+    return contains(material.title,e.competenceQuote,4)||(record.kind==='REALIGN'&&hasStep07LinkRationale(e));
+  });
+}
+
 /** A scoped authority check, not a replacement semantic engine or canonical validator. */
 export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:AlignmentAction[],atp:ATPData,tp:TPData,permit:Step07AutoPermit,isExistingAutomatic:(action:AlignmentAction)=>boolean=()=>false):string[] {
   const issues:string[]=[];
   if(permit.scope!=='STEP07_AUTO_REPAIR'||!Array.isArray(permit.checks)||permit.sourceKey!==step07SourceKey(units,atp,tp)) return ['STEP07_SOURCE_CHANGED: sumber atau canonical berubah setelah verifikasi.'];
   for(const action of actions){
     const fail=(reason:string)=>issues.push(`${action.id}: ${reason}`);
-    if(isExistingAutomatic(action))continue;
+    if(action.type!=='LINK_TP'&&isExistingAutomatic(action))continue;
     const unit=units.find(u=>u.id===action.targetUnitId),source=units.find(u=>u.id===(action.sourceUnitId||action.targetUnitId));
     const material=source?.materials.find(m=>m.id===action.targetMaterialId);
     const matches=permit.checks.filter(check=>check?.actionId===action.id);
@@ -95,11 +116,12 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
     if(['ADD_MATERIAL','MOVE_MATERIAL'].includes(action.type)&&check.targetUnitQuote!==unit.title){fail('Konteks Bab tujuan belum diverifikasi.');continue;}
     if(action.type==='ADD_MATERIAL'&&(check.additionNecessary!==true||action.linkedTpIds.every(id=>units.some(u=>u.materials.some(m=>m.linkedTpIds.includes(id)))))){fail('Materi baru hanya untuk TP yang belum terwakili oleh materi existing.');continue;}
     for(const id of action.linkedTpIds){
-      const objective=tp.items.find(t=>t.id===id),evidence=check.evidence.find(e=>e?.tpId===id);
+      const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id),evidence=entries.length===1?entries[0]:undefined;
       if(!objective){fail(`STRUCTURAL_CONFLICT: TP canonical '${id}' tidak ditemukan.`);continue;}
       if(!evidence||!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
       const competence=(objective.competence || '').split(/[,;]/).map(value=>value.trim()).filter(Boolean);
-      if(!contains(objective.statement,evidence.competenceQuote,4)||!contains(after,evidence.competenceQuote,4)||!competence.some(verb=>normalized(evidence.competenceQuote).includes(normalized(verb)))) fail(`Kompetensi TP '${id}' belum dinyatakan pada materi/hasil yang diusulkan; kesamaan kata bukan bukti.`);
+      if(!contains(objective.statement,evidence.competenceQuote,4)||(action.type!=='LINK_TP'&&!contains(after,evidence.competenceQuote,4))||!competence.some(verb=>normalized(evidence.competenceQuote).includes(normalized(verb)))) fail(`Kompetensi TP '${id}' belum dinyatakan pada materi/hasil yang diusulkan; kesamaan kata bukan bukti.`);
+      if(action.type==='LINK_TP'&&!contains(after,evidence.competenceQuote,4)&&!hasStep07LinkRationale(evidence))fail(`SEMANTIC_MISMATCH: TP '${id}' memerlukan penjelasan spesifik hubungan kompetensi dengan aktivitas materi, bukan kemiripan kata.`);
       const context=action.type==='ADD_MATERIAL'?unit.title:before;
       if(!contains(context,evidence.contextQuote,8)||!contains(after,evidence.contextQuote,8))fail(`Konteks substansi asli untuk TP '${id}' belum dipertahankan.`);
       if(checkMappingSemanticEvidence({label:after,tpItems:[objective]}).hardConflict)fail(`Konflik substansi eksplisit untuk TP '${id}'.`);

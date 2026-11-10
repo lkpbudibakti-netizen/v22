@@ -149,7 +149,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
         if(action.targetMaterialId)return materialGaps.has(action.targetMaterialId);
         return (readiness.repairIssues || []).some(g=>g.unitId===action.targetUnitId);
       }).map(action=>{const normalized=normalizeStep07SourceEvidence(action,current.units,options.tp);if(normalized.notes.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'PROPOSE',unitId:action.targetUnitId,reason:`action=${action.id}; ${normalized.notes.join('; ')}`,success:true});return normalized.action;});
-      const substantial=candidates.filter(action=>!isMappingActionAutomatic(action,current.units,options.tp));
+      const substantial=candidates.filter(action=>action.type==='LINK_TP'||!isMappingActionAutomatic(action,current.units,options.tp));
       let checks:Step07SemanticCheck[]=[];
       if(substantial.length){
         executionStage='VERIFY';

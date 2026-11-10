@@ -580,7 +580,7 @@ export interface Step07SemanticCheck {
   missingEvidence?:string[];
   additionNecessary?:boolean;
   targetUnitQuote?:string;
-  evidence:Array<{tpId:string;tpQuote:string;materialQuote:string;competenceQuote:string;contextQuote:string}>;
+  evidence:Array<{tpId:string;tpQuote:string;materialQuote:string;competenceQuote:string;contextQuote:string;relationshipReason?:string}>;
 }
 export interface Step07AutoRequest {
   repair?:{attempt:number;strategy:'REVISE_MATERIAL'|'CORRECT_STRUCTURE'|'CHECK_EVIDENCE'|'TARGET_REMAINING';failures:import('../services/step07AutoExecutionPolicy').Step07ActionFailure[];rejectedFingerprints:string[]};

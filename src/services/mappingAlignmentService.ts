@@ -2,7 +2,7 @@ import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, MappingChange
 import { deriveMappingAtpIds } from './atpMappingLineageService';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
-import { validateStep07AutoExecution, type Step07AutoPermit } from './step07AutoExecutionPolicy';
+import { validateStep07AutoExecution, hasStep07StoredSemanticSupport, type Step07AutoPermit } from './step07AutoExecutionPolicy';
 
 export const ALIGNMENT_PRIORITY = ['EDIT_UNIT_TITLE', 'LINK_TP', 'EDIT_MATERIAL', 'ADD_MATERIAL', 'MOVE_MATERIAL', 'RESTRUCTURE_UNIT'] as const;
 export type AlignmentActionType = typeof ALIGNMENT_PRIORITY[number];
@@ -195,8 +195,8 @@ export function hasTeacherMaterialSupport(unit: ATPUnitMapping, material: ATPUni
   const history=[...(unit.actionHistory || []), ...(material.titleHistory || [])];
   for (const record of history) {
     if (record.kind==='UNDO' || history.some(h=>h.undoOf===record.id)) continue;
-    const scopedAutomatic=record.approval==='AUTOMATIC'&&record.executionContext==='STEP07_AUTO_REPAIR'&&!!record.reviewedUnitTitle&&mappingTitleMeaning(record.reviewedUnitTitle)===mappingTitleMeaning(unit.title)&&record.semanticVerification?.verdict==='SUPPORTED'&&!record.semanticVerification.missingEvidence?.length;
-    const independentAutomatic=scopedAutomatic || record.approval==='AUTOMATIC' && record.kind==='REALIGN' && record.reviewedTpIds?.length===1 &&
+    const scopedAutomatic=record.approval==='AUTOMATIC'&&record.executionContext==='STEP07_AUTO_REPAIR'&&!!record.reviewedUnitTitle&&mappingTitleMeaning(record.reviewedUnitTitle)===mappingTitleMeaning(unit.title)&&hasStep07StoredSemanticSupport(record,material,tp);
+    const independentAutomatic=scopedAutomatic || record.executionContext!=='STEP07_AUTO_REPAIR' && record.approval==='AUTOMATIC' && record.kind==='REALIGN' && record.reviewedTpIds?.length===1 &&
       tp.items.filter(t=>mappingProposition(t.statement)===mappingProposition(material.title)).length===1 &&
       tp.items.some(t=>t.id===record.reviewedTpIds![0]&&mappingProposition(t.statement)===mappingProposition(material.title));
     if ((record.approval !== 'TEACHER' && !independentAutomatic) || record.materialId !== material.id || !record.reviewedTitle || !record.reviewedTpIds ||
