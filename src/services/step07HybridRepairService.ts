@@ -1,7 +1,7 @@
 import type { ATPUnitMappingData,Step07AutoRequest } from '../types';
 import type { MappingAnalysisResult } from './aiService';
 import type { Step07RepairOptions,Step07RepairResult } from './step07AutoRepairService';
-import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
+import { resolveATPUnitMappingReadiness,countStep07CompletedUnits } from './atpMappingReadinessService';
 import { computeMappingFingerprint } from './atpMappingActionApplyService';
 import { step07PersistedKey } from './step07AutoExecutionPolicy';
 import { getATPUnitMappingV5,loadStorageV5 } from './storageV5';
@@ -29,17 +29,40 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
   try{return await withStep07CheckpointLock(context,async()=>{
     let persisted=getATPUnitMappingV5(context.yearPlanId);
     let storedKey=persisted?step07PersistedKey(persisted,options.atp,options.tp):'NONE';
+    // V5 is authoritative. Rebase a stale render against its supplied saved base,
+    // retaining only genuine unsaved edits; never give an old draft the latest CAS key.
+    const base=options.persistedMapping;
+    if(persisted&&base&&JSON.stringify(base.units)!==JSON.stringify(persisted.units)){
+      const ids=(m:ATPUnitMappingData)=>JSON.stringify(m.units.map(u=>u.id));
+      if(current.id!==persisted.id||(ids(current)!==ids(base)&&ids(persisted)!==ids(base)&&ids(current)!==ids(persisted)))throw new Error('STEP07_STALE: struktur draft dan V5 berubah bersamaan; muat sumber terbaru.');
+      for(const id of new Set([...base.units,...current.units,...persisted.units].map(u=>u.id))){
+        const key=(m:ATPUnitMappingData)=>{const u=m.units.find(u=>u.id===id);return u?step07UnitKey(u):'NONE';};
+        if(key(current)!==key(base)&&key(persisted)!==key(base)&&key(current)!==key(persisted))throw new Error('STEP07_STALE: Bab '+id+' diedit/dihapus pada draft dan V5; perubahan manual dipertahankan.');
+      }
+      const order=ids(current)===ids(base)?persisted.units:current.units;
+      const units=order.flatMap(unit=>{
+        const original=base.units.find(u=>u.id===unit.id),draft=current.units.find(u=>u.id===unit.id),saved=persisted!.units.find(u=>u.id===unit.id);
+        const key=(u:typeof unit|undefined)=>u?step07UnitKey(u):'NONE';
+        if(key(draft)===key(original))return saved?[structuredClone(saved)]:[];
+        if(key(saved)!==key(original)&&key(saved)!==key(draft))throw new Error('STEP07_STALE: Bab '+unit.id+' diedit pada draft dan V5; perubahan manual dipertahankan.');
+        return draft?[structuredClone(draft)]:[];
+      });
+      current={...persisted,units};
+      recordStep07Diagnostic(context,{kind:'SOURCE_REBASE',success:true,persisted:true,reason:'Snapshot V5 terbaru digunakan; edit manual yang tidak berkonflik dipertahankan per Bab.'});
+    }
+    if(persisted&&!base&&JSON.stringify(current.units)!==JSON.stringify(persisted.units))throw new Error('STEP07_STALE: sumber draft berbeda dari V5 tanpa snapshot dasar; perubahan manual dipertahankan.');
     let root=readStep07Checkpoint(context);
     recordStep07Diagnostic(context,{kind:'RUN_START',unitId:root?.activeUnitId,phase:root?.activeUnitId?root.units[root.activeUnitId]?.stage:undefined,cache:root?'RESUME':'NEW',reason:root?`Checkpoint tersedia; revision=${root.revision}`:'Belum ada checkpoint.'});
     const sameIdentity=root?.context.identityFingerprint===context.identityFingerprint;
-    // Restore a buffered stage only when no manual/persisted source has changed.
-    if(root&&sameIdentity&&root.canonical===canonical&&root.baseStoredKey===storedKey&&root.workingMapping&&(!persisted||computeMappingFingerprint(current.units,options.atp,options.tp)===computeMappingFingerprint(persisted.units,options.atp,options.tp)))current=structuredClone(root.workingMapping);
-    else if(root&&sameIdentity&&root.canonical===canonical&&root.workingMapping){
-      // Merge only a buffered Bab whose pre-apply source is still exact. An edit
-      // in another Bab must neither discard this progress nor be overwritten.
+    // Only unfinished, exact-source stage buffers may supplement the saved source.
+    // Whole-draft/graph-only restoration can discard newer semantic history.
+    if(root&&sameIdentity&&root.canonical===canonical&&root.workingMapping){
+      const pending=assess(current,options).repairIssues || [];
       current.units=current.units.map(unit=>{
         const point=root!.units[unit.id],buffer=root!.workingMapping!.units.find(u=>u.id===unit.id);
-        return point&&buffer&&point.baseSource===step07UnitKey(unit)&&point.source===step07UnitKey(buffer)?structuredClone(buffer):unit;
+        const exact=step07UnitKey(unit);
+        return point&&buffer&&pending.some(issue=>issue.unitId===unit.id)&&point.source===step07UnitKey(buffer)&&exact!==point.source&&
+          (point.status!=='DONE'||root!.baseStoredKey===storedKey)&&point.baseSource===exact?structuredClone(buffer):unit;
       });
     }
     if(root?.workingMapping)for(const unit of current.units){
@@ -51,6 +74,14 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     root.context=context;root.canonical=canonical;root.mode=detectStep07Mode(current,options);
     root.initialIssueIds ||= (assess(current,options).repairIssues || []).map(i=>i.id);
     const checkpoint:Step07Checkpoint=root;
+    const priorCompleted=new Set(Object.entries(checkpoint.units).filter(([id,p])=>id!=='GLOBAL'&&p.status==='DONE').map(([id])=>id));
+    const observeProgress=()=>{
+      const issues=assess(current,options).repairIssues || [];
+      const ready=new Set(current.units.filter(u=>!issues.some(i=>i.unitId===u.id)).map(u=>u.id));
+      for(const id of priorCompleted)if(!ready.has(id))recordStep07Diagnostic(context,{kind:'PROGRESS_DECREASE',unitId:id,phase:'VALIDATE',category:'SOURCE_CHANGED',success:false,reason:current.units.some(u=>u.id===id)?issues.filter(i=>i.unitId===id).map(i=>i.id+': '+i.message).join('; '):'Bab dihapus dari sumber draft.'});
+      priorCompleted.clear();ready.forEach(id=>priorCompleted.add(id));
+    };
+    observeProgress();
     const start=Date.now(),deadline=start+Math.min(options.timeoutMs ?? 180000,300000);
     let calls=0,input=0;
     const maxCalls=Math.min(options.maxRequests ?? 24,60),maxInput=Math.min(options.maxInputCharacters ?? 2000000,4000000);
@@ -61,7 +92,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       const actual=getATPUnitMappingV5(context.yearPlanId);
       if((actual?step07PersistedKey(actual,options.atp,options.tp):'NONE')!==storedKey)throw new Error('CHECKPOINT_STALE: draft tersimpan berubah; muat sumber terbaru.');
     };
-    const persist=()=>{checkFresh();checkpoint.workingMapping=structuredClone(current);checkpoint.baseStoredKey=storedKey;writeStep07Checkpoint(checkpoint);};
+    const persist=()=>{checkFresh();observeProgress();checkpoint.workingMapping=structuredClone(current);checkpoint.baseStoredKey=storedKey;writeStep07Checkpoint(checkpoint);};
     // Mark a previously legacy mapping as in-progress before awaiting AI. Otherwise
     // a reload could expose legacy structural readiness while its semantic review
     // is still pending in the separate checkpoint store.
@@ -98,7 +129,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     checkpoint.beforeUnits=checkpoint.beforeUnits.filter(u=>current.units.some(v=>v.id===u.id));
     for(const unit of current.units)if(!checkpoint.beforeUnits.some(u=>u.id===unit.id))checkpoint.beforeUnits.push(structuredClone(unit));
     persist();
-    const completed=()=>current.units.filter(u=>!(assess(current,options).repairIssues || []).some(i=>i.unitId===u.id)).length;
+    const completed=()=>countStep07CompletedUnits(current,options.atp,options.tp);
     const deferred:NonNullable<Step07AutoRequest['actions']>=Object.values(checkpoint.units).flatMap(p=>(p.proposal?.alignmentProposals || []).flatMap(v=>v.action?.sourceUnitId&&v.action.sourceUnitId!==v.action.targetUnitId?[v.action]:[]));
     const execute=async(id:string)=>{
       let entry=checkpoint.units[id];
@@ -208,6 +239,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       result.appliedActions.forEach(id=>allApplied.add(id));result.appliedActions=[...allApplied];latest=result;current=structuredClone(result.mapping);
       if(result.outcome==='NEEDS_TEACHER_REVIEW')point.status='NEEDS_TEACHER_REVIEW';
       else if(!result.saved&&result.issues.some(i=>classifyStep07Failure(i)==='API_FAILURE'))point.status='BLOCKED';
+      // A failed later Bab does not undo earlier confirmed saves. Return the saved
+      // snapshot (including its semantic history), not transient failed-run metadata.
+      if(!result.stale&&persisted&&assess(current,options).canSaveDraft&&JSON.stringify(current.units)===JSON.stringify(persisted.units)){
+        current=structuredClone(persisted);result.mapping=current;result.persisted=true;
+        result.readiness=resolveATPUnitMappingReadiness(current,options.atp,options.tp);result.validation=result.readiness.validationResult!;
+      }
       recordStep07Diagnostic(context,{kind:'TERMINAL',unitId:id,phase:point.stage,category:result.outcome,success:result.saved||point.status==='DONE',persisted:result.persisted,reason:`checkpoint=${point.status}; remaining=${result.progress.remaining}; ${result.issues.join('; ')}`});
       if(result.persisted&&persisted)current=structuredClone(persisted);
       if(!result.persisted&&point.stage==='SAVE'&&persisted&&computeMappingFingerprint(persisted.units,options.atp,options.tp)===computeMappingFingerprint(current.units,options.atp,options.tp)){current=structuredClone(persisted);}

@@ -1,4 +1,5 @@
 import { runStep07AutoRepair, step07RepairColor, undoStep07AutoRepair } from '../services/step07AutoRepairService';
+import { getATPUnitMappingV5 } from '../services/storageV5';
 import { resolveStep07CheckpointContext,readStep07Checkpoint,type Step07WorkStatus } from '../services/step07CheckpointService';
 import { copyCPAnalysisDiagnosis } from '../services/cpAnalysisAIDiagnostics';
 import {buildStep07FullDiagnosticReport} from '../services/step07FullDiagnosticReport';
@@ -45,7 +46,7 @@ import {
 } from '../services/aiService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
 import { mappingCoverage, alignmentProposalStatus, refreshAlignmentProposals, isMappingActionAutomatic, formatMappingUnitTitle, confirmMappingMaterialOrigin, applyMinimalAlignment, buildMappingMaterialResolutions, undoMappingTitle, undoMappingRelation, recordMappingBatch } from '../services/mappingAlignmentService';
-import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
+import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness, countStep07CompletedUnits } from '../services/atpMappingReadinessService';
 import {
   applyATPMappingActions,
   rollbackATPMappingActions,
@@ -310,9 +311,11 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   useEffect(() => {
     if (mapping && Array.isArray(mapping.units) && mapping.units.length > 0) {
       if (!hasChanges&&!isAnalyzing) {
-        setUnits(createInitialUnits(mapping, atp.items || []));
-        setAutoRepair(mapping.step07AutoRepair);
-        setRepairProgress(mapping.step07AutoRepair?.progress);
+        const saved=getATPUnitMappingV5(mapping.academicSettingId);
+        const source=saved?.id===mapping.id&&saved.atpId===atp.id&&saved.tpDataId===mapping.tpDataId?saved:mapping;
+        setUnits(createInitialUnits(source, atp.items || []));
+        setAutoRepair(source.step07AutoRepair);
+        setRepairProgress(source.step07AutoRepair?.progress);
       }
     }
   }, [mapping, hasChanges, atp.items,isAnalyzing]);
@@ -322,9 +325,9 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     try{
       const checkpoint=readStep07Checkpoint(resolveStep07CheckpointContext(mapping.academicSettingId));
       const id=checkpoint?.activeUnitId,point=id?checkpoint?.units[id]:undefined;
-      if(checkpoint&&point&&id)setCheckpointWork({mode:checkpoint.mode,activeUnitId:id,stage:point.stage,completed:Object.entries(checkpoint.units).filter(([key,p])=>key!=='GLOBAL'&&p.status==='DONE').length,total:mapping.units.length,checkpointStatus:'Checkpoint tersedia untuk dilanjutkan'});
+      if(checkpoint&&point&&id)setCheckpointWork({mode:checkpoint.mode,activeUnitId:id,stage:point.stage,completed:countStep07CompletedUnits(mapping,atp,tp),total:mapping.units.length,checkpointStatus:'Checkpoint tersedia untuk dilanjutkan'});
     }catch{/* A corrupt/unavailable checkpoint is reported when repair or diagnostics is invoked. */}
-  },[mapping,isAnalyzing]);
+  },[mapping,isAnalyzing,atp,tp]);
 
   // Canonical mapping existence and unsaved draft checks
   const hasCanonicalMapping = Boolean(
@@ -1811,7 +1814,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       )}
       {(isAnalyzing||autoRepair||checkpointWork)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
         <strong>{isAnalyzing?autoPhase:autoRepair?.outcome==='NEEDS_TEACHER_REVIEW'?'Perlu tinjauan guru':(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
-        {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {checkpointWork.completed}/{checkpointWork.total} · {checkpointWork.checkpointStatus}</p>}
+        {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {isAnalyzing?checkpointWork.completed:countStep07CompletedUnits({...mapping,id:mapping?.id || 'temp',academicSettingId:atp.academicSettingId,atpId:atp.id,updatedAt:mapping?.updatedAt || '',units,step07AutoRepair:autoRepair},atp,tp)}/{units.length} · {checkpointWork.checkpointStatus}</p>}
         {(isAnalyzing?repairProgress:autoRepair?.progress)&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {(isAnalyzing?repairProgress:autoRepair?.progress)!.initial} · Selesai: {(isAnalyzing?repairProgress:autoRepair?.progress)!.resolved} · Tersisa: {(isAnalyzing?repairProgress:autoRepair?.progress)!.remaining}</p>}
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
         {autoRepair&&!isAnalyzing&&<p className="text-sm">{autoRepair.rounds} putaran · {mappingReadiness.validationResult?.isValid?'Valid':'Belum valid'} · {mappingReadiness.validationResult?.isComplete?'Struktur lengkap':'Struktur belum lengkap'} · {hasChanges?'Draft belum tersimpan':'Tersimpan'}</p>}

@@ -168,3 +168,9 @@ export function resolveATPUnitMappingReadiness(
     ...(scoped?{repairIssues}:{}),
   };
 }
+
+/** UI/checkpoint progress is a projection of shared readiness, never checkpoint status. */
+export function countStep07CompletedUnits(mapping:ATPUnitMappingData,atp:ATPData,tp:TPData):number {
+  const issues=resolveATPUnitMappingReadiness(mapping,atp,tp,undefined,{evaluateRepair:true}).repairIssues || [];
+  return mapping.units.filter(unit=>!issues.some(issue=>issue.unitId===unit.id)).length;
+}
