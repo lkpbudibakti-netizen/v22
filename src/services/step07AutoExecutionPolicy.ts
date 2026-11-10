@@ -48,6 +48,8 @@ export function normalizeStep07VerificationSources(checks:Step07SemanticCheck[],
     // Retain missing/negative semantic decisions. Only replace existing evidence
     // source-quote fields; never synthesize a SUPPORTED finding or semantic evidence.
     if(Array.isArray(copy.evidence))for(const evidence of copy.evidence){const exact=repaired.evidence?.find(e=>e.tpId===evidence.tpId);if(exact){evidence.tpQuote=exact.tpQuote;evidence.materialQuote=exact.materialQuote;}}
+    const target=units.find(u=>u.id===action.targetUnitId);
+    if(target&&['ADD_MATERIAL','MOVE_MATERIAL'].includes(action.type)&&typeof copy.targetUnitQuote==='string'&&copy.targetUnitQuote.trim())copy.targetUnitQuote=target.title;
     return copy;
   });
 }
@@ -78,7 +80,8 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
     const material=source?.materials.find(m=>m.id===action.targetMaterialId);
     const matches=permit.checks.filter(check=>check?.actionId===action.id);
     const check=matches[0];
-    if(!unit||!source||matches.length!==1||check?.verdict!=='SUPPORTED'||typeof check.reason!=='string'||!check.reason.trim()||(check.missingEvidence!==undefined&&(!Array.isArray(check.missingEvidence)||check.missingEvidence.length>0))){fail('NEEDS_REVIEW: verifikasi semantik independen belum mendukung tindakan.');continue;}
+    if(!unit||!source){fail('STRUCTURAL_CONFLICT: Bab sumber/target tidak ditemukan.');continue;}
+    if(matches.length!==1||check?.verdict!=='SUPPORTED'||typeof check.reason!=='string'||!check.reason.trim()||(check.missingEvidence!==undefined&&(!Array.isArray(check.missingEvidence)||check.missingEvidence.length>0))){fail('NEEDS_REVIEW: verifikasi semantik independen belum mendukung tindakan.');continue;}
     if(action.replaceTpIds){
       const removed=(material?.linkedTpIds || []).filter(id=>!action.linkedTpIds.includes(id));
       for(const id of removed){
@@ -93,7 +96,8 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
     if(action.type==='ADD_MATERIAL'&&(check.additionNecessary!==true||action.linkedTpIds.every(id=>units.some(u=>u.materials.some(m=>m.linkedTpIds.includes(id)))))){fail('Materi baru hanya untuk TP yang belum terwakili oleh materi existing.');continue;}
     for(const id of action.linkedTpIds){
       const objective=tp.items.find(t=>t.id===id),evidence=check.evidence.find(e=>e?.tpId===id);
-      if(!objective||!evidence||!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
+      if(!objective){fail(`STRUCTURAL_CONFLICT: TP canonical '${id}' tidak ditemukan.`);continue;}
+      if(!evidence||!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
       const competence=(objective.competence || '').split(/[,;]/).map(value=>value.trim()).filter(Boolean);
       if(!contains(objective.statement,evidence.competenceQuote,4)||!contains(after,evidence.competenceQuote,4)||!competence.some(verb=>normalized(evidence.competenceQuote).includes(normalized(verb)))) fail(`Kompetensi TP '${id}' belum dinyatakan pada materi/hasil yang diusulkan; kesamaan kata bukan bukti.`);
       const context=action.type==='ADD_MATERIAL'?unit.title:before;

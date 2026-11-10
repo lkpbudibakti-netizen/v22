@@ -9,7 +9,8 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
   const before = mappingCoverage(mapping.units, atp, tp);
   const proposals: AlignmentProposal[] = [];
   // Accept the flat prompt schema and the existing UI-shaped {action: ...} envelope.
-  // Only representation is normalized; canonical IDs, text and evidence are never repaired.
+  // Canonical IDs and curriculum text remain immutable. Scoped Step07 source
+  // citations are repaired below; this preview never grants semantic authority.
   const actions: any[] = (Array.isArray(raw?.alignmentProposals) ? raw.alignmentProposals.slice(0, 200) : []).map((candidate: any) => {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return { contractIssue: 'PROPOSAL_SHAPE_INVALID: proposal harus berupa object.' };
     if (!('action' in candidate)) return candidate;

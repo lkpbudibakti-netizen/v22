@@ -268,6 +268,7 @@ export async function aiFetch(
   policy: AIFetchPolicy = {}
 ): Promise<Response> {
   let attempt=0;
+  const acceptsRetryEngine=(body:any)=>body?.engine==='gemini'||url==='/api/ai/analyze-atp-unit-mapping'&&body?.engine==='gemini_ai';
   const probe=(decision:string,body?:any)=>{try{policy.observeProbe?.({attempt,engine:typeof body?.engine==='string'?body.engine:undefined,decision});}catch{/* diagnostic only */}};
   const makeRequest = async (currentKey?: string | null): Promise<Response> => {
     const headers = new Headers(options.headers || {});
@@ -319,11 +320,11 @@ export async function aiFetch(
             if (contentType.toLowerCase().includes('application/json')) {
               const retryCloned = typeof retryRes.clone === 'function' ? retryRes.clone() : retryRes;
               const retryBody = await retryCloned.json().catch(() => null);
-              if(policy.requireJSONProbe)probe(retryBody?.engine==='gemini'?'RETRY_ENGINE_ACCEPTED':retryBody?'RETRY_ENGINE_MISMATCH':'RETRY_INVALID_JSON',retryBody);
+              if(policy.requireJSONProbe)probe(acceptsRetryEngine(retryBody)?'RETRY_ENGINE_ACCEPTED':retryBody?'RETRY_ENGINE_MISMATCH':'RETRY_INVALID_JSON',retryBody);
               if (
                 retryBody &&
                 typeof retryBody === 'object' &&
-                retryBody.engine === 'gemini'
+                acceptsRetryEngine(retryBody)
               ) {
                 if (url.includes('generate-tp')) {
                   const rawItems = Array.isArray(retryBody.items)

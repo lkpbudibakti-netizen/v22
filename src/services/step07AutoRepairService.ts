@@ -56,6 +56,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   const beforeUnits=structuredClone(options.baselineUnits || (continuing?previous!.beforeUnits:initial.units));
   let current=structuredClone(initial),analysis:MappingAnalysisResult|undefined,rounds=0,saved=false,persisted=false,requests=0,inputCharacters=0;
   let readiness=readinessOf(current,options),repeatedIssues=0;
+  let resetRepairOnSourceChange=true;
   const initialIssueIds=options.baselineIssueIds || (continuing&&previous!.initialIssueIds?.length?[...previous!.initialIssueIds]:[...new Set((readiness.repairIssues || []).map(i=>i.id))]);
   let progress:Step07RepairProgress;
   const reportProgress=()=>{
@@ -105,7 +106,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       const repair=options.repairState;
       if(repair){
         const sourceKey=step07SourceKey(options.activeUnitId?current.units.filter(u=>u.id===options.activeUnitId):current.units,options.atp,options.tp);
-        if(repair.sourceKey!==sourceKey)Object.assign(repair,{sourceKey,attempts:0,seen:[],failures:[],status:undefined});
+        if(repair.sourceKey!==sourceKey)Object.assign(repair,{sourceKey,...(resetRepairOnSourceChange?{attempts:0,seen:[],status:undefined}:{})});
         if(repair.status==='NEEDS_TEACHER_REVIEW'||repair.attempts>=2){outcome='NEEDS_TEACHER_REVIEW';repair.status=outcome;issues.push('NEEDS_TEACHER_REVIEW: batas perbaikan aman pada sumber yang sama tercapai; ubah draft/sumber berdasarkan tinjauan guru sebelum mencoba lagi.');break;}
       }
       const before=readiness.validationResult!,beforeIssues=new Set((readiness.repairIssues || []).map(i=>i.id));
@@ -123,7 +124,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       for(const proposal of (analysis.alignmentProposals || []).slice(0,200).filter(p=>p.validationStatus==='REJECTED'))issues.push(...(proposal.validationIssues?.length?proposal.validationIssues:[proposal.reason]));
       for(const proposal of (analysis.alignmentProposals || []).slice(0,200)){
         if(proposal.validationStatus==='REJECTED'){const reasons=proposal.validationIssues?.length?proposal.validationIssues:[proposal.reason];failure('PROPOSE',proposal.actionId || proposal.id,reasons);options.onCheckpoint?.('PROPOSE',{mapping:current,actionId:proposal.actionId || proposal.id,issues:reasons,success:false});}
-        if(proposal.sourceEvidenceRepairs?.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'PROPOSE',unitId:proposal.targetUnitId,reason:`action=${proposal.actionId || proposal.id}; ${proposal.sourceEvidenceRepairs.join('; ')}`,success:true});
+        if(proposal.sourceEvidenceRepairs?.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'PROPOSE',unitId:proposal.targetUnitId,reason:`action=${proposal.actionId || proposal.id}; ${proposal.sourceEvidenceRepairs.join('; ')}`,success:true});
       }
       if(!fresh())throw new Error('STEP07_STALE: perubahan manual/konteks dipertahankan.');
       const materialGaps=new Set((readiness.repairIssues || []).flatMap(g=>g.materialId?[g.materialId]:[]));
@@ -147,7 +148,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
         if(resolvesLocalCoverage)return true;
         if(action.targetMaterialId)return materialGaps.has(action.targetMaterialId);
         return (readiness.repairIssues || []).some(g=>g.unitId===action.targetUnitId);
-      }).map(action=>{const normalized=normalizeStep07SourceEvidence(action,current.units,options.tp);if(normalized.notes.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'PROPOSE',unitId:action.targetUnitId,reason:`action=${action.id}; ${normalized.notes.join('; ')}`,success:true});return normalized.action;});
+      }).map(action=>{const normalized=normalizeStep07SourceEvidence(action,current.units,options.tp);if(normalized.notes.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'PROPOSE',unitId:action.targetUnitId,reason:`action=${action.id}; ${normalized.notes.join('; ')}`,success:true});return normalized.action;});
       const substantial=candidates.filter(action=>!isMappingActionAutomatic(action,current.units,options.tp));
       let checks:Step07SemanticCheck[]=[];
       if(substantial.length){
@@ -156,7 +157,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
         if(verified.analysisNotice)issues.push(verified.analysisNotice);
         checks=Array.isArray(verified.step07SemanticChecks)?verified.step07SemanticChecks.slice(0,200):[];
         const exactChecks=normalizeStep07VerificationSources(checks,substantial,current.units,options.tp);
-        if(JSON.stringify(exactChecks)!==JSON.stringify(checks))recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'VERIFY',unitId:options.activeUnitId || 'GLOBAL',reason:'Kutipan sumber diperbaiki; verdict, kompetensi, konteks, dan missingEvidence tidak diubah.',success:true});
+        for(let i=0;i<checks.length;i++)if(JSON.stringify(exactChecks[i])!==JSON.stringify(checks[i]))recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'VERIFY',unitId:options.activeUnitId || 'GLOBAL',reason:`action=${checks[i].actionId}; kutipan sumber diperbaiki; verdict, kompetensi, konteks, dan missingEvidence tidak diubah.`,success:true});
         checks=exactChecks;
         options.onCheckpoint?.('VERIFY',{mapping:current,checks,success:true});
       }
@@ -196,6 +197,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       if(options.activeUnitId&&!(readiness.repairIssues || []).some(issue=>issue.unitId===options.activeUnitId))break;
       const afterIssues=new Set((readiness.repairIssues || []).map(i=>i.id));
       const resolved=[...beforeIssues].some(id=>!afterIssues.has(id));
+      resetRepairOnSourceChange=resolved;
       repeatedIssues=resolved?0:repeatedIssues+1;
       const state=computeMappingFingerprint(current.units,options.atp,options.tp);
       if(repair&&!resolved){

@@ -104,7 +104,15 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       let entry=checkpoint.units[id];
       if(!entry)entry=checkpoint.units[id]={source:source(id),baseSource:source(id),dependency:canonical,stage:'ANALYZE',status:'PENDING',applied:[],events:[]};
       const point=entry;
-      point.rejected ||= [];point.verifiedDependencies ||= {};point.repairState ||= {sourceKey:'',attempts:0,seen:[],failures:[]};
+      point.rejected ||= point.events.filter(e=>!e.success&&e.actionId&&['PROPOSE','VERIFY','FILTER','APPLY'].includes(e.stage)).map(e=>e.actionId!);
+      if(!point.verifiedDependencies){
+        point.verifiedDependencies={};
+        // Older VERIFY checkpoints bind the exact full source. Retain that
+        // completed stage; later/unknown legacy dependencies require reverify.
+        if(point.stage==='VERIFY'&&point.source===source(id)&&point.dependency===canonical)for(const p of point.proposal?.alignmentProposals || point.analysis?.alignmentProposals || [])if(p.action&&point.verification?.step07SemanticChecks?.some(c=>c.actionId===p.action!.id&&c.verdict==='SUPPORTED'))point.verifiedDependencies[p.action.id]=step07ActionDependency(p.action,current.units,options.atp,options.tp);
+      }
+      point.repairState ||= {sourceKey:'',attempts:0,seen:[],failures:point.events.filter(e=>!e.success).map(e=>({actionId:e.actionId || 'proposal-set',category:e.failureCategory || classifyStep07Failure(e.reason),reason:e.reason,phase:e.stage}))};
+      if(point.analysis || point.proposal)point.cacheUsable=true;
       checkpoint.activeUnitId=id;
       const work=(stage:Step07Stage,status:string)=>options.onWork?.({mode:checkpoint.mode,activeUnitId:id,stage,completed:completed(),total:current.units.length,checkpointStatus:status});
       const event=(stage:Step07Stage,success:boolean,reason:string,actionId?:string)=>{
@@ -223,11 +231,21 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       if(!latest)throw new Error('NEEDS_TEACHER_REVIEW: masalah lokal belum terselesaikan.');
       if(current.step07AutoRepair){
         current={...current,step07AutoRepair:{...current.step07AutoRepair,runId:current.step07AutoRepair.runId+'-review',outcome:'NEEDS_TEACHER_REVIEW',verifiedFingerprint:undefined,expectedStoredFingerprint:storedKey,issues:[...latest.issues,'NEEDS_TEACHER_REVIEW: periksa Bab lokal yang belum didukung substansi.']}};
-        if(assess(current,options).canSaveDraft)await withStep07StorageWrite(()=>{checkFresh();if(!options.save(current))throw new Error('CHECKPOINT_SAVE_FAILED: status tinjauan belum tersimpan.');persisted=getATPUnitMappingV5(context.yearPlanId);if(!persisted)throw new Error('SAVE_NOT_CONFIRMED');current=structuredClone(persisted);storedKey=step07PersistedKey(persisted,options.atp,options.tp);},deadline-Date.now());
+        if(assess(current,options).canSaveDraft)await withStep07StorageWrite(()=>{checkFresh();const expected=current.step07AutoRepair!.runId;if(!options.save(current))throw new Error('CHECKPOINT_SAVE_FAILED: status tinjauan belum tersimpan.');persisted=getATPUnitMappingV5(context.yearPlanId);if(!persisted||persisted.step07AutoRepair?.runId!==expected||persisted.step07AutoRepair.outcome!=='NEEDS_TEACHER_REVIEW'||computeMappingFingerprint(persisted.units,options.atp,options.tp)!==computeMappingFingerprint(current.units,options.atp,options.tp))throw new Error('SAVE_NOT_CONFIRMED');current=structuredClone(persisted);storedKey=step07PersistedKey(persisted,options.atp,options.tp);},deadline-Date.now());
       }
-      persist();return {...latest,mapping:current,readiness:resolveATPUnitMappingReadiness(current,options.atp,options.tp),outcome:'NEEDS_TEACHER_REVIEW',saved:false,persisted:Boolean(persisted),issues:current.step07AutoRepair?.issues || latest.issues};
+      persist();return {...latest,mapping:current,readiness:resolveATPUnitMappingReadiness(current,options.atp,options.tp),outcome:'NEEDS_TEACHER_REVIEW',saved:false,persisted:Boolean(persisted&&persisted.step07AutoRepair?.runId===current.step07AutoRepair?.runId&&current.step07AutoRepair?.outcome==='NEEDS_TEACHER_REVIEW'),issues:current.step07AutoRepair?.issues || latest.issues};
     }
     recordStep07Diagnostic(context,{kind:'GLOBAL_ENTER',unitId:'GLOBAL',phase:'VALIDATE',category:blocked.length?'GLOBAL_CROSS_UNIT_CONFLICT':'GLOBAL_VALIDATION',reason:`Bab lengkap=${current.units.length-blocked.length}/${current.units.length}; konflik lintas-Bab=${deferred.length}. GLOBAL tidak menerapkan ulang perbaikan lokal.`});
-    return await execute('GLOBAL');
+    const reconciled=await execute('GLOBAL');
+    if(reconciled.saved){
+      const readiness=assess(current,options);
+      for(const unit of current.units){const point=checkpoint.units[unit.id];if(point&&!(readiness.repairIssues || []).some(i=>i.unitId===unit.id)&&(point.status!=='DONE'||point.source!==source(unit.id))){
+        point.status='DONE';point.source=source(unit.id);point.dependency=dependency(unit.id);if(point.repairState)point.repairState.status=undefined;
+        point.events.push({stage:'VALIDATE',success:true,reason:'Konflik lintas-Bab terselesaikan; validasi global dan simpan draft terkonfirmasi.'});
+        recordStep07Diagnostic(context,{kind:'LOCAL_STATUS_RECONCILED',unitId:unit.id,phase:'VALIDATE',success:true,reason:'Status disinkronkan dari readiness global setelah simpan; bukti semantik tetap berasal dari engine.'});
+      }}
+      persist();
+    }
+    return reconciled;
   });}catch(error){return fallback(error instanceof Error?error.message:String(error));}
 }

@@ -17,6 +17,7 @@ import {copyCPAnalysisDiagnosis} from '../src/services/cpAnalysisAIDiagnostics';
 import {analyzeATPUnitMappingWithAI} from '../src/services/aiService';
 import {buildStep07FullDiagnosticReport} from '../src/services/step07FullDiagnosticReport';
 import {readStep07Diagnostics} from '../src/services/step07DiagnosticsService';
+import {classifyStep07Failure,normalizeStep07SourceEvidence} from '../src/services/step07AutoExecutionPolicy';
 import type {ATPData,TPData,ATPUnitMappingData,Step07AutoRequest,Step07SemanticCheck} from '../src/types';
 import type {MappingAnalysisResult} from '../src/services/aiService';
 const raw=JSON.parse(readFileSync('scripts/fixtures/pjokClass6MappingDiagnostic.json','utf8'));
@@ -91,9 +92,9 @@ await test('VERIFY timeout resumes the saved proposal; late responses cannot alt
 });
 await test('A failing action is isolated, rejection stages persist, and full-run rollback retains teacher history',async()=>{
   const f=seed(),base=provider(f);let inject=true;
-  const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>{const value=await base(m,r,s);if(inject&&r.phase==='PROPOSE'){inject=false;value.alignmentProposals![0].action!.evidence=[];value.alignmentProposals![0].validationStatus='READY';}return value;}}));
+  const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>{const value=await base(m,r,s);if(inject&&r.phase==='VERIFY'){inject=false;value.step07SemanticChecks![0].verdict='CONFLICT';}return value;}}));
   assert(result.saved,result.issues.join('; '));const cp=readStep07Checkpoint(resolveStep07CheckpointContext('y'))!;
-  assert(Object.values(cp.units).some(p=>p.events.some(e=>e.stage==='APPLY'&&!e.success&&e.reason.includes('EVIDENCE'))));
+  assert(Object.values(cp.units).some(p=>p.events.some(e=>e.stage==='VERIFY'&&!e.success&&e.failureCategory==='SEMANTIC_MISMATCH')));
   assert(Object.values(cp.units).some(p=>p.applied.length>1));
   const saved=getATPUnitMappingV5('y')!,undo=undoStep07AutoRepair(saved,f.atp,f.tp);assert(undo.success,undo.issues.join('; '));
   saveATPUnitMappingV5('y',undo.mapping!);assert(!resolveATPUnitMappingReadiness(getATPUnitMappingV5('y'),f.atp,f.tp).canProceed);
@@ -149,6 +150,7 @@ await test('Cross-Bab MOVE is deferred locally and applied only by global reconc
   }}));
   assert(result.saved,result.issues.join('; '));assert.equal(result.mapping.units[0].materials[0].id,'m1');assert.equal(result.mapping.units[1].materials.length,1);
   assert(readStep07Checkpoint(resolveStep07CheckpointContext('y'))!.units.A.events.some(e=>e.stage==='FILTER'&&e.reason.includes('GLOBAL_RECONCILIATION')));
+  assert.equal(readStep07Checkpoint(resolveStep07CheckpointContext('y'))!.units.A.status,'DONE');assert.equal(readStep07Checkpoint(resolveStep07CheckpointContext('y'))!.units.B.status,'DONE');
 });
 await test('Two distinct profiles can process concurrently while V5 writes retain both mappings',async()=>{
   const f=seed(),f2=structuredClone(f),state=loadStorageV5();state.yearPlans.push({...state.yearPlans[0],id:'y2',profileId:'p2',schoolId:'s2'});
@@ -184,21 +186,96 @@ await test('ANALYZE timeout keeps legacy-complete data locked; SAVE wait timeout
   const supported=navigator.locks;Object.defineProperty(navigator,'locks',{configurable:true,value:undefined});
   try{const blocked=await runStep07AutoRepair(options(f));assert(blocked.issues.some(i=>i.includes('CHECKPOINT_LOCK_UNAVAILABLE')));assert(!blocked.saved);}finally{Object.defineProperty(navigator,'locks',{configurable:true,value:supported});}
 });
-await test('5/9 Bab, 12 semantic issues, BLOCKED to GLOBAL PROPOSE and HTML response are fully diagnosable without resetting checkpoint',async()=>{
+await test('5/9 Bab and 12 local issues stop for teacher review without GLOBAL re-analysis; diagnostics remain read-only',async()=>{
   const f=seed(),mapping=structuredClone(completeFixture);mapping.units.slice(5).forEach(u=>{u.actionHistory=[];u.materials.forEach(m=>m.titleHistory=[]);});
   const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=mapping;saveStorageV5(state);
   const before=resolveATPUnitMappingReadiness(mapping,f.atp,f.tp,undefined,{evaluateRepair:true});assert.equal(before.repairIssues!.length,12);
   const priorFetch=globalThis.fetch;globalThis.fetch=async()=>new Response('<!doctype html><html>API_KEY=DO_NOT_STORE</html>',{status:200,headers:{'content-type':'text/html','x-request-id':'req-global-html'}});
   try{
     const context=resolveStep07CheckpointContext('y');
-    const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>r.execution?.reconciliation?analyzeATPUnitMappingWithAI({currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r},{signal:s,diagnosticContext:context}):{summary:{} as any,atpFindings:[],materialFindings:[],alignmentProposals:[]}}));
-    assert(!result.saved);assert(result.issues.some(i=>i.includes('API_NON_JSON_RESPONSE')));
-    const cp=readStep07Checkpoint(context)!;assert.equal(Object.values(cp.units).filter(p=>p.status==='BLOCKED').length,4);
-    assert(readStep07Diagnostics(context).events.some(e=>e.kind==='GLOBAL_ENTER'&&e.category==='GLOBAL_WITH_BLOCKED'));
+    const result=await runStep07AutoRepair(options(f,{analyze:async(_m,r)=>{assert(!r.execution?.reconciliation);return {summary:{} as any,atpFindings:[],materialFindings:[],alignmentProposals:[]};}}));
+    assert(!result.saved);assert.equal(result.outcome,'NEEDS_TEACHER_REVIEW');
+    const cp=readStep07Checkpoint(context)!;assert.equal(Object.values(cp.units).filter(p=>p.status==='NEEDS_TEACHER_REVIEW').length,4);
+    assert(readStep07Diagnostics(context).events.some(e=>e.kind==='GLOBAL_SKIPPED'));
     const rawBefore=memory.get(step07CheckpointKey(context)),report=buildStep07FullDiagnosticReport({mapping:result.mapping,atp:f.atp,tp:f.tp,context});
-    assert(report.includes('Bab selesai: 5/9; masalah tersisa: 12'));assert(report.includes('API_NON_JSON_RESPONSE'));assert(report.includes('req-global-html'));assert(report.includes('text/html'));assert(report.includes('GLOBAL'));
+    assert(report.includes('Bab selesai: 5/9; masalah tersisa: 12'));assert(report.includes('NEEDS_TEACHER_REVIEW'));assert(report.includes('GLOBAL_SKIPPED'));
     assert.equal(memory.get(step07CheckpointKey(context)),rawBefore,'copy does not reset/rewrite checkpoint');
     assert(!report.includes('<!doctype'));assert(!JSON.stringify([...memory.values()]).includes('DO_NOT_STORE'));assert(!result.readiness.canProceed);
   }finally{globalThis.fetch=priorFetch;}
+});
+function targetFixture(){
+  const f=seed(),mapping=structuredClone(completeFixture),unit=mapping.units[0],material=unit.materials[0],tpId=material.linkedTpIds[0];
+  material.title='Melempar dan menangkap bola';material.linkedTpIds=[];material.linkedAtpItemIds=[];material.titleHistory=[];unit.actionHistory=(unit.actionHistory || []).filter(h=>h.materialId!==material.id);
+  const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=mapping;saveStorageV5(state);f.mapping=mapping;return {f,unit,material,tpId};
+}
+await test('Exact source citations can be repaired, but cannot authorize semantics or invent canonical IDs',async()=>{
+  assert.equal(classifyStep07Failure('EVIDENCE_MISSING quote'),'EVIDENCE_INVALID');assert.equal(classifyStep07Failure('Kompetensi belum dinyatakan'),'SEMANTIC_MISMATCH');assert.equal(classifyStep07Failure('BEFORE_MISMATCH'),'STRUCTURAL_CONFLICT');assert.equal(classifyStep07Failure('API_NON_JSON_RESPONSE'),'API_FAILURE');assert.equal(classifyStep07Failure('NO_PROGRESS'),'NO_PROGRESS');
+  for(const semantic of ['SUPPORTED','CONFLICT'] as const){
+    const {f}=targetFixture(),base=provider(f),canonical=JSON.stringify([f.tp,f.atp]);
+    const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>{const value=await base(m,r,s);if(r.phase==='PROPOSE')for(const p of value.alignmentProposals || [])if(p.action)p.action.evidence=p.action.linkedTpIds.map(tpId=>({tpId,tpQuote:'wrong citation',materialQuote:'wrong citation'}));else{};if(r.phase==='VERIFY')for(const check of value.step07SemanticChecks || []){check.verdict=semantic;check.evidence.forEach(e=>{e.tpQuote='wrong quote';e.materialQuote='wrong quote';});}return value;}}));
+    assert.equal(JSON.stringify([f.tp,f.atp]),canonical);
+    if(semantic==='SUPPORTED'){assert(result.saved,result.issues.join('; '));assert(Object.values(readStep07Checkpoint(resolveStep07CheckpointContext('y'))!.units).every(p=>p.cacheUsable!==false));}
+    else{assert(!result.saved);assert.equal(result.outcome,'NEEDS_TEACHER_REVIEW');assert.equal(result.mapping.units[0].materials[0].title,'Melempar dan menangkap bola');}
+  }
+  const {f,unit,material}=targetFixture();const invalid:AlignmentAction={id:'invalid',type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,before:material.title,linkedTpIds:['FAKE_ID'],reason:'invalid',evidence:[]};assert.deepEqual(normalizeStep07SourceEvidence(invalid,f.mapping.units,f.tp).action,invalid);
+});
+await test('Semantic mismatch sends action-specific feedback and revises wording before independently verified apply',async()=>{
+  const {f,unit,material,tpId}=targetFixture(),base=provider(f),requests:Step07AutoRequest[]=[];
+  const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>{
+    requests.push(structuredClone(r));
+    if(r.phase==='PROPOSE'&&r.repair?.strategy!=='REVISE_MATERIAL')return sanitizeMappingAnalysisResult({alignmentProposals:[{id:'first-link',type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,before:material.title,linkedTpIds:[tpId],reason:'Usulan awal relasi; verifikasi kompetensi tetap wajib.',evidence:[{tpId,tpQuote:f.tp.items.find(t=>t.id===tpId)!.statement,materialQuote:material.title}]}]},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});
+    return base(m,r,s);
+  }}));
+  assert(result.saved,result.issues.join('; '));assert(requests.some(r=>r.repair?.strategy==='REVISE_MATERIAL'&&r.repair.failures.some(f=>f.actionId==='first-link'&&f.category==='SEMANTIC_MISMATCH')));
+  assert(result.mapping.units[0].materials[0].title.startsWith(material.title));assert(hasTeacherMaterialSupport(result.mapping.units[0],result.mapping.units[0].materials[0],f.tp));
+});
+await test('Identical rejected proposals stop before another VERIFY; reload does not repeat teacher-review work',async()=>{
+  const {f,unit,material,tpId}=targetFixture(),base=provider(f);let proposes=0,verifies=0;
+  const analyze:Step07RepairOptions['analyze']=async(m,r,s)=>{
+    if(r.phase==='VERIFY'){verifies++;return base(m,r,s);}proposes++;
+    return sanitizeMappingAnalysisResult({alignmentProposals:[{id:'repeat-'+proposes,type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,before:material.title,linkedTpIds:[tpId],reason:'LINK sama tanpa redaksi kompetensi.',evidence:[{tpId,tpQuote:f.tp.items.find(t=>t.id===tpId)!.statement,materialQuote:material.title}]}]},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});
+  };
+  const result=await runStep07AutoRepair(options(f,{analyze}));assert.equal(result.outcome,'NEEDS_TEACHER_REVIEW');assert.equal(proposes,2);assert.equal(verifies,1);assert(!result.readiness.canProceed);
+  const resumed=await runStep07AutoRepair(options(f,{analyze:async()=>{throw Error('Must not repeat unchanged review work');}}));assert.equal(resumed.outcome,'NEEDS_TEACHER_REVIEW');assert(!resumed.saved);
+});
+await test('PJOK 9 Bab: 16 initial issues reduce to 8; valid progress persists, unresolved local work never goes GLOBAL',async()=>{
+  const f=seed(),mapping=structuredClone(completeFixture),original=structuredClone(mapping),blocked=new Set<string>();
+  for(const unit of mapping.units){const rawUnit=raw.units.find((u:any)=>u.id===unit.id);if(!rawUnit.linkedTpIds.length){unit.linkedTpIds=[];unit.linkedAtpItemIds=[];}for(const material of unit.materials){const rawMaterial=rawUnit.materials.find((m:any)=>m.id===material.id);if(!rawMaterial.linkedTpIds.length){material.linkedTpIds=[];material.linkedAtpItemIds=[];if([6,7].includes(unit.order)||unit.order===1&&material.order===1)blocked.add(material.id);}}}
+  const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=mapping;saveStorageV5(state);f.mapping=mapping;
+  assert.equal(resolveATPUnitMappingReadiness(mapping,f.atp,f.tp,undefined,{evaluateRepair:true}).repairIssues!.length,16);
+  const base=provider(f),canonical=JSON.stringify([f.tp,f.atp]);
+  const result=await runStep07AutoRepair(options(f,{analyze:async(m,r,s)=>{
+    assert(!r.execution?.reconciliation,'local BLOCKED cannot trigger GLOBAL');
+    if(r.phase==='VERIFY'){const value=await base(m,r,s);for(const check of value.step07SemanticChecks || [])if(r.actions?.some(a=>a.id===check.actionId&&blocked.has(a.targetMaterialId || ''))){check.verdict='NEEDS_REVIEW';check.missingEvidence=['Bukti pedagogis independen belum cukup.'];}return value;}
+    const actions=m.units.flatMap(u=>u.materials.filter(mat=>!mat.linkedTpIds.length).map(mat=>{const ids=original.units.find(v=>v.id===u.id)!.materials.find(v=>v.id===mat.id)!.linkedTpIds;return {id:'gap-'+mat.id,type:'LINK_TP',targetUnitId:u.id,targetMaterialId:mat.id,before:mat.title,linkedTpIds:ids,reason:'Hubungkan hanya kompetensi yang didukung judul dan verifikasi independen.',evidence:ids.map(tpId=>({tpId,tpQuote:f.tp.items.find(t=>t.id===tpId)!.statement,materialQuote:mat.title}))};}));
+    return sanitizeMappingAnalysisResult({alignmentProposals:actions},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});
+  }}));
+  assert.equal(result.outcome,'NEEDS_TEACHER_REVIEW');assert.equal(result.progress.initial,16);assert.equal(result.progress.remaining,8);assert.equal(result.progress.resolved,8);assert(!result.saved&&result.persisted);assert(!result.readiness.canProceed);
+  const saved=getATPUnitMappingV5('y')!;assert.equal(resolveATPUnitMappingReadiness(saved,f.atp,f.tp,undefined,{evaluateRepair:true}).repairIssues!.length,8);assert.equal(JSON.stringify([f.tp,f.atp]),canonical);assert.equal(saved.units.flatMap(u=>u.materials).length,27);
+  const cp=readStep07Checkpoint(resolveStep07CheckpointContext('y'))!;assert(Object.values(cp.units).some(p=>p.events.some(e=>e.failureCategory==='SEMANTIC_MISMATCH'&&e.actionId)));assert(!cp.units.GLOBAL);
+});
+await test('Legacy checkpoint without new retry/dependency fields resumes completed VERIFY without repeating AI',async()=>{
+  const {f}=targetFixture(),calls:Step07AutoRequest[]=[];let interrupted=false;
+  await runStep07AutoRepair(options(f,{analyze:provider(f,calls),onCheckpoint:(stage,data)=>{if(stage==='VERIFY'&&data.success&&!interrupted){interrupted=true;throw Error('CHECKPOINT_INTERRUPT');}}}));
+  const context=resolveStep07CheckpointContext('y'),cp=readStep07Checkpoint(context)!;
+  for(const point of Object.values(cp.units)){delete point.repairState;delete point.verifiedDependencies;delete point.rejected;point.cacheUsable=false;}
+  writeStep07Checkpoint(cp);
+  const result=await runStep07AutoRepair(options(f,{analyze:async()=>{throw Error('Completed legacy stages must be reused');}}));
+  assert(result.saved,result.issues.join('; '));assert(result.readiness.canProceed);assert.equal(calls.filter(c=>c.phase==='PROPOSE').length,1);assert.equal(calls.filter(c=>c.phase==='VERIFY').length,1);
+});
+await test('Cosmetic changes cannot reset the no-progress attempt budget or manufacture lineage',async()=>{
+  const {f,unit,material}=targetFixture();let calls=0;
+  const result=await runStep07AutoRepair(options(f,{analyze:async(m,r)=>{
+    assert.equal(r.phase,'PROPOSE');calls++;assert(calls<=2);
+    const action=calls===1?{id:'cosmetic-unit',type:'EDIT_UNIT_TITLE',targetUnitId:unit.id,before:m.units[0].title,after:m.units[0].title.toUpperCase(),linkedTpIds:m.units[0].linkedTpIds,reason:'Kapitalisasi judul Bab.',evidence:[]}:{id:'cosmetic-material',type:'EDIT_MATERIAL',targetUnitId:unit.id,targetMaterialId:material.id,before:m.units[0].materials[0].title,after:m.units[0].materials[0].title.toUpperCase(),linkedTpIds:[],reason:'Kapitalisasi judul materi.',evidence:[]};
+    return sanitizeMappingAnalysisResult({alignmentProposals:[action]},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});
+  }}));
+  assert.equal(result.outcome,'NEEDS_TEACHER_REVIEW');assert.equal(calls,2);assert.equal(result.progress.resolved,0);assert(!result.readiness.canProceed);assert.equal(result.mapping.units[0].materials[0].linkedTpIds.length,0);
+});
+await test('Invalid legacy input cannot be reported as persisted just because an older mapping exists',async()=>{
+  const f=seed(),mapping=structuredClone(completeFixture);mapping.units=mapping.units.slice(0,1);mapping.units[0].linkedTpIds=['FAKE'];mapping.units[0].materials[0].linkedTpIds=['FAKE'];
+  const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=mapping;saveStorageV5(state);const before=JSON.stringify(getATPUnitMappingV5('y'));let saves=0;
+  const result=await runStep07AutoRepair(options(f,{save:()=>{saves++;return true;},analyze:async()=>({summary:{} as any,atpFindings:[],materialFindings:[],alignmentProposals:[]})}));
+  assert(!result.validation.isValid);assert(!result.saved&&!result.persisted);assert.equal(saves,0);assert.equal(JSON.stringify(getATPUnitMappingV5('y')),before);
 });
 console.log('PASS '+count+' hybrid checkpoint cases. Live Gemini NOT VERIFIED.');

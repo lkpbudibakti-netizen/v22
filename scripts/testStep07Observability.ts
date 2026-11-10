@@ -79,12 +79,12 @@ await test('Actual analysis endpoint echoes request metadata and classifies prov
   await invoke(undefined)({...req,body:{}},res);assert.equal(status,400);assert.equal(data.diagnostic.requestId,'request-endpoint');
   await invoke('fake',JSON.stringify({atpFindings:[],materialFindings:[],alignmentProposals:[]}))(req,res);assert.equal(data.engine,'gemini_ai');assert.equal(data.diagnostic.fallback,false);
 });
-await test('Existing BYOK engine-label mismatch is observable while retry selection remains unchanged',async()=>{
+await test('Step07 BYOK accepts the actual endpoint engine label, preserving HTTP/schema and semantic guards',async()=>{
   const original=globalThis.fetch;let requests=0;localStorage.setItem(GEMINI_API_KEY_STORAGE_KEY,'FIXTURE_BYOK_NOT_A_SECRET');
   try{
     globalThis.fetch=async()=>new Response(JSON.stringify({engine:++requests===1?'pedagogical_engine':'gemini_ai',data:{summary:{},atpFindings:[],materialFindings:[]}}),{headers:{'content-type':'application/json'}});
-    const result=await analyzeATPUnitMappingWithAI(params,{diagnosticContext:context});assert.equal(requests,2);assert.equal(result.engine,'pedagogical_engine','audit must not change existing retry selection');
-    const events=readStep07Diagnostics(context).events;assert(events.some(e=>e.category==='AI_RETRY_ENGINE_MISMATCH'&&e.engine==='gemini_ai'));assert(events.some(e=>e.fallback==='FIRST_VALID_FALLBACK'));
+    const result=await analyzeATPUnitMappingWithAI(params,{diagnosticContext:context});assert.equal(requests,2);assert.equal(result.engine,'gemini_ai','valid Step07 model response must not be discarded');
+    const events=readStep07Diagnostics(context).events;assert(events.some(e=>e.category==='RETRY_ENGINE_ACCEPTED'&&e.engine==='gemini_ai'));assert(events.some(e=>e.kind==='HTTP_RESULT'&&e.engine==='gemini_ai'&&e.fallback==='NONE'));
     assert(!JSON.stringify(events).includes('FIXTURE_BYOK_NOT_A_SECRET'));
   }finally{globalThis.fetch=original;localStorage.removeItem(GEMINI_API_KEY_STORAGE_KEY);}
 });
