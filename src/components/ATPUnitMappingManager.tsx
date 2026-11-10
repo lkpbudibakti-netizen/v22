@@ -421,6 +421,12 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     return resolveATPUnitMappingReadiness(currentDraft, atp, tp, academicSetting);
   }, [units, atp, tp, academicSetting, mapping, autoRepair]);
 
+  const displayedRepairProgress=isAnalyzing?repairProgress:autoRepair?.progress&&{
+    ...autoRepair.progress,
+    remaining:mappingReadiness.repairIssues?.length ?? autoRepair.progress.remaining,
+    ...(autoRepair.initialIssueIds&&mappingReadiness.repairIssues?{resolved:autoRepair.initialIssueIds.filter(id=>!mappingReadiness.repairIssues!.some(issue=>issue.id===id)).length}:{}),
+  };
+
   const localValidation = useMemo(() => {
     const validation = mappingReadiness.validationResult || validateATPUnitMappingCanonical(mapping, atp, tp);
 
@@ -1815,7 +1821,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       {(isAnalyzing||autoRepair||checkpointWork)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
         <strong>{isAnalyzing?autoPhase:autoRepair?.outcome==='NEEDS_TEACHER_REVIEW'?'Perlu tinjauan guru':(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
         {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {isAnalyzing?checkpointWork.completed:countStep07CompletedUnits({...mapping,id:mapping?.id || 'temp',academicSettingId:atp.academicSettingId,atpId:atp.id,updatedAt:mapping?.updatedAt || '',units,step07AutoRepair:autoRepair},atp,tp)}/{units.length} · {checkpointWork.checkpointStatus}</p>}
-        {(isAnalyzing?repairProgress:autoRepair?.progress)&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {(isAnalyzing?repairProgress:autoRepair?.progress)!.initial} · Selesai: {(isAnalyzing?repairProgress:autoRepair?.progress)!.resolved} · Tersisa: {(isAnalyzing?repairProgress:autoRepair?.progress)!.remaining}</p>}
+        {displayedRepairProgress&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {displayedRepairProgress!.initial} · Selesai: {displayedRepairProgress!.resolved} · Tersisa: {displayedRepairProgress!.remaining}</p>}
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
         {autoRepair&&!isAnalyzing&&<p className="text-sm">{autoRepair.rounds} putaran · {mappingReadiness.validationResult?.isValid?'Valid':'Belum valid'} · {mappingReadiness.validationResult?.isComplete?'Struktur lengkap':'Struktur belum lengkap'} · {hasChanges?'Draft belum tersimpan':'Tersimpan'}</p>}
         <details><summary>Detail proses</summary><ul>{[...new Set([...(autoRepair?.issues || []),...(analysisError?.split('\n') || [])])].map((issue,index)=><li key={index}>{issue}</li>)}</ul></details>

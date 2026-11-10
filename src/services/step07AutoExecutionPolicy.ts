@@ -82,11 +82,15 @@ export function hasStep07StoredSemanticSupport(record:MappingChangeRecord,materi
   if(!check||check.verdict!=='SUPPORTED'||typeof check.reason!=='string'||!check.reason.trim()||(check.missingEvidence!==undefined&&(!Array.isArray(check.missingEvidence)||check.missingEvidence.length>0))||!Array.isArray(check.evidence)||!record.reviewedTpIds?.length)return false;
   return record.reviewedTpIds.every(id=>{
     const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id);
-    if(!objective||entries.length!==1)return false;
-    const e=entries[0],original=record.kind==='REALIGN'?material.title:(record.before || material.title);
+    if(!objective||!entries.length)return false;
+    // One canonical TP may contain several competencies. Preserve and validate
+    // every source-bound proof; never discard a failing secondary proof.
+    return entries.every(e=>{
+    const original=record.kind==='REALIGN'?material.title:(record.before || material.title);
     if(!contains(objective.statement,e.tpQuote,12)||!contains(original,e.materialQuote,8)||!contains(objective.statement,e.competenceQuote,4)||!contains(original,e.contextQuote,8)||!contains(material.title,e.contextQuote,8))return false;
     if(!(objective.competence || '').split(/[,;]/).some(v=>v.trim()&&normalized(e.competenceQuote).includes(normalized(v.trim()))))return false;
     return contains(material.title,e.competenceQuote,4)||(record.kind==='REALIGN'&&hasStep07LinkRationale(e));
+    });
   });
 }
 
@@ -116,9 +120,11 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
     if(['ADD_MATERIAL','MOVE_MATERIAL'].includes(action.type)&&check.targetUnitQuote!==unit.title){fail('Konteks Bab tujuan belum diverifikasi.');continue;}
     if(action.type==='ADD_MATERIAL'&&(check.additionNecessary!==true||action.linkedTpIds.every(id=>units.some(u=>u.materials.some(m=>m.linkedTpIds.includes(id)))))){fail('Materi baru hanya untuk TP yang belum terwakili oleh materi existing.');continue;}
     for(const id of action.linkedTpIds){
-      const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id),evidence=entries.length===1?entries[0]:undefined;
+      const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id);
       if(!objective){fail(`STRUCTURAL_CONFLICT: TP canonical '${id}' tidak ditemukan.`);continue;}
-      if(!evidence||!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
+      if(!entries.length){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
+      for(const evidence of entries){
+      if(!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
       const competence=(objective.competence || '').split(/[,;]/).map(value=>value.trim()).filter(Boolean);
       if(!contains(objective.statement,evidence.competenceQuote,4)||(action.type!=='LINK_TP'&&!contains(after,evidence.competenceQuote,4))||!competence.some(verb=>normalized(evidence.competenceQuote).includes(normalized(verb)))) fail(`Kompetensi TP '${id}' belum dinyatakan pada materi/hasil yang diusulkan; kesamaan kata bukan bukti.`);
       if(action.type==='LINK_TP'&&!contains(after,evidence.competenceQuote,4)&&!hasStep07LinkRationale(evidence))fail(`SEMANTIC_MISMATCH: TP '${id}' memerlukan penjelasan spesifik hubungan kompetensi dengan aktivitas materi, bukan kemiripan kata.`);
@@ -126,6 +132,7 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
       if(!contains(context,evidence.contextQuote,8)||!contains(after,evidence.contextQuote,8))fail(`Konteks substansi asli untuk TP '${id}' belum dipertahankan.`);
       if(checkMappingSemanticEvidence({label:after,tpItems:[objective]}).hardConflict)fail(`Konflik substansi eksplisit untuk TP '${id}'.`);
       if(checkMappingSemanticEvidence({label:action.type==='EDIT_UNIT_TITLE'?after:unit.title,tpItems:[objective]}).hardConflict)fail(`Konflik konteks Bab untuk TP '${id}'.`);
+      }
     }
   }
   return issues;

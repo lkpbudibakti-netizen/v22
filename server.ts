@@ -3103,6 +3103,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
 
   const apiKey = resolveApiKey(req);
   let fallbackReason=apiKey?'AI_PROVIDER_INVALID_RESPONSE':'AI_NOT_CONFIGURED';
+  let providerFailure='';
   if (apiKey) {
     try {
       const ai = createAIClient(apiKey);
@@ -3139,7 +3140,8 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
       }
     } catch (err: any) {
       fallbackReason=err instanceof SyntaxError?'AI_PROVIDER_INVALID_JSON':'AI_PROVIDER_ERROR';
-      console.warn('[AI Mapping Analysis]',requestId,fallbackReason,redactStep07Diagnostic(err?.message || err,300));
+      providerFailure=redactStep07Diagnostic(err?.message || err,300);
+      console.warn('[AI Mapping Analysis]',requestId,fallbackReason,providerFailure);
     }
   }
 
@@ -3149,6 +3151,7 @@ app.post('/api/ai/analyze-atp-unit-mapping', async (req, res) => {
     ? 'AI_UNAVAILABLE_OR_INVALID: AI tidak memberikan respons yang dapat digunakan. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada rekomendasi semantik yang direkayasa.'
     : 'AI_NOT_CONFIGURED: layanan AI belum dikonfigurasi. Opsi kanonikal tersedia untuk tinjauan dan ACC guru; tidak ada relasi yang dipaksakan.';
   if(serverParams.step07Auto?.scope==='STEP07_AUTO_REPAIR')fallbackResult.analysisNotice=apiKey?'AI_UNAVAILABLE_OR_INVALID: verifikasi semantik otomatis tidak tersedia. Gap dipertahankan; tidak ada relasi yang dipaksakan.':'AI_NOT_CONFIGURED: API key server/BYOK belum tersedia pada permintaan ini. Auto-repair tidak mengarang dukungan semantik atau memaksakan relasi.';
+  if(serverParams.step07Auto?.scope==='STEP07_AUTO_REPAIR'&&providerFailure)fallbackResult.analysisNotice+=` Penyebab layanan Gemini: ${providerFailure}`;
   return respond(200,{
     success: true,
     data: fallbackResult,

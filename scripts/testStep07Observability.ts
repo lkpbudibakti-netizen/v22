@@ -78,6 +78,10 @@ await test('Actual analysis endpoint echoes request metadata and classifies prov
   await invoke('fake','<!doctype html>PROVIDER_SECRET')(req,res);assert.equal(data.diagnostic.fallbackReason,'AI_PROVIDER_INVALID_JSON');assert(!JSON.stringify(data).includes('PROVIDER_SECRET'));
   await invoke(undefined)({...req,body:{}},res);assert.equal(status,400);assert.equal(data.diagnostic.requestId,'request-endpoint');
   await invoke('fake',JSON.stringify({atpFindings:[],materialFindings:[],alignmentProposals:[]}))(req,res);assert.equal(data.engine,'gemini_ai');assert.equal(data.diagnostic.fallback,false);
+  const failed=routeCallback('server.ts','/api/ai/analyze-atp-unit-mapping',{resolveApiKey:()=> 'fake',createAIClient:()=>({}),generateContentWithRetry:async()=>{throw Error('429 QUOTA_EXCEEDED api_key=TOPSECRET Bearer HIDDEN_TOKEN');},buildMappingAnalysisPrompt,sanitizeMappingAnalysisResult,fallbackAnalyzeMapping,redactStep07Diagnostic});
+  await failed({...req,body:{...params,step07Auto:{scope:'STEP07_AUTO_REPAIR',phase:'PROPOSE',round:1,focus:{unitIds:[],materialIds:[],tpIds:[],atpIds:[]}}}},res);assert.equal(data.engine,'pedagogical_engine');assert.equal(data.diagnostic.fallbackReason,'AI_PROVIDER_ERROR');
+  assert(data.data.analysisNotice.includes('429 QUOTA_EXCEEDED'),'Step07 must expose an actionable provider cause without requiring server logs');
+  assert(!JSON.stringify(data).includes('TOPSECRET')&&!JSON.stringify(data).includes('HIDDEN_TOKEN'));
 });
 await test('Step07 BYOK accepts the actual endpoint engine label, preserving HTTP/schema and semantic guards',async()=>{
   const original=globalThis.fetch;let requests=0;localStorage.setItem(GEMINI_API_KEY_STORAGE_KEY,'FIXTURE_BYOK_NOT_A_SECRET');
