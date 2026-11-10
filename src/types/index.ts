@@ -583,6 +583,7 @@ export interface Step07SemanticCheck {
   evidence:Array<{tpId:string;tpQuote:string;materialQuote:string;competenceQuote:string;contextQuote:string}>;
 }
 export interface Step07AutoRequest {
+  repair?:{attempt:number;strategy:'REVISE_MATERIAL'|'CORRECT_STRUCTURE'|'CHECK_EVIDENCE'|'TARGET_REMAINING';failures:import('../services/step07AutoExecutionPolicy').Step07ActionFailure[];rejectedFingerprints:string[]};
   execution?:{mode:'INITIAL_MAPPING'|'REPAIR'|'VALIDATE';activeUnitId?:string;reconciliation:boolean;otherUnits:Array<{id:string;title:string;tpIds:string[];materialCount:number}>;deferredActions?:import('../services/mappingAlignmentService').AlignmentAction[]};
   scope:'STEP07_AUTO_REPAIR';
   phase:'PROPOSE'|'VERIFY';
@@ -615,7 +616,7 @@ export interface Step07AutoRepairRun {
   expectedStoredFingerprint:string;
   addedMaterialIds:string[];
   rounds:number;
-  outcome:'COMPLETE'|'INCOMPLETE'|'STAGNATED'|'TIMEOUT'|'SAVE_FAILED'|'BUDGET_LIMIT'|'REPEATED_ISSUES';
+  outcome:'COMPLETE'|'INCOMPLETE'|'STAGNATED'|'TIMEOUT'|'SAVE_FAILED'|'BUDGET_LIMIT'|'REPEATED_ISSUES'|'NEEDS_TEACHER_REVIEW';
   issues:string[];
 }
 

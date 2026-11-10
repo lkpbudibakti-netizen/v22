@@ -4,7 +4,7 @@ import { applyMinimalAlignment, isMappingActionAutomatic, suggestMappingCopyedit
 import { computeStep07VerifiedFingerprint, computeMappingFingerprint } from './atpMappingActionApplyService';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
-import { step07SourceKey, step07PersistedKey, validateStep07AutoExecution } from './step07AutoExecutionPolicy';
+import { step07SourceKey, step07PersistedKey, validateStep07AutoExecution,normalizeStep07SourceEvidence,normalizeStep07VerificationSources,classifyStep07Failure,step07RepairProposalKey,type Step07RepairAttemptState } from './step07AutoExecutionPolicy';
 import { getMappingAtpTpIds } from './atpMappingLineageService';
 import { runHybridStep07Repair } from './step07HybridRepairService';
 import type { Step07CheckpointContext,Step07Stage,Step07WorkStatus } from './step07CheckpointService';
@@ -20,8 +20,10 @@ export interface Step07RepairOptions {
   saveInitialProgress?:boolean;
   baselineUnits?:ATPUnitMappingData['units'];
   baselineIssueIds?:string[];
+  repairState?:Step07RepairAttemptState;
+  globalReconciliationOnly?:boolean;
   onWork?:(state:Step07WorkStatus)=>void;
-  onCheckpoint?:(stage:Step07Stage,data:{mapping:ATPUnitMappingData;analysis?:MappingAnalysisResult;checks?:Step07SemanticCheck[];action?:AlignmentAction;issues?:string[];success:boolean})=>void;
+  onCheckpoint?:(stage:Step07Stage,data:{mapping:ATPUnitMappingData;analysis?:MappingAnalysisResult;checks?:Step07SemanticCheck[];action?:AlignmentAction;actionId?:string;issues?:string[];success:boolean})=>void;
   mapping:ATPUnitMappingData; atp:ATPData; tp:TPData; persistedMapping?:ATPUnitMappingData;
   analyze:(mapping:ATPUnitMappingData,request:Step07AutoRequest,signal:AbortSignal)=>Promise<MappingAnalysisResult>;
   save:(mapping:ATPUnitMappingData)=>boolean;
@@ -74,6 +76,10 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   const maxInputCharacters=Math.max(1,Math.min(4000000,options.maxInputCharacters ?? 2000000));
   const maxResponseCharacters=Math.max(1,Math.min(500000,options.maxResponseCharacters ?? 300000));
   const fresh=()=>options.isCurrent()&&canonicalKey===JSON.stringify({atp:options.atp,tp:options.tp});
+  const failure=(phase:Step07Stage,actionId:string,reasons:string[])=>{
+    for(const reason of reasons){const category=classifyStep07Failure(reason);recordStep07Diagnostic(diagnosticScope,{kind:'ACTION_FAILURE',phase,unitId:options.activeUnitId || 'GLOBAL',category,reason:`action=${actionId}; ${reason}`,success:false});
+      if(options.repairState&&!options.repairState.failures.some(f=>f.actionId===actionId&&f.reason===reason&&f.phase===phase))options.repairState.failures.push({actionId,category,reason,phase});}
+  };
   async function analyze(request:Step07AutoRequest) {
     if(!fresh())throw new Error('STEP07_STALE: data manual/konteks berubah; hasil tidak diterapkan.');
     if(Date.now()>=deadline)throw new Error('STEP07_TIMEOUT: batas waktu total terlampaui.');
@@ -96,19 +102,33 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       readiness=readinessOf(current,options);reportProgress();
       if(readiness.canProceed){outcome='COMPLETE';break;}
       if(options.activeUnitId&&!(readiness.repairIssues || []).some(issue=>issue.unitId===options.activeUnitId))break;
+      const repair=options.repairState;
+      if(repair){
+        const sourceKey=step07SourceKey(options.activeUnitId?current.units.filter(u=>u.id===options.activeUnitId):current.units,options.atp,options.tp);
+        if(repair.sourceKey!==sourceKey)Object.assign(repair,{sourceKey,attempts:0,seen:[],failures:[],status:undefined});
+        if(repair.status==='NEEDS_TEACHER_REVIEW'||repair.attempts>=2){outcome='NEEDS_TEACHER_REVIEW';repair.status=outcome;issues.push('NEEDS_TEACHER_REVIEW: batas perbaikan aman pada sumber yang sama tercapai; ubah draft/sumber berdasarkan tinjauan guru sebelum mencoba lagi.');break;}
+      }
       const before=readiness.validationResult!,beforeIssues=new Set((readiness.repairIssues || []).map(i=>i.id));
       const focus=focusFor(current,options,readiness,round===1&&!continuing);
       if(options.activeUnitId){focus.unitIds=[options.activeUnitId];focus.materialIds=current.units.find(u=>u.id===options.activeUnitId)?.materials.map(m=>m.id) || [];}
       const validation={canProceed:readiness.canProceed,issues:readiness.repairIssues || [],rejectedActions:[...new Set(issues)]};
+      const repairRequest=repair?{attempt:repair.attempts+1,strategy:(repair.failures.some(f=>f.category==='SEMANTIC_MISMATCH')?'REVISE_MATERIAL':repair.failures.some(f=>f.category==='STRUCTURAL_CONFLICT')?'CORRECT_STRUCTURE':repair.failures.some(f=>f.category==='EVIDENCE_INVALID')?'CHECK_EVIDENCE':'TARGET_REMAINING') as NonNullable<Step07AutoRequest['repair']>['strategy'],failures:repair.failures,rejectedFingerprints:repair.seen}:undefined;
       options.onStatus?.('Menganalisis');
       executionStage='PROPOSE';
-      analysis=await analyze({scope:'STEP07_AUTO_REPAIR',phase:'PROPOSE',round,focus,validation});
+      analysis=await analyze({scope:'STEP07_AUTO_REPAIR',phase:'PROPOSE',round,focus,validation,repair:repairRequest});
       options.onCheckpoint?.('PROPOSE',{mapping:current,analysis,success:true});
+      const proposalKey=step07RepairProposalKey(analysis);
+      if(repair&&repair.seen.includes(proposalKey)){outcome='NEEDS_TEACHER_REVIEW';repair.status=outcome;failure('PROPOSE','proposal-set',['NO_PROGRESS: proposal identik mengulang tindakan ditolak tanpa perubahan sumber atau solusi.']);issues.push('NEEDS_TEACHER_REVIEW: proposal identik; verifikasi/apply tidak diulang.');break;}
       if(analysis.analysisNotice)issues.push(analysis.analysisNotice);
       for(const proposal of (analysis.alignmentProposals || []).slice(0,200).filter(p=>p.validationStatus==='REJECTED'))issues.push(...(proposal.validationIssues?.length?proposal.validationIssues:[proposal.reason]));
+      for(const proposal of (analysis.alignmentProposals || []).slice(0,200)){
+        if(proposal.validationStatus==='REJECTED'){const reasons=proposal.validationIssues?.length?proposal.validationIssues:[proposal.reason];failure('PROPOSE',proposal.actionId || proposal.id,reasons);options.onCheckpoint?.('PROPOSE',{mapping:current,actionId:proposal.actionId || proposal.id,issues:reasons,success:false});}
+        if(proposal.sourceEvidenceRepairs?.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'PROPOSE',unitId:proposal.targetUnitId,reason:`action=${proposal.actionId || proposal.id}; ${proposal.sourceEvidenceRepairs.join('; ')}`,success:true});
+      }
       if(!fresh())throw new Error('STEP07_STALE: perubahan manual/konteks dipertahankan.');
       const materialGaps=new Set((readiness.repairIssues || []).flatMap(g=>g.materialId?[g.materialId]:[]));
       const candidates=(analysis.alignmentProposals || []).slice(0,200).filter(p=>p.validationStatus==='READY'&&p.action).map(p=>p.action!).filter(action=>{
+        if(options.globalReconciliationOnly&&(!action.sourceUnitId||action.sourceUnitId===action.targetUnitId)){const reasons=['STRUCTURAL_CONFLICT: GLOBAL tidak memperbaiki ulang tindakan lokal; tinjau Bab terkait.'];failure('FILTER',action.id,reasons);options.onCheckpoint?.('FILTER',{mapping:current,action,issues:reasons,success:false});return false;}
         if(options.activeUnitId&&(action.targetUnitId!==options.activeUnitId||(action.sourceUnitId||action.targetUnitId)!==options.activeUnitId)){
           options.onCheckpoint?.('FILTER',{mapping:current,action,issues:['GLOBAL_RECONCILIATION: tindakan lintas Bab ditunda ke rekonsiliasi global.'],success:false});return false;
         }
@@ -127,14 +147,17 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
         if(resolvesLocalCoverage)return true;
         if(action.targetMaterialId)return materialGaps.has(action.targetMaterialId);
         return (readiness.repairIssues || []).some(g=>g.unitId===action.targetUnitId);
-      });
+      }).map(action=>{const normalized=normalizeStep07SourceEvidence(action,current.units,options.tp);if(normalized.notes.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'PROPOSE',unitId:action.targetUnitId,reason:`action=${action.id}; ${normalized.notes.join('; ')}`,success:true});return normalized.action;});
       const substantial=candidates.filter(action=>!isMappingActionAutomatic(action,current.units,options.tp));
       let checks:Step07SemanticCheck[]=[];
       if(substantial.length){
         executionStage='VERIFY';
-        const verified=await analyze({scope:'STEP07_AUTO_REPAIR',phase:'VERIFY',round,focus,actions:substantial,validation});
+        const verified=await analyze({scope:'STEP07_AUTO_REPAIR',phase:'VERIFY',round,focus,actions:substantial,validation,repair:repairRequest});
         if(verified.analysisNotice)issues.push(verified.analysisNotice);
         checks=Array.isArray(verified.step07SemanticChecks)?verified.step07SemanticChecks.slice(0,200):[];
+        const exactChecks=normalizeStep07VerificationSources(checks,substantial,current.units,options.tp);
+        if(JSON.stringify(exactChecks)!==JSON.stringify(checks))recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',phase:'VERIFY',unitId:options.activeUnitId || 'GLOBAL',reason:'Kutipan sumber diperbaiki; verdict, kompetensi, konteks, dan missingEvidence tidak diubah.',success:true});
+        checks=exactChecks;
         options.onCheckpoint?.('VERIFY',{mapping:current,checks,success:true});
       }
       if(!fresh())throw new Error('STEP07_STALE: perubahan manual/konteks dipertahankan.');
@@ -144,7 +167,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       executionStage='FILTER';
       for(const action of candidates.sort((a,b)=>priority.indexOf(a.type)-priority.indexOf(b.type))){
         const errors=validateStep07AutoExecution(current.units,[action],options.atp,options.tp,permit,a=>isMappingActionAutomatic(a,current.units,options.tp));
-        if(errors.length){issues.push(...errors);options.onCheckpoint?.('VERIFY',{mapping:current,action,issues:errors,success:false});continue;}
+        if(errors.length){issues.push(...errors);failure('VERIFY',action.id,errors);options.onCheckpoint?.('VERIFY',{mapping:current,action,issues:errors,success:false});continue;}
         const target=action.targetMaterialId || `${action.targetUnitId}:${action.type==='ADD_MATERIAL'?action.after:'unit'}`;
         if(targets.has(target)){options.onCheckpoint?.('FILTER',{mapping:current,action,issues:['CONFLICT: alternatif untuk target yang sama; satu tindakan dipilih.'],success:false});continue;}
         if(action.type==='ADD_MATERIAL'&&chosen.some(existing=>existing.type!=='ADD_MATERIAL'&&existing.linkedTpIds.some(id=>action.linkedTpIds.includes(id))))continue;
@@ -162,7 +185,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
             const next={...current,units:candidate.nextUnits};
             current=next;changed ||= didChange;if(didChange)appliedActions.push(...batch.map(a=>a.id));
             options.onCheckpoint?.('APPLY',{mapping:current,action:batch[0],success:true});
-          }else{issues.push(...candidate.issues);options.onCheckpoint?.('APPLY',{mapping:current,action:batch[0],issues:candidate.issues,success:false});}
+          }else{issues.push(...candidate.issues);for(const action of batch)failure('APPLY',action.id,candidate.issues);options.onCheckpoint?.('APPLY',{mapping:current,action:batch[0],issues:candidate.issues,success:false});}
         }
       }
       options.onStatus?.('Memvalidasi');
@@ -175,13 +198,20 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       const resolved=[...beforeIssues].some(id=>!afterIssues.has(id));
       repeatedIssues=resolved?0:repeatedIssues+1;
       const state=computeMappingFingerprint(current.units,options.atp,options.tp);
+      if(repair&&!resolved){
+        if(analysis.engine==='pedagogical_engine'||issues.some(i=>classifyStep07Failure(i)==='API_FAILURE')){const reason='API_FAILURE: verifikasi semantik AI/fallback tidak tersedia; progres aman dipertahankan.';failure('PROPOSE','analysis',[reason]);issues.push(reason);outcome='INCOMPLETE';break;}
+        repair.attempts++;repair.seen.push(proposalKey);
+        if(!repair.failures.length)failure('VALIDATE','proposal-set',['NO_PROGRESS: masalah readiness belum berkurang; diperlukan strategi revisi yang berbeda.']);
+        if(repair.attempts>=2){outcome='NEEDS_TEACHER_REVIEW';repair.status=outcome;issues.push('NEEDS_TEACHER_REVIEW: dua upaya pada sumber yang sama belum menghasilkan perbaikan aman.');break;}
+        issues.push('REPAIR_RETRY: gunakan alasan per tindakan; revisi materi/konteks, bukan mengulang LINK_TP tanpa dukungan.');options.onCheckpoint?.('VALIDATE',{mapping:current,issues:['REPAIR_RETRY: kegagalan spesifik tersimpan untuk strategi berikutnya.'],success:false});continue;
+      }
       // History-only semantic confirmation can make real readiness progress while
       // the graph stays identical. It is not a cycle when an issue was resolved.
       if(!changed){outcome='STAGNATED';issues.push('STEP07_STAGNATED: tidak ada tindakan aman yang menghasilkan kemajuan.');break;}
       if(!resolved&&(seenStates.has(state)||repeatedIssues>=2)){outcome='REPEATED_ISSUES';issues.push('STEP07_REPEATED_ISSUES: kondisi/masalah berulang tanpa penyelesaian; progres aman dipertahankan.');break;}
       seenStates.add(state);
     }
-  } catch(error){const message=error instanceof Error?error.message:String(error);issues.push(message);outcome=message.includes('STEP07_TIMEOUT')?'TIMEOUT':message.includes('STEP07_BUDGET_LIMIT')?'BUDGET_LIMIT':'INCOMPLETE';if(fresh())try{options.onCheckpoint?.(executionStage,{mapping:current,issues:[message],success:false});}catch(logError){issues.push(String(logError));}}
+  } catch(error){const message=error instanceof Error?error.message:String(error);issues.push(message);failure(executionStage,'analysis', [message]);outcome=message.includes('STEP07_TIMEOUT')?'TIMEOUT':message.includes('STEP07_BUDGET_LIMIT')?'BUDGET_LIMIT':'INCOMPLETE';if(fresh())try{options.onCheckpoint?.(executionStage,{mapping:current,issues:[message],success:false});}catch(logError){issues.push(String(logError));}}
   const stale=!fresh();
   if(stale)issues.push('STEP07_STALE: draft aktif tidak boleh diganti oleh hasil lama.');
   readiness=readinessOf(current,options);reportProgress();

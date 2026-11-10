@@ -1,6 +1,7 @@
 import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, mappingActionKind, isMappingActionAutomatic, hasTeacherMaterialSupport, suggestMappingCopyedit, buildMappingPedagogicalReport, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
 import type { AnalyzeATPUnitMappingServerParams, MappingAnalysisResult } from './mappingAnalysis';
 import { getMappingAtpTpIds, deriveMappingAtpIds } from '../src/services/atpMappingLineageService';
+import {normalizeStep07SourceEvidence} from '../src/services/step07AutoExecutionPolicy';
 
 /** AI owns semantic proposals; the server derives impact from real candidate data, not AI counts. */
 export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingServerParams, result: MappingAnalysisResult): MappingAnalysisResult {
@@ -60,6 +61,8 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
       materialOrder: Array.isArray(candidate.materialOrder) && candidate.materialOrder.every((id: unknown) => typeof id === 'string') ? candidate.materialOrder : undefined,
       reason: typeof candidate.reason === 'string' ? candidate.reason : '', evidence: candidate.evidence,
     };
+    const sourceRepair=params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?normalizeStep07SourceEvidence(action,mapping.units,tp):undefined;
+    if(sourceRepair)Object.assign(action,sourceRepair.action);
     const preview = applyMinimalAlignment(mapping.units, [action], atp, tp);
     const duplicate = seen.has(action.id) || actions.filter(a => a?.id === action.id).length > 1;
     const unchanged = preview.success && JSON.stringify(preview.nextUnits) === JSON.stringify(mapping.units);
@@ -69,7 +72,7 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     const changeKind = mappingActionKind(action, mapping.units);
     const automatic = isMappingActionAutomatic(action, mapping.units, tp);
     seen.add(action.id);
-    proposals.push({ id: `minimal-${proposals.length}-${action.id}`, targetUnitId: action.targetUnitId,
+    proposals.push({ id: `minimal-${proposals.length}-${action.id}`,actionId:action.id,sourceEvidenceRepairs:sourceRepair?.notes, targetUnitId: action.targetUnitId,
       targetMaterialId: action.targetMaterialId, before: typeof action.before === 'string' ? action.before : '',
       after: action.type === 'RESTRUCTURE_UNIT' ? JSON.stringify(action.materialOrder || []) : typeof action.after === 'string' ? action.after : typeof action.before === 'string' ? action.before : '',
       tpIds: Array.isArray(action.linkedTpIds) ? action.linkedTpIds : [],

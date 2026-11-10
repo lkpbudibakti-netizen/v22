@@ -21,6 +21,8 @@ export interface AlignmentAction {
   evidence: { tpId: string; tpQuote: string; materialQuote: string }[];
 }
 export interface AlignmentProposal {
+  actionId?:string;
+  sourceEvidenceRepairs?:string[];
   executionClass?: 'AUTO_APPLY' | 'NEEDS_APPROVAL';
   changeKind?: MappingChangeRecord['kind'];
   approval?: 'AUTOMATIC' | 'TEACHER';

@@ -1810,7 +1810,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
       {(isAnalyzing||autoRepair||checkpointWork)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
-        <strong>{isAnalyzing?autoPhase:(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
+        <strong>{isAnalyzing?autoPhase:autoRepair?.outcome==='NEEDS_TEACHER_REVIEW'?'Perlu tinjauan guru':(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
         {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {checkpointWork.completed}/{checkpointWork.total} · {checkpointWork.checkpointStatus}</p>}
         {(isAnalyzing?repairProgress:autoRepair?.progress)&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {(isAnalyzing?repairProgress:autoRepair?.progress)!.initial} · Selesai: {(isAnalyzing?repairProgress:autoRepair?.progress)!.resolved} · Tersisa: {(isAnalyzing?repairProgress:autoRepair?.progress)!.remaining}</p>}
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>

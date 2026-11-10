@@ -3,17 +3,21 @@ import type { MappingAnalysisResult } from './aiService';
 import { loadStorageV5 } from './storageV5';
 import { computeAtpSubstantiveFingerprint,computeTpSubstantiveFingerprint } from './atpMappingActionApplyService';
 import {recordStep07Diagnostic,step07ErrorCategory} from './step07DiagnosticsService';
+import type {Step07FailureCategory,Step07RepairAttemptState} from './step07AutoExecutionPolicy';
 
 export type Step07Stage='ANALYZE'|'PROPOSE'|'VERIFY'|'FILTER'|'APPLY'|'VALIDATE'|'SAVE';
 export type Step07Mode='INITIAL_MAPPING'|'REPAIR'|'VALIDATE';
 export interface Step07CheckpointContext {yearPlanId:string;profileId:string;schoolId:string;identityFingerprint:string;}
 export interface Step07WorkStatus {mode:Step07Mode;activeUnitId:string;stage:Step07Stage;completed:number;total:number;checkpointStatus:string;}
-export interface Step07StageEvent {stage:Step07Stage;actionId?:string;success:boolean;reason:string;}
+export interface Step07StageEvent {stage:Step07Stage;actionId?:string;success:boolean;reason:string;failureCategory?:Step07FailureCategory;}
 export interface Step07UnitCheckpoint {
   baseSource?:string;
-  source:string;dependency:string;stage:Step07Stage;status:'PENDING'|'RUNNING'|'DONE'|'BLOCKED';
+  source:string;dependency:string;stage:Step07Stage;status:'PENDING'|'RUNNING'|'DONE'|'BLOCKED'|'NEEDS_TEACHER_REVIEW';
   analysis?:MappingAnalysisResult;proposal?:MappingAnalysisResult;verification?:MappingAnalysisResult;
   cacheUsable?:boolean;applied:string[];events:Step07StageEvent[];
+  rejected?:string[];
+  verifiedDependencies?:Record<string,string>;
+  repairState?:Step07RepairAttemptState;
   responses?:Array<{phase:string;source:string;canonical:string;result:MappingAnalysisResult}>;
 }
 export interface Step07Checkpoint {

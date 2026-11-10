@@ -1,11 +1,61 @@
 import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, Step07SemanticCheck } from '../types';
 import type { AlignmentAction } from './mappingAlignmentService';
+import type {MappingAnalysisResult} from './aiService';
 import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
 
 export interface Step07AutoPermit {
   scope:'STEP07_AUTO_REPAIR';
   sourceKey:string;
   checks:Step07SemanticCheck[];
+}
+export type Step07FailureCategory='EVIDENCE_INVALID'|'SEMANTIC_MISMATCH'|'STRUCTURAL_CONFLICT'|'API_FAILURE'|'NO_PROGRESS';
+export interface Step07ActionFailure {actionId:string;category:Step07FailureCategory;reason:string;phase:string;}
+export interface Step07RepairAttemptState {sourceKey:string;attempts:number;seen:string[];failures:Step07ActionFailure[];status?:'NEEDS_TEACHER_REVIEW';}
+export function step07RepairProposalKey(result:MappingAnalysisResult):string {
+  return JSON.stringify((result.alignmentProposals || []).map(p=>{const a=p.action;return {type:a?.type || p.proposalType,unit:p.targetUnitId,source:a?.sourceUnitId,material:p.targetMaterialId,before:p.before,after:p.after,tp:[...(a?.linkedTpIds || p.tpIds || [])].sort()};}).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
+}
+export function classifyStep07Failure(reason:string):Step07FailureCategory {
+  if(/API_|AI_UNAVAILABLE|AI_NOT_CONFIGURED|TIMEOUT|NETWORK|ABORT/i.test(reason))return 'API_FAILURE';
+  if(/EVIDENCE_|kutipan|bukti sumber|tidak dapat ditelusuri|sumber.*bukti.*lengkap/i.test(reason))return 'EVIDENCE_INVALID';
+  if(/SEMANTIC|NEEDS_REVIEW|kompetensi|substansi|konteks|pedagog|hard.conflict|CONTENT_CHANGE/i.test(reason))return 'SEMANTIC_MISMATCH';
+  if(/CONFLICT|MISMATCH|ID |ID_|fiktif|duplikat|duplicate|tidak ditemukan|struktur|source.changed|stale|BEFORE_/i.test(reason))return 'STRUCTURAL_CONFLICT';
+  return 'NO_PROGRESS';
+}
+/** Source citations are pointers, not semantic approval. Never repair a stale before,
+ * fabricated ID, verdict, competence/context claim, missingEvidence, or material scope. */
+export function normalizeStep07SourceEvidence(action:AlignmentAction,units:ATPUnitMapping[],tp:TPData):{action:AlignmentAction;notes:string[]} {
+  const copy=structuredClone(action),notes:string[]=[];
+  const unit=units.find(u=>u.id===action.targetUnitId),source=units.find(u=>u.id===(action.sourceUnitId || action.targetUnitId));
+  const material=source?.materials.find(m=>m.id===action.targetMaterialId);
+  const original=action.type==='EDIT_UNIT_TITLE'?unit?.title:action.type==='ADD_MATERIAL'?action.after:action.type==='RESTRUCTURE_UNIT'?source?.materials.map(m=>m.title).join('; '):material?.title;
+  if(!unit||!source||!original||!action.linkedTpIds.length||action.linkedTpIds.some(id=>tp.items.filter(t=>t.id===id).length!==1))return {action:copy,notes};
+  if(action.type!=='ADD_MATERIAL'&&action.type!=='RESTRUCTURE_UNIT'&&action.before!==original){
+    if(typeof action.before!=='string'||normalized(action.before)!==normalized(original))return {action:copy,notes};
+    copy.before=original;notes.push('BEFORE_SOURCE_NORMALIZED: hanya Unicode/spasi/kapital, bukan substansi.');
+  }
+  const old=Array.isArray(copy.evidence)?copy.evidence:[];
+  copy.evidence=action.linkedTpIds.map(id=>{
+    const item=tp.items.find(t=>t.id===id)!,prior=old.find(e=>e.tpId===id);
+    if(prior?.tpQuote!==item.statement||prior?.materialQuote!==original)notes.push(`SOURCE_CITATION_REPAIRED:${id}: kutipan exact diambil dari ID sumber, belum merupakan verifikasi semantik.`);
+    return {tpId:id,tpQuote:item.statement,materialQuote:original};
+  });
+  return {action:copy,notes};
+}
+export function normalizeStep07VerificationSources(checks:Step07SemanticCheck[],actions:AlignmentAction[],units:ATPUnitMapping[],tp:TPData):Step07SemanticCheck[] {
+  return checks.map(check=>{
+    const action=actions.find(a=>a.id===check.actionId);if(!action)return structuredClone(check);
+    const repaired=normalizeStep07SourceEvidence(action,units,tp).action,copy=structuredClone(check);
+    // Retain missing/negative semantic decisions. Only replace existing evidence
+    // source-quote fields; never synthesize a SUPPORTED finding or semantic evidence.
+    if(Array.isArray(copy.evidence))for(const evidence of copy.evidence){const exact=repaired.evidence?.find(e=>e.tpId===evidence.tpId);if(exact){evidence.tpQuote=exact.tpQuote;evidence.materialQuote=exact.materialQuote;}}
+    return copy;
+  });
+}
+export function step07ActionDependency(action:AlignmentAction,units:ATPUnitMapping[],atp:ATPData,tp:TPData):string {
+  const unit=units.find(u=>u.id===action.targetUnitId),source=units.find(u=>u.id===(action.sourceUnitId || action.targetUnitId));
+  const material=source?.materials.find(m=>m.id===action.targetMaterialId);
+  const ids=new Set([...action.linkedTpIds,...(action.replaceTpIds?material?.linkedTpIds || []:[])]);
+  return JSON.stringify({unit:unit?.title,source:source?.title,material:material&&{id:material.id,title:material.title,tp:material.linkedTpIds,atp:material.linkedAtpItemIds},structure:['ADD_MATERIAL','MOVE_MATERIAL','RESTRUCTURE_UNIT'].includes(action.type)?[unit?.materials.map(m=>[m.id,m.title,m.order,m.linkedTpIds]),source?.materials.map(m=>[m.id,m.title,m.order,m.linkedTpIds])]:undefined,tp:tp.items.filter(t=>ids.has(t.id)),atp:atp.items.filter(a=>(a.linkedTpIds || (a.tpId?[a.tpId]:[])).some(id=>ids.has(id)))});
 }
 export const step07SourceKey=(units:ATPUnitMapping[],atp:ATPData,tp:TPData)=>JSON.stringify({units,atp,tp});
 export function step07PersistedKey(mapping:ATPUnitMappingData,atp:ATPData,tp:TPData):string {
