@@ -54,15 +54,131 @@ export function readStep07Checkpoint(context:Step07CheckpointContext):Step07Chec
   recordStep07Diagnostic(context,{kind:'CHECKPOINT_READ',unitId:value.activeUnitId,success:true,persisted:true,reason:`schema=${value.schemaVersion}; revision=${value.revision}`});return value;
   }catch(error){recordStep07Diagnostic(context,{kind:'CHECKPOINT_READ',success:false,category:step07ErrorCategory(error),reason:'Checkpoint gagal dibaca; data mentah dipertahankan.'});throw error;}
 }
+export function classifyCheckpointStorageError(err:unknown):{category:string;message:string} {
+  if(typeof globalThis.localStorage==='undefined')return {category:'CHECKPOINT_STORAGE_UNAVAILABLE',message:'CHECKPOINT_SAVE_FAILED: localStorage tidak tersedia pada browser/lingkungan ini. Draft tersimpan tetap aman di V5.'};
+  const name=err&&typeof err==='object'&&'name' in err?String(err.name):'';
+  const msg=err instanceof Error?err.message:String(err || '');
+  if(name==='QuotaExceededError'||(err as any)?.code===22||name==='NS_ERROR_DOM_QUOTA_REACHED'||/quota|QuotaExceeded|storage full/i.test(msg)){
+    return {category:'CHECKPOINT_QUOTA_EXCEEDED',message:'CHECKPOINT_SAVE_FAILED: kuota penyimpanan browser (localStorage) penuh. Draft tersimpan sebelumnya tetap aman di V5; kosongkan cache situs atau ekspor cadangan profil.'};
+  }
+  if(err instanceof TypeError||/circular|serialize|JSON\.stringify/i.test(msg)){
+    return {category:'CHECKPOINT_SERIALIZATION_FAILED',message:'CHECKPOINT_SAVE_FAILED: struktur data checkpoint tidak dapat diserialisasi. Draft tersimpan di V5 tidak terpengaruh.'};
+  }
+  if(/unavailable|disabled|security|access denied|not available/i.test(msg)){
+    return {category:'CHECKPOINT_STORAGE_UNAVAILABLE',message:'CHECKPOINT_SAVE_FAILED: akses penyimpanan lokal dinonaktifkan atau diblokir oleh izin browser. Draft tersimpan di V5 tidak terpengaruh.'};
+  }
+  return {category:'CHECKPOINT_SAVE_FAILED',message:`CHECKPOINT_SAVE_FAILED: penyimpanan lokal gagal (${msg || 'unknown'}). Proses dihentikan; draft tersimpan sebelumnya tetap aman.`};
+}
+
+export function compactStep07Checkpoint(checkpoint:Step07Checkpoint):Step07Checkpoint {
+  if(!checkpoint)return checkpoint;
+  if(Array.isArray(checkpoint.beforeUnits)){
+    const seen=new Set<string>();
+    checkpoint.beforeUnits=checkpoint.beforeUnits.filter(u=>{
+      if(!u||!u.id||seen.has(u.id))return false;
+      seen.add(u.id);
+      return true;
+    });
+  }
+  if(Array.isArray(checkpoint.invalidated)&&checkpoint.invalidated.length>10){
+    checkpoint.invalidated=checkpoint.invalidated.slice(-10);
+  }
+  if(Array.isArray(checkpoint.invalidated)){
+    for(const item of checkpoint.invalidated){
+      if(item?.checkpoint){
+        delete item.checkpoint.analysis;
+        delete item.checkpoint.proposal;
+        delete item.checkpoint.verification;
+        delete item.checkpoint.responses;
+        if(Array.isArray(item.checkpoint.events)&&item.checkpoint.events.length>6){
+          item.checkpoint.events=item.checkpoint.events.slice(-6);
+        }
+      }
+    }
+  }
+  if(checkpoint.units&&typeof checkpoint.units==='object'){
+    for(const point of Object.values(checkpoint.units)){
+      if(!point)continue;
+      if(Array.isArray(point.events)&&point.events.length>30){
+        const failed=point.events.filter(e=>!e.success);
+        const success=point.events.filter(e=>e.success);
+        const keptFailed=failed.slice(-15);
+        const keptSuccess=success.slice(-15);
+        point.events=[...keptFailed,...keptSuccess].sort((a,b)=>point.events.indexOf(a)-point.events.indexOf(b));
+      }
+      if(Array.isArray(point.responses)&&point.responses.length>3){
+        point.responses=point.responses.slice(-3);
+      }
+      if(Array.isArray(point.rejected)){
+        point.rejected=[...new Set(point.rejected)];
+      }
+    }
+  }
+  return checkpoint;
+}
+
+function pruneCheckpointForEmergency(cp:Step07Checkpoint):Step07Checkpoint {
+  delete cp.workingMapping;
+  if(Array.isArray(cp.invalidated)){
+    cp.invalidated=cp.invalidated.slice(-2).map(i=>({unitId:i.unitId,reason:i.reason,checkpoint:{stage:i.checkpoint?.stage,status:i.checkpoint?.status,source:i.checkpoint?.source,dependency:i.checkpoint?.dependency,applied:i.checkpoint?.applied || [],events:[]}}));
+  }
+  for(const p of Object.values(cp.units)){
+    delete p.responses;
+    if(p.events&&p.events.length>3)p.events=p.events.slice(-3);
+    if(p.status==='DONE'||p.status==='BLOCKED'){
+      delete p.analysis;
+      delete p.proposal;
+    }
+  }
+  return cp;
+}
+
 export function writeStep07Checkpoint(value:Step07Checkpoint):void {
-  const started=Date.now();try{
-  const key=step07CheckpointKey(value.context),previous=localStorage.getItem(key);
-  if(previous){const stored=JSON.parse(previous) as Step07Checkpoint;if(stored.revision!==value.revision)throw new Error('CHECKPOINT_CONFLICT: checkpoint berubah pada proses lain.');if(previous===JSON.stringify(value))return;}
-  const next={...value,revision:value.revision+1};
-  try{localStorage.setItem(key,JSON.stringify(next));}catch{throw new Error('CHECKPOINT_SAVE_FAILED: penyimpanan lokal penuh/tidak tersedia. Proses dihentikan; draft tersimpan sebelumnya tetap aman.');}
-  value.revision=next.revision;
-  recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,phase:value.activeUnitId?value.units[value.activeUnitId]?.stage:undefined,success:true,persisted:true,durationMs:Date.now()-started,reason:`revision=${value.revision}`});
-  }catch(error){recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,success:false,persisted:false,category:step07ErrorCategory(error),reason:'Checkpoint gagal dipersist; snapshot terakhir tidak direset.'});throw error;}
+  const started=Date.now();
+  let failureCategory='CHECKPOINT_SAVE_FAILED';
+  try{
+    const key=step07CheckpointKey(value.context),previous=localStorage.getItem(key);
+    if(previous){
+      const stored=JSON.parse(previous) as Step07Checkpoint;
+      if(stored.revision!==value.revision)throw new Error('CHECKPOINT_CONFLICT: checkpoint berubah pada proses lain.');
+      if(previous===JSON.stringify(value))return;
+    }
+    compactStep07Checkpoint(value);
+    const next={...value,revision:value.revision+1};
+    let serialized:string;
+    try{
+      serialized=JSON.stringify(next);
+    }catch(serializeErr){
+      const classified=classifyCheckpointStorageError(serializeErr);
+      failureCategory=classified.category;
+      throw new Error(classified.message);
+    }
+    try{
+      localStorage.setItem(key,serialized);
+    }catch(writeErr){
+      const classified=classifyCheckpointStorageError(writeErr);
+      failureCategory=classified.category;
+      if(classified.category==='CHECKPOINT_QUOTA_EXCEEDED'){
+        try{
+          pruneCheckpointForEmergency(next);
+          serialized=JSON.stringify(next);
+          localStorage.setItem(key,serialized);
+        }catch(retryErr){
+          const retryClassified=classifyCheckpointStorageError(retryErr);
+          failureCategory=retryClassified.category;
+          throw new Error(retryClassified.message);
+        }
+      }else{
+        throw new Error(classified.message);
+      }
+    }
+    value.revision=next.revision;
+    recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,phase:value.activeUnitId?value.units[value.activeUnitId]?.stage:undefined,success:true,persisted:true,durationMs:Date.now()-started,reason:`revision=${value.revision}`});
+  }catch(error){
+    const category=(error instanceof Error&&error.message.includes('CHECKPOINT_CONFLICT'))?'CHECKPOINT_CONFLICT':failureCategory;
+    recordStep07Diagnostic(value.context,{kind:'CHECKPOINT_WRITE',unitId:value.activeUnitId,success:false,persisted:false,category,reason:'Checkpoint gagal dipersist; snapshot terakhir tidak direset.'});
+    throw error;
+  }
 }
 /** Web Locks provide cross-tab/process exclusion and release automatically after a crash.
  * Fail closed on unsupported surfaces rather than pretend localStorage read/write is a lock. */

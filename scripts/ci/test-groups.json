@@ -32,6 +32,7 @@
     "scripts/testStep07TargetUnit.ts",
     "scripts/testStep07ProgressPersistence.ts",
     "scripts/testStep07RealProjectEvidence.ts",
+    "scripts/testStep07CheckpointSaveResilience.ts",
     "scripts/testStep07Observability.ts",
     "scripts/testMeetingAlignment.ts",
     "scripts/testCalendarBackendSearchProvider.ts",
