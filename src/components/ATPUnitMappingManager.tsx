@@ -1,4 +1,5 @@
 import { runStep07AutoRepair, step07RepairColor, undoStep07AutoRepair } from '../services/step07AutoRepairService';
+import {STEP07_SEMANTIC_POLICY_VERSION} from '../services/step07AutoExecutionPolicy';
 import { getATPUnitMappingV5 } from '../services/storageV5';
 import { resolveStep07CheckpointContext,readStep07Checkpoint,step07CanonicalKey,step07UnitKey,type Step07WorkStatus } from '../services/step07CheckpointService';
 import { copyCPAnalysisDiagnosis } from '../services/cpAnalysisAIDiagnostics';
@@ -1064,7 +1065,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   // Reuse persisted proposals only for their exact current unit/canonical source.
   const guidancePoints=useMemo(()=>{
     try{const cp=readStep07Checkpoint(resolveStep07CheckpointContext(academicSetting?.id || atp.academicSettingId));
-      return cp?.canonical===step07CanonicalKey(atp,tp)?units.flatMap(unit=>{const point=cp.units[unit.id];return point?.source===step07UnitKey(unit)?[{unitId:unit.id,point}]:[];}):[];
+      return cp?.canonical===step07CanonicalKey(atp,tp)?units.flatMap(unit=>{const point=cp.units[unit.id];return point?.source===step07UnitKey(unit)&&point.semanticPolicyVersion===STEP07_SEMANTIC_POLICY_VERSION?[{unitId:unit.id,point}]:[];}):[];
     }catch{return [];}
   },[units,atp,tp,academicSetting?.id,checkpointWork]);
   const guidanceProposals=[...guidancePoints.flatMap(({point})=>(point.proposal || point.analysis)?.alignmentProposals || []),...(analysisResult?.alignmentProposals || [])]
@@ -1090,7 +1091,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                   const selectedTpIds=tpIds.length?tpIds:(replace?[]:material?.linkedTpIds || []);
                   const rename=newTitle!==title;
                   if (replace && rename) {setApplyIssues(['Lakukan koreksi relasi dan perubahan judul dalam tindakan terpisah agar setiap dampak dapat ditinjau.']);return;}
-                  if ((!selectedTpIds.length && !rename && !replace) || !reason.trim()) {setApplyIssues(['Pilih TP atau perbaiki judul, lalu jelaskan bukti aktivitas/kompetensi sebelum ACC.']);return;}
+                  if ((!selectedTpIds.length && !rename && !replace) || !reason.trim()) {setApplyIssues(['Pilih TP atau perbaiki judul, lalu jelaskan alasan relevansi substansi/kompetensi sebelum ACC.']);return;}
                   const current=unitsRef.current, before=computeMappingFingerprint(current,atpRef.current,tpRef.current);
                   const result=applyATPMappingActions({units:current,atp:atpRef.current,tp:tpRef.current,expectedFingerprint:before,currentFingerprint:before,
                     selectedActions:[{id:`teacher-review-${materialId}-${Date.now()}`,type:rename?'EDIT_MATERIAL':'LINK_TP',targetUnitId:unitId,targetMaterialId:materialId,before:title,after:rename?newTitle:undefined,replaceTpIds:replace,linkedTpIds:[...new Set([...(replace?[]:material?.linkedTpIds || []),...selectedTpIds])],reason:reason.trim(),
@@ -1121,11 +1122,11 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     const reasons=[...new Set([...(proposal?.validationIssues || []),...checks.flatMap(c=>c.verdict!=='SUPPORTED'?[c.reason,...c.missingEvidence]:[]),...(point?.events.filter(e=>!e.success&&belongs(e.actionId)).map(e=>e.reason) || []),...(point?.repairState?.failures.filter(f=>belongs(f.actionId)).map(f=>f.reason) || [])])];
     return <section data-teacher-guidance={material.id} className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs">
       <p className="font-semibold">Perlu tinjauan: {material.title}</p>
-      <p>{material.linkedTpIds.length?'TP sudah dicentang, tetapi bukti aktivitas dan persetujuan untuk redaksi saat ini belum lengkap.':'Materi belum dipetakan. Pilih TP berdasarkan aktivitas yang benar-benar diajarkan.'} Centang relasi saja belum mencatat bukti pedagogis.</p>
+      <p>{material.linkedTpIds.length?'TP sudah dicentang, tetapi alasan relevansi dan persetujuan untuk redaksi saat ini belum lengkap.':'Materi belum dipetakan. Pilih TP berdasarkan relevansi substansi dan cakupan.'} Centang relasi saja belum mencatat bukti pedagogis.</p>
       {proposal&&<div><p>Usulan AI untuk ditinjau — belum dinyatakan valid:</p><p><del>{proposal.before}</del> → <strong>{proposal.after || proposal.before}</strong></p><p>{proposal.reason}</p></div>}
       {reasons.map(reason=><p key={reason}>Belum diterapkan: {reason}</p>)}
       {material.linkedTpIds.map(id=>{const objective=tp.items.find(t=>t.id===id);return objective?<p key={id}>[{objective.code}] {objective.statement}</p>:null;})}
-      <p>Edit judul bila perlu, lalu jelaskan aktivitas peserta didik yang menunjukkan kompetensi setiap TP. Jika TP tidak sesuai, koreksi relasinya. Usulan AI di atas tidak otomatis diterapkan atau dianggap benar.</p>
+      <p>Edit judul bila perlu, lalu jelaskan relevansi substansi dan cakupan materi terhadap setiap TP. Aktivitas pembelajaran dirumuskan pada modul ajar. Jika TP tidak sesuai, koreksi relasinya. Usulan AI di atas tidak otomatis diterapkan atau dianggap benar.</p>
       {renderInlineAlignment(unit,material.id)}
     </section>;
   };

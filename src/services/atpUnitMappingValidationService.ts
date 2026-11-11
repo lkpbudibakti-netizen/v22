@@ -208,7 +208,7 @@ export function validateATPUnitMappingCanonical(
       const parentUnitTpSet = new Set(unitTpIds);
       for (const tpId of matTpIds) {
         const objective = tp.items.find(item => item.id === tpId);
-        const semantic = objective ? checkMappingSemanticEvidence({ label: m.title, tpItems: [objective] }) : undefined;
+        const semantic = objective ? checkMappingSemanticEvidence({ label: m.title, unitTitle:u.title, tpItems: [objective] }) : undefined;
         if (semantic?.hardConflict) {
           result.isValid = false;
           result.isComplete = false;

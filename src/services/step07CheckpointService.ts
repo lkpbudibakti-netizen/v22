@@ -11,6 +11,7 @@ export interface Step07CheckpointContext {yearPlanId:string;profileId:string;sch
 export interface Step07WorkStatus {mode:Step07Mode;activeUnitId:string;stage:Step07Stage;completed:number;total:number;checkpointStatus:string;}
 export interface Step07StageEvent {stage:Step07Stage;actionId?:string;success:boolean;reason:string;failureCategory?:Step07FailureCategory;}
 export interface Step07UnitCheckpoint {
+  semanticPolicyVersion?:string;
   baseSource?:string;
   source:string;dependency:string;stage:Step07Stage;status:'PENDING'|'RUNNING'|'DONE'|'BLOCKED'|'NEEDS_TEACHER_REVIEW';
   analysis?:MappingAnalysisResult;proposal?:MappingAnalysisResult;verification?:MappingAnalysisResult;

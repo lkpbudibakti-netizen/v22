@@ -150,11 +150,11 @@ export function buildMappingPedagogicalReport(units: ATPUnitMapping[], atp: ATPD
   const all = units.flatMap(unit => unit.materials.map(material => ({ unit, material })));
   for (const unitId of result.unitsWithoutLineage) add({ id: `lineage-empty-${unitId}`, unitId, category: 'UNIT_LINEAGE', priority: 'P1',
     actual: `Bab "${units.find(unit => unit.id === unitId)?.title || unitId}" belum memiliki lineage TP/ATP lengkap.`, evidence: 'Validator menemukan relasi TP/ATP Bab kosong meskipun coverage global mungkin sudah lengkap.',
-    recommendation: 'Tinjau kompetensi dan aktivitas materi dalam Bab, lalu setujui hanya relasi TP yang didukung substansi; ATP mengikuti induk TP kanonikal.',
+    recommendation: 'Tinjau substansi dan kompetensi materi dalam Bab, lalu setujui hanya relasi TP yang didukung substansi; ATP mengikuti induk TP kanonikal.',
     impact: 'Bab tetap dipertahankan; Step 08 belum READY sampai lineage lengkap.', approval: 'TEACHER', status: 'NEEDS_REVIEW' });
   for (const ref of result.materialsWithoutLineage) add({ id: `support-empty-${ref.unitId}-${ref.materialId}`, unitId: ref.unitId, materialId: ref.materialId, category: 'MATERIAL_SUPPORT', priority: 'P1',
     actual: `Materi "${all.find(({ unit, material }) => unit.id === ref.unitId && material.id === ref.materialId)?.material.title || ref.materialId}" belum memiliki lineage TP/ATP lengkap.`, evidence: 'Validator menemukan relasi materi kosong; judul singkat atau tidak adanya keyword tidak membuktikan ketidakrelevanan.',
-    recommendation: 'Minta usulan TP dengan alasan kompetensi, aktivitas dan cakupan dalam konteks Bab. Untuk TP luas, jelaskan aktivitas yang menunjukkan kompetensinya; jangan menambah materi atau menautkan TP hanya demi coverage.',
+    recommendation: 'Minta usulan TP dengan alasan substansi, kompetensi dan cakupan dalam konteks Bab. Untuk TP luas, jelaskan relevansi substansi terhadap kompetensinya; jangan menambah materi atau menautkan TP hanya demi coverage.',
     impact: 'Materi manual dipertahankan; relasi baru memerlukan persetujuan guru dan validasi ulang.', approval: 'TEACHER', status: 'NEEDS_REVIEW' });
   for (const { unit, material } of all) {
     for (const id of material.linkedTpIds) {
@@ -163,7 +163,7 @@ export function buildMappingPedagogicalReport(units: ATPUnitMapping[], atp: ATPD
       const signal = checkMappingSemanticEvidence({ label: material.title, tpItems: [objective] });
       add({ id: `support-${unit.id}-${material.id}-${id}`, unitId: unit.id, materialId: material.id, category: 'MATERIAL_SUPPORT', priority: signal.hardConflict ? 'P1' : 'P2',
         actual: `Materi "${material.title}" tertaut ke ${objective.code || id}.`, evidence: `TP: "${objective.statement}". ${signal.reason} Kecocokan kata saja bukan bukti kesetaraan pedagogis.`,
-        recommendation: signal.hardConflict ? 'Tinjau atau lepaskan hubungan yang bertentangan melalui keputusan guru.' : 'Konfirmasikan aktivitas, kompetensi dan cakupan; pertahankan relasi manual sampai keputusan guru.',
+        recommendation: signal.hardConflict ? 'Tinjau atau lepaskan hubungan yang bertentangan melalui keputusan guru.' : 'Konfirmasikan relevansi substansi, kompetensi dan cakupan; pertahankan relasi manual sampai keputusan guru.',
         impact: signal.hardConflict ? 'Konflik eksplisit mengunci kesiapan.' : 'Tidak ada relasi atau materi yang diubah oleh laporan.', approval: 'TEACHER', status: signal.hardConflict ? 'OPEN' : hasTeacherMaterialSupport(unit, material, tp) ? 'RESOLVED' : 'NEEDS_REVIEW' });
     }
     const duplicates = all.filter(other => other.material.id !== material.id && mappingTitleMeaning(other.material.title) === mappingTitleMeaning(material.title));
@@ -268,13 +268,14 @@ export function buildMappingMaterialResolutions(units: ATPUnitMapping[], atp: AT
       status: complete && approved && origin !== 'UNVERIFIED' ? 'RESOLVED' as const : actionable.length ? 'NEEDS_APPROVAL' as const : 'NEEDS_REVIEW' as const,
       reason: complete && approved ? 'Relasi tersimpan memiliki bukti persetujuan guru atau kesetaraan proposisi lengkap yang diperiksa independen untuk judul dan TP saat ini.' :
         gaps.find(g => g.kind === 'MATERIAL' && g.id === material.id)?.reason || matches.find(p => p.validationIssues?.length)?.reason ||
-        'Belum ada usulan semantik terverifikasi. Judul saja belum membuktikan kompetensi; guru perlu menjelaskan aktivitas dan cakupan.',
+        'Belum ada usulan semantik terverifikasi. Judul saja belum membuktikan kompetensi; guru perlu meninjau relevansi substansi dan cakupan.',
       proposalIds:actionable.map(p => p.id),
+      suggestedReason:matches.find(p=>p.reason?.trim())?.reason,
       candidates: tp.items.map(objective => {
         const parents = deriveMappingAtpIds([objective.id], atp, tp), conflict = checkMappingSemanticEvidence({label:material.title,tpItems:[objective]});
         const suggested = matches.find(p => p.tpIds.includes(objective.id));
         return {tpId:objective.id,atpIds:parents.atpItemIds,code:objective.code,statement:objective.statement,competence:objective.competence,
-          materialQuote:material.title,reason:suggested?.reason || 'Opsi pembanding kanonikal, bukan rekomendasi relevansi. Jelaskan bagaimana aktivitas materi menunjukkan kompetensi TP sebelum menyetujui.',
+          materialQuote:material.title,reason:suggested?.reason || 'Opsi pembanding kanonikal, bukan rekomendasi relevansi. Jelaskan relevansi substansi materi terhadap kompetensi TP sebelum menyetujui.',
           blocked:parents.issues.length > 0 || conflict.hardConflict, issues:[...parents.issues,...(conflict.hardConflict?[conflict.reason]:[])],
           suggested:!!suggested,needsEvidence:!!suggested && alignmentProposalStatus(suggested)!=='READY',impact:'Menambah relasi pada materi existing; ATP diturunkan dari TP. Tidak menambah materi atau mengubah TP kanonikal.'};
       }),
@@ -425,9 +426,11 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
         }
         if (checkMappingSemanticEvidence({ label: title, tpItems: [objective] }).hardConflict) fail(`HARD_CONFLICT: materi berlawanan dengan TP '${id}'.`);
       }
-      if (action.type === 'EDIT_MATERIAL' && classifyMappingTitle(original!.title, title!) === 'CONTENT_CHANGE' &&
-          !checkMappingSemanticEvidence({ label: title!, tpItems: tp.items.filter(t => action.linkedTpIds.includes(t.id)) }).supported) {
-        fail('CONTENT_CHANGE belum memiliki bukti substansi yang cukup; tinjau cakupan bersama guru.');
+      // Substantive edits require independent scoped verification or explicit teacher
+      // authority above. Lexical overlap is a signal, not an additional semantic veto.
+      if(action.type==='EDIT_MATERIAL'&&classifyMappingTitle(original!.title,title!)==='CONTENT_CHANGE'&&!scoped&&
+        !action.evidence?.every(e=>typeof e.materialQuote==='string'&&mappingTitleMeaning(title!).includes(mappingTitleMeaning(e.materialQuote)))){
+        fail('CONTENT_CHANGE: konteks materi sumber tidak dipertahankan; tinjau perubahan substansi sebelum menyetujui relasi.');
       }
       if (issues.length) continue;
       if (action.type === 'ADD_MATERIAL') {

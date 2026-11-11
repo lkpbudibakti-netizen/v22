@@ -6,7 +6,7 @@ import { computeMappingFingerprint } from './atpMappingActionApplyService';
 import { step07PersistedKey } from './step07AutoExecutionPolicy';
 import { getATPUnitMappingV5,loadStorageV5 } from './storageV5';
 import {recordStep07Diagnostic,step07ErrorCategory,step07ProposalFingerprint} from './step07DiagnosticsService';
-import {classifyStep07Failure,step07ActionDependency} from './step07AutoExecutionPolicy';
+import {classifyStep07Failure,step07ActionDependency,STEP07_SEMANTIC_POLICY_VERSION} from './step07AutoExecutionPolicy';
 import { readStep07Checkpoint,writeStep07Checkpoint,withStep07CheckpointLock,withStep07StorageWrite,resolveStep07CheckpointContext,step07CanonicalKey,step07UnitKey,type Step07Checkpoint,type Step07UnitCheckpoint,type Step07Stage,type Step07Mode } from './step07CheckpointService';
 
 type Pass=(options:Step07RepairOptions)=>Promise<Step07RepairResult>;
@@ -167,6 +167,19 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       let entry=checkpoint.units[id];
       if(!entry)entry=checkpoint.units[id]={source:source(id),baseSource:source(id),dependency:canonical,stage:'ANALYZE',status:'PENDING',applied:[],events:[]};
       const point=entry;
+      // A pending decision made under the activity/title policy must be rechecked,
+      // without discarding applied proof, saved units, or completed Bab.
+      if(point.semanticPolicyVersion!==STEP07_SEMANTIC_POLICY_VERSION&&id!=='GLOBAL'&&(assess(current,options).repairIssues || []).some(i=>i.unitId===id)){
+        if(point.analysis||point.proposal||point.verification||point.repairState?.attempts||point.events.length){
+          const reason='Kriteria relevansi pemetaan menggantikan syarat aktivitas/judul; hanya keputusan AI tertunda ditinjau ulang, hasil tersimpan dipertahankan.';
+          (checkpoint.invalidated ||= []).push({unitId:id,reason,checkpoint:structuredClone(point)});
+          recordStep07Diagnostic(context,{kind:'SEMANTIC_POLICY_CHANGED',unitId:id,phase:'ANALYZE',reason});
+        }
+        point.events=[];
+        delete point.analysis;delete point.proposal;delete point.verification;point.responses=[];point.cacheUsable=false;point.rejected=[];point.verifiedDependencies={};
+        point.repairState={sourceKey:'',attempts:0,seen:[],failures:[]};point.status='PENDING';
+      }
+      point.semanticPolicyVersion=STEP07_SEMANTIC_POLICY_VERSION;
       point.rejected ||= point.events.filter(e=>!e.success&&e.actionId&&['PROPOSE','VERIFY','FILTER','APPLY'].includes(e.stage)).map(e=>e.actionId!);
       if(!point.verifiedDependencies){
         point.verifiedDependencies={};

@@ -160,7 +160,9 @@ await test('Short LINK_TP uses independent activity evidence, preserves title, p
   assert.deepEqual(validate(action,check),[]);
   for(const verdict of ['CONFLICT','NEEDS_REVIEW'] as const)assert(validate(action,{...check,verdict}).length);
   for(const mutate of [(c:Step07SemanticCheck)=>c.evidence=[],(c:Step07SemanticCheck)=>c.evidence[0].tpQuote='Kutipan TP palsu',(c:Step07SemanticCheck)=>c.evidence[0].materialQuote='Materi palsu',(c:Step07SemanticCheck)=>c.evidence[0].competenceQuote='Menganalisis',(c:Step07SemanticCheck)=>delete c.evidence[0].relationshipReason,(c:Step07SemanticCheck)=>c.missingEvidence=['Aktivitas belum diketahui']]){const c=structuredClone(check);mutate(c);assert(validate(action,c).length);}
-  assert(validate({...action,type:'EDIT_MATERIAL',after:material.title+' dalam pencak silat'},check).length,'EDIT still requires explicit competence');
+  assert.deepEqual(validate({...action,type:'EDIT_MATERIAL',after:material.title+' dalam pencak silat'},check),[],'Relevant EDIT uses independent scope rationale, not literal competence in its title');
+  const noEditRationale=structuredClone(check);delete noEditRationale.evidence[0].relationshipReason;
+  assert(validate({...action,type:'EDIT_MATERIAL',after:material.title+' dalam pencak silat'},noEditRationale).length,'Implicit EDIT still requires independent substantive rationale');
   for(const [title,reason] of [['Sikap kuda-kuda','Materi hanya mengamati gambar; belum mendukung praktik sikap dasar.'],['Kuda dalam cerita silat','Kesamaan kata kuda/silat tidak membuktikan aktivitas gerak pencak silat.']]){
     const g=structuredClone(f);g.mapping.units[0].materials[0].title=title;
     const a={...action,before:title,evidence:[{tpId:'stance-tp',tpQuote:g.tp.items[0].statement,materialQuote:title}]};

@@ -1428,15 +1428,15 @@ PRINSIP & ATURAN GENERATOR CANONICAL (WAJIB DIPATUHI):
 4. INTEGRASI TP CROSS-CUTTING / TRANSVERSAL:
    a. Bedakan TP substantif (materi/keterampilan inti spesifik) dan TP cross-cutting/transversal (misalnya karakter, sikap, tanggung jawab, kolaborasi, refleksi, evaluasi diri, gotong royong, dimensi profil pelajar/lulusan).
    b. TP karakter/sikap/kolaborasi/tanggung jawab/refleksi TIDAK OTOMATIS MEMBENTUK BAB SENDIRI jika kompetensi tersebut dapat diintegrasikan secara autentik ke dalam Bab substantif (contoh pada PJOK: TP karakter dan tanggung jawab diintegrasikan ke Bab praktik gerak/permainan/olahraga, BUKAN menjadi Bab 'Membangun Karakter' terpisah).
-   c. Integrasikan TP cross-cutting ke Bab substantif tempat kompetensi tersebut dapat diwujudkan dan diamati secara autentik dalam aktivitas pembelajaran.
-   d. Satu ATP/TP cross-cutting diperbolehkan dan dianjurkan mendukung lebih dari satu Bab jika memang relevan dengan konteks kegiatan di bab-bab tersebut.
+   c. Integrasikan TP cross-cutting berdasarkan relevansi kompetensi, substansi dan cakupan Bab; jangan meminta atau merumuskan aktivitas pembelajaran pada tahap pemetaan ini.
+   d. Satu ATP/TP cross-cutting diperbolehkan dan dianjurkan mendukung lebih dari satu Bab jika memang relevan dengan substansi dan cakupan bab-bab tersebut.
    e. Jangan menyalin cross-cutting TP ke semua Bab secara membabi buta tanpa relevansi nyata.
    f. Bab mandiri HANYA BOLEH dibentuk jika TP mempunyai content domain substantif independen (misalnya keselamatan diri, pertolongan pertama, kesehatan diri, privasi tubuh), bukan semata perilaku transversal.
    g. Saat menentukan judul Bab, utamakan topik/domain dari TP substantif (bukan rumusan karakter/refleksi transversal).
 5. CAKUPAN GLOBAL (GLOBAL LINEAGE COVERAGE): Seluruh ATP dan TP canonical harus ter-cover secara global. Setiap ATP canonical minimal harus muncul pada satu Bab, dan gabungan (union) TP dari seluruh Bab yang memuat ATP tersebut harus mencakup seluruh TP canonical milik ATP tersebut tanpa ada TP yang tertinggal.
 6. SETIAP BAB & MATERI WAJIB MEMILIKI LINEAGE: Setiap Unit/Bab WAJIB memiliki 'linkedAtpItemIds' (non-empty) dan 'linkedTpIds' (non-empty). Setiap Lingkup Materi dalam Bab WAJIB memiliki 'linkedAtpItemIds' (subset dari ATP Bab) dan 'linkedTpIds' (subset dari TP Bab yang didukung oleh ATP materi tersebut). JANGAN membuat materi generik kosong tanpa relasi TP/ATP.
 7. INTEGRITAS RUJUKAN: Setiap relasi linkedTpIds dan linkedAtpItemIds WAJIB menggunakan persis string ID input ([TP_ID: ...] dan [ATP_ID: ...]). JANGAN membuat TP atau ATP fiktif.
-8. JANGAN menentukan alokasi JP, semester, pertemuan, rencana asesmen, atau Modul Ajar/LearningPlan pada tahap ini.
+8. JANGAN menentukan alokasi JP, semester, pertemuan, aktivitas pembelajaran, rencana asesmen, atau Modul Ajar/LearningPlan pada tahap ini. Judul Bab/materi tidak wajib mengandung kata kerja TP; utamakan kejelasan substansi.
 9. ${
   count
     ? `Jumlah Bab wajib TEPAT ${count} Bab. Jika tidak dapat disusun dengan lineage autentik dan cakupan penuh, jangan klaim hasil lengkap.`

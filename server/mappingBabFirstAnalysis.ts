@@ -66,7 +66,7 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
         : [];
       const parents = deriveMappingAtpIds(tpIds, atp, tp);
       if (!tpIds.length && !geminiProposal) {
-        manual('NEEDS_REVIEW: keselarasan TP belum dapat dipastikan karena materi belum memiliki relasi TP dan analisis tidak memberikan usulan TP eksplisit. Ini bukan bukti materi tidak relevan; diperlukan usulan berbukti tentang kompetensi, aktivitas dan cakupan dalam konteks Bab. Relasi tidak dibuat dari kesamaan kata.'); continue;
+        manual('NEEDS_REVIEW: keselarasan TP belum dapat dipastikan karena materi belum memiliki relasi TP dan analisis tidak memberikan usulan TP eksplisit. Ini bukan bukti materi tidak relevan; diperlukan usulan berbukti tentang substansi, kompetensi dan cakupan dalam konteks Bab. Relasi tidak dibuat dari kesamaan kata.'); continue;
       }
       if (parents.issues.length || !tpIds.length) {
         manual('Subset TP canonical tidak valid atau ATP induk belum tersedia. ' + parents.issues.join('; ')); continue;

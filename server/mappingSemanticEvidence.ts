@@ -1,4 +1,5 @@
 export interface SemanticEvidence {
+  /** Lexical signal only; never authorizes mapping without verifier/teacher review. */
   supported: boolean;
   ambiguous: boolean;
   matchedSignals: string[];
@@ -117,6 +118,7 @@ function detectExplicitMovementConflict(label: string, evidence: string): string
 
 export function checkMappingSemanticEvidence(params: {
   label: string;
+  unitTitle?: string;
   atpItems?: Array<{ focus?: string; linkedTpIds?: string[]; tpId?: string }>;
   tpItems?: Array<{ statement?: string; competence?: string; contentScope?: string; id?: string }>;
 }): SemanticEvidence {
@@ -176,7 +178,7 @@ export function checkMappingSemanticEvidence(params: {
       supported: true,
       ambiguous: false,
       matchedSignals: matches,
-      reason: `Ditemukan bukti substansi: ${matches.join(', ') || 'frasa terkait'}.`,
+      reason: `Sinyal substansi leksikal: ${matches.join(', ') || 'frasa terkait'}; relevansi tetap memerlukan tinjauan semantik/konteks.`,
     };
   }
 
@@ -191,8 +193,8 @@ export function checkMappingSemanticEvidence(params: {
 
   return {
     supported: false,
-    ambiguous: false,
+    ambiguous: true,
     matchedSignals: [],
-    reason: 'Tidak ditemukan bukti substansi antara judul dan ATP tertaut.',
+    reason: `Tidak ada kesamaan token; relevansi tidak dapat diputuskan dari judul saja. Tinjau substansi dan cakupan${params.unitTitle ? ` dalam konteks Bab '${params.unitTitle}'` : ''} melalui verifikasi semantik atau tinjauan guru.`,
   };
 }

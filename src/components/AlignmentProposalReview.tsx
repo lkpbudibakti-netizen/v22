@@ -58,17 +58,17 @@ export function AlignmentProposalReview({ proposals, selectedIds, onSelectionCha
         {resolution.origin==='UNVERIFIED' && <div className="bg-amber-50 p-2"><p>Asal materi alignment-* belum dapat dibuktikan dari riwayat. ID bukan bukti persetujuan. Materi dipertahankan.</p>
           {onConfirmOrigin && <button type="button" className="underline" onClick={()=>onConfirmOrigin(resolution.unitId,resolution.materialId,resolution.title)}>ACC keberadaan materi saat ini dan catat persetujuan</button>}</div>}
         <form key={`${resolution.title}:${resolution.linkedTpIds.join(',')}`} onSubmit={event=>{event.preventDefault();const data=new FormData(event.currentTarget);onReviewMaterial?.(resolution.unitId,resolution.materialId,resolution.title,data.getAll('tpId').map(String),String(data.get('reason')||''),String(data.get('newTitle')||resolution.title),data.has('replace'));}}>
-          <p>Usulan AI yang lolos pemeriksaan sumber dapat dipilih pada daftar proposal. Opsi kanonikal berikut bukan klaim relevansi; periksa kompetensi, aktivitas dan cakupan.</p>
+          <p>Usulan AI yang lolos pemeriksaan sumber dapat dipilih pada daftar proposal. Opsi kanonikal berikut bukan klaim relevansi; periksa substansi, kompetensi dan cakupan.</p>
           {resolution.candidates.map(candidate=><details key={candidate.tpId}><summary>{candidate.code || candidate.tpId} · {candidate.suggested?candidate.needsEvidence?'Kandidat AI: lengkapi bukti lalu ACC':'Usulan AI untuk ACC':'Pembanding untuk tinjauan'}{candidate.blocked?' · Tidak dapat diterapkan':''}</summary>
             <p>TP: {candidate.statement}</p><p>Kompetensi: {candidate.competence}</p><p>Bukti materi tersedia: “{candidate.materialQuote}”</p><p>{candidate.reason}</p><p>ATP: {candidate.atpIds.join(', ')} · {candidate.impact}</p>
             {candidate.issues.map(issue=><p key={issue}>{issue}</p>)}
-            {onReviewMaterial && <label><input type="checkbox" name="tpId" value={candidate.tpId} disabled={candidate.blocked}/> Saya menilai aktivitas dan cakupan materi mendukung TP ini</label>}
+            {onReviewMaterial && <label><input type="checkbox" name="tpId" value={candidate.tpId} disabled={candidate.blocked}/> Saya menilai substansi dan cakupan materi relevan dengan TP ini</label>}
           </details>)}
           {onReviewMaterial && <><label className="block">Usulan judul (opsional; perubahan cakupan memerlukan ACC)<input name="newTitle" defaultValue={resolution.title} required className="block w-full border rounded p-2"/></label>
             <label className="block"><input type="checkbox" name="replace"/> Ganti relasi TP lama dengan pilihan ini (tanpa opsi ini relasi manual lama dipertahankan). Tanpa TP terpilih berarti kosongkan relasi untuk ditinjau ulang; Step 08 tetap terkunci. Klaim Bab yang hanya didukung relasi lama juga dikoreksi.</label>
-            <label className="block">Jelaskan aktivitas yang menunjukkan kompetensi TP dan alasan relasinya<textarea name="reason" required className="block w-full border rounded p-2"/></label>
+            <label className="block">Alasan relevansi pemetaan: substansi, kompetensi dan cakupan TP<textarea name="reason" defaultValue={resolution.suggestedReason || ''} required className="block w-full border rounded p-2"/></label>
             <button type="submit" className="underline">ACC penyelarasan judul/relasi ke draf dan catat bukti guru</button></>}
-          <p>Jika bukti belum tersedia, lengkapi uraian aktivitas atau analisis ulang. Tidak ada TP yang ditautkan otomatis dari daftar pembanding.</p>
+          <p>Jika bukti belum tersedia, perjelas konteks substansi atau analisis ulang. Tidak ada TP yang ditautkan otomatis dari daftar pembanding.</p>
         </form></>;
   if (inlineScope) {
     const {unitId,materialId}=inlineScope;

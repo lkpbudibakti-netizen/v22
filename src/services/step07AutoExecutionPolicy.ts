@@ -8,6 +8,7 @@ export interface Step07AutoPermit {
   sourceKey:string;
   checks:Step07SemanticCheck[];
 }
+export const STEP07_SEMANTIC_POLICY_VERSION='MAPPING_RELEVANCE_V1';
 export type Step07FailureCategory='EVIDENCE_INVALID'|'SEMANTIC_MISMATCH'|'STRUCTURAL_CONFLICT'|'API_FAILURE'|'NO_PROGRESS';
 export interface Step07ActionFailure {actionId:string;category:Step07FailureCategory;reason:string;phase:string;}
 export interface Step07RepairAttemptState {sourceKey:string;attempts:number;seen:string[];failures:Step07ActionFailure[];status?:'NEEDS_TEACHER_REVIEW';}
@@ -70,10 +71,11 @@ const normalized=(value:string)=>value.normalize('NFC').toLocaleLowerCase('id').
 const contains=(text:string,quote:unknown,min:number)=>typeof quote==='string'&&quote.trim().length>=Math.min(min,text.trim().length)&&!!quote.trim()&&normalized(text).includes(normalized(quote));
 
 /** Source citations are not a pedagogical explanation. The independent verifier
- * must explain the activity-to-competence relationship for implicit short titles. */
+ * must explain substantive scope/competence relevance, without inventing lessons. */
 export function hasStep07LinkRationale(evidence:Step07SemanticCheck['evidence'][number]):boolean {
   return typeof evidence.relationshipReason==='string' && evidence.relationshipReason.trim().length>=24;
 }
+const legacyLiteralProof=(title:string,quote:string,competence:string)=>contains(title,quote,4)&&competence.split(/[,;]/).some(v=>v.trim()&&normalized(quote).includes(normalized(v.trim())));
 
 /** Recheck persisted proof against current canonical sources; IDs or a verdict alone
  * are insufficient to unlock scoped readiness after reload. */
@@ -88,8 +90,8 @@ export function hasStep07StoredSemanticSupport(record:MappingChangeRecord,materi
     return entries.every(e=>{
     const original=record.kind==='REALIGN'?material.title:(record.before || material.title);
     if(!contains(objective.statement,e.tpQuote,12)||!contains(original,e.materialQuote,8)||!contains(objective.statement,e.competenceQuote,4)||!contains(original,e.contextQuote,8)||!contains(material.title,e.contextQuote,8))return false;
-    if(!(objective.competence || '').split(/[,;]/).some(v=>v.trim()&&normalized(e.competenceQuote).includes(normalized(v.trim()))))return false;
-    return contains(material.title,e.competenceQuote,4)||(record.kind==='REALIGN'&&hasStep07LinkRationale(e));
+    // Older literal proofs remain valid; implicit titles need a source-bound rationale.
+    return legacyLiteralProof(material.title,e.competenceQuote,objective.competence || '')||hasStep07LinkRationale(e);
     });
   });
 }
@@ -125,9 +127,8 @@ export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:Align
       if(!entries.length){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
       for(const evidence of entries){
       if(!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
-      const competence=(objective.competence || '').split(/[,;]/).map(value=>value.trim()).filter(Boolean);
-      if(!contains(objective.statement,evidence.competenceQuote,4)||(action.type!=='LINK_TP'&&!contains(after,evidence.competenceQuote,4))||!competence.some(verb=>normalized(evidence.competenceQuote).includes(normalized(verb)))) fail(`Kompetensi TP '${id}' belum dinyatakan pada materi/hasil yang diusulkan; kesamaan kata bukan bukti.`);
-      if(action.type==='LINK_TP'&&!contains(after,evidence.competenceQuote,4)&&!hasStep07LinkRationale(evidence))fail(`SEMANTIC_MISMATCH: TP '${id}' memerlukan penjelasan spesifik hubungan kompetensi dengan aktivitas materi, bukan kemiripan kata.`);
+      if(!contains(objective.statement,evidence.competenceQuote,4))fail(`EVIDENCE_INVALID: kutipan kompetensi TP '${id}' tidak sesuai sumber kanonikal.`);
+      if(!legacyLiteralProof(after,evidence.competenceQuote,objective.competence || '')&&!hasStep07LinkRationale(evidence))fail(`SEMANTIC_MISMATCH: TP '${id}' memerlukan alasan relevansi substansi, kompetensi dan cakupan dalam konteks Bab, bukan kemiripan kata.`);
       const context=action.type==='ADD_MATERIAL'?unit.title:before;
       if(!contains(context,evidence.contextQuote,8)||!contains(after,evidence.contextQuote,8))fail(`Konteks substansi asli untuk TP '${id}' belum dipertahankan.`);
       if(checkMappingSemanticEvidence({label:after,tpItems:[objective]}).hardConflict)fail(`Konflik substansi eksplisit untuk TP '${id}'.`);

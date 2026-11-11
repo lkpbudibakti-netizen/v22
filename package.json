@@ -11,6 +11,7 @@
     "test:step07-real-project": "tsx scripts/testStep07RealProjectEvidence.ts",
     "test:step07-target": "tsx scripts/testStep07TargetUnit.ts",
     "test:step07-guidance": "tsx scripts/testStep07TeacherGuidance.tsx",
+    "test:step07-mapping-scope": "tsx scripts/testStep07MappingScope.tsx",
     "test:step07-progress": "tsx scripts/testStep07ProgressPersistence.ts",
     "test:step07-checkpoint": "tsx scripts/testStep07HybridCheckpoint.ts",
     "test:step07-diagnostics": "tsx scripts/testStep07Observability.ts",

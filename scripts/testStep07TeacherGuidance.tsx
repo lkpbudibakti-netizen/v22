@@ -7,7 +7,8 @@ import {applyMinimalAlignment,hasTeacherMaterialSupport,type AlignmentAction} fr
 import {finalizeTeacherReviewedMapping,resolveATPUnitMappingReadiness} from '../src/services/atpMappingReadinessService';
 import {createReadyV21WorkflowFixture} from './fixtures/v21ReadyWorkflowFixture';
 import {saveStorageV5,getATPUnitMappingV5,saveATPUnitMappingV5} from '../src/services/storageV5';
-import {resolveStep07CheckpointContext,writeStep07Checkpoint,step07CanonicalKey,step07UnitKey} from '../src/services/step07CheckpointService';
+import {resolveStep07CheckpointContext,readStep07Checkpoint,writeStep07Checkpoint,step07CanonicalKey,step07UnitKey} from '../src/services/step07CheckpointService';
+import {STEP07_SEMANTIC_POLICY_VERSION} from '../src/services/step07AutoExecutionPolicy';
 import {sanitizeMappingAnalysisResult} from '../server/mappingAnalysis';
 import {initializer,evaluateExpression} from './helpers/uiContractHarness';
 import {deriveMappingAtpIds} from '../src/services/atpMappingLineageService';
@@ -31,10 +32,11 @@ const unit=f.mapping.units[0],material=unit.materials[0],ids=material.linkedTpId
 const action:AlignmentAction={id:'guide-test',type:'EDIT_MATERIAL',targetUnitId:unit.id,targetMaterialId:material.id,before:material.title,after:material.title+' — usulan perlu ditinjau',linkedTpIds:ids,reason:'Simulated proposal explaining the activity to review.',evidence:ids.map(id=>({tpId:id,tpQuote:f.tp.items.find(t=>t.id===id)!.statement,materialQuote:material.title}))};
 const proposal=sanitizeMappingAnalysisResult({alignmentProposals:[action]},{currentMapping:f.mapping,atpData:f.atp,tpData:f.tp});
 const context=resolveStep07CheckpointContext('y');
-writeStep07Checkpoint({schemaVersion:1,revision:0,context,canonical:step07CanonicalKey(f.atp,f.tp),units:{[unit.id]:{source:step07UnitKey(unit),dependency:step07CanonicalKey(f.atp,f.tp),status:'NEEDS_TEACHER_REVIEW',stage:'VERIFY',proposal,applied:[],events:[{stage:'VERIFY',actionId:action.id,success:false,reason:'Perlu aktivitas konkret, bukan hanya kata kerja pada judul.'}]}},beforeUnits:f.mapping.units,baseStoredKey:'fixture',mode:'REPAIR'});
-const guided=html(f);assert(guided.includes('usulan perlu ditinjau'));assert(guided.includes('Perlu aktivitas konkret'));assert(guided.includes('belum dinyatakan valid'));
+writeStep07Checkpoint({schemaVersion:1,revision:0,context,canonical:step07CanonicalKey(f.atp,f.tp),units:{[unit.id]:{semanticPolicyVersion:STEP07_SEMANTIC_POLICY_VERSION,source:step07UnitKey(unit),dependency:step07CanonicalKey(f.atp,f.tp),status:'NEEDS_TEACHER_REVIEW',stage:'VERIFY',proposal,applied:[],events:[{stage:'VERIFY',actionId:action.id,success:false,reason:'Perlu alasan relevansi cakupan, bukan hanya kata kerja pada judul.'}]}},beforeUnits:f.mapping.units,baseStoredKey:'fixture',mode:'REPAIR'});
+const guided=html(f);assert(guided.includes('usulan perlu ditinjau'));assert(guided.includes('Perlu alasan relevansi cakupan'));assert(guided.includes('belum dinyatakan valid'));
 const stale=structuredClone(f);stale.mapping.units[0].materials[0].title+=' manual edit';assert(!html(stale).includes('usulan perlu ditinjau'));
 const canonical=structuredClone(f);canonical.tp.items[0].statement+=' sumber berubah';assert(!html(canonical).includes('usulan perlu ditinjau'));
+const legacyCheckpoint=readStep07Checkpoint(context)!;delete legacyCheckpoint.units[unit.id].semanticPolicyVersion;writeStep07Checkpoint(legacyCheckpoint);assert(!html(f).includes('usulan perlu ditinjau'));
 console.log('PASS 2: saved proposals/rejections remain visible after reload; source/canonical drift hides stale advice');
 
 let reviewed=structuredClone(f.mapping);
