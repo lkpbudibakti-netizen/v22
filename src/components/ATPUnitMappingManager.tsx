@@ -299,6 +299,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   const [autoRepair,setAutoRepair]=useState(mapping?.step07AutoRepair);
   const [repairProgress,setRepairProgress]=useState(mapping?.step07AutoRepair?.progress);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [unitRepairState,setUnitRepairState]=useState<{unitId:string;message:string;remaining?:number;success?:boolean}>();
   const [checkpointWork,setCheckpointWork]=useState<Step07WorkStatus>();
   const [manualDiagnostic,setManualDiagnostic]=useState('');
   const [autoPhase,setAutoPhase]=useState('');
@@ -786,6 +787,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   }, [tp]);
 
   const analysisRequestIdRef = useRef(0);
+  const analysisBusyRef = useRef(false);
   useEffect(()=>()=>{analysisRequestIdRef.current++;},[]);
 
   // Import Bab & Materi State (Section 4, 5, 6)
@@ -898,29 +900,46 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     setImportErrors(null);
   };
 
-  const handleAnalyzeMapping = async () => {
+  const handleAnalyzeMapping = async (targetUnitId?:string) => {
+    if(analysisBusyRef.current||isGeneratingStructure)return;
+    analysisBusyRef.current=true;
+    setUnitRepairState(targetUnitId?{unitId:targetUnitId,message:'Menganalisis Bab ini...'}:undefined);
     setIsAnalyzing(true);setAutoPhase('Menganalisis');setAnalysisError(null);setApplyIssues([]);setAppliedNotice(null);setSelectedAnalysisActionIds(new Set());
     const requestId=++analysisRequestIdRef.current;
+    try{
     const source=generationContextRef.current;
     const initial=buildCurrentMappingDraft();
-    let checkpointContext;
-    try{checkpointContext=resolveStep07CheckpointContext(initial.academicSettingId);}catch(error){setIsAnalyzing(false);setAnalysisError(error instanceof Error?error.message:String(error));return;}
+    const checkpointContext=resolveStep07CheckpointContext(initial.academicSettingId);
     const result=await runStep07AutoRepair({mapping:initial,persistedMapping:mapping,atp:atpRef.current,tp:tpRef.current,
-      checkpointContext,onWork:setCheckpointWork,
+      checkpointContext,targetUnitId,onWork:setCheckpointWork,
       isCurrent:()=>requestId===analysisRequestIdRef.current&&source===generationContextRef.current,
       analyze:(draft,step07Auto,signal)=>analyzeATPUnitMappingWithAI({subject:academicSetting?.subject,grade:academicSetting?.grade,phase:academicSetting?.phase,tpData:tpRef.current,atpData:atpRef.current,currentMapping:draft,step07Auto},{signal,diagnosticContext:checkpointContext}),
       save:onSaveMapping,onStatus:setAutoPhase,onProgress:setRepairProgress,
     });
     if(requestId!==analysisRequestIdRef.current)return;
     setIsAnalyzing(false);
-    if(result.stale){setAnalysisError('Data manual atau konteks berubah. Hasil lama tidak diterapkan.');return;}
+    if(result.stale){const message='Data manual atau konteks berubah. Hasil lama tidak diterapkan.';setAnalysisError(message);if(targetUnitId)setUnitRepairState({unitId:targetUnitId,message,success:false});return;}
     setAlignmentRollback({units:structuredClone(initial.units),fingerprint:computeMappingFingerprint(result.mapping.units,atpRef.current,tpRef.current)});
     setUnits(result.mapping.units);unitsRef.current=result.mapping.units;setAutoRepair(result.mapping.step07AutoRepair);
     setHasChanges(!result.persisted);setAnalysisResult(result.analysis || null);setLastAnalysisSnapshot(result.analysis || null);setLastAppliedActionIds(result.appliedActions);
     setAnalysisFingerprint(computeMappingFingerprint(result.mapping.units,atpRef.current,tpRef.current));
     setSaveSuccessNotice(result.saved);setAutoPhase(result.saved?'Selesai':'Belum selesai');
-    if(result.saved)setAppliedNotice('Selesai: hasil valid dan lengkap tersimpan atomik. Lanjut Step 08 tersedia.');
+    if(targetUnitId){
+      const issues=resolveATPUnitMappingReadiness(result.mapping,atpRef.current,tpRef.current,undefined,{evaluateRepair:true}).repairIssues?.filter(issue=>issue.unitId===targetUnitId) || [];
+      const selected=result.mapping.units.find(u=>u.id===targetUnitId),stored=getATPUnitMappingV5(initial.academicSettingId)?.units.find(u=>u.id===targetUnitId);
+      const targetSaved=!!selected&&!!stored&&JSON.stringify(selected)===JSON.stringify(stored),complete=!!selected&&!issues.length;
+      const failed=['SAVE_FAILED','TIMEOUT','BUDGET_LIMIT'].includes(result.outcome)||result.issues.some(issue=>/CHECKPOINT_|API_FAILURE|AI_UNAVAILABLE|AI_NOT_CONFIGURED|STEP07_STALE/.test(issue));
+      const success=complete&&!failed&&(targetSaved||!result.appliedActions.length);
+      const message=failed?`Proses Bab terhenti: ${result.issues[0] || result.outcome}. ${targetSaved?'Snapshot Bab tersimpan tetap aman.':''}`:complete&&targetSaved?'Bab ini valid dan tersimpan.':success?'Bab ini sudah valid. Perubahan manual tetap di draf; simpan pemetaan untuk menyimpannya.':`Bab ini belum selesai: ${issues.length} masalah tersisa. ${result.issues[0] || 'Periksa materi dan bukti TP Bab ini.'}`;
+      setUnitRepairState({unitId:targetUnitId,message,remaining:issues.length,success});
+      setAnalysisError(success?null:[result.issues[0],...issues.map(issue=>issue.message)].filter(Boolean).join('\n'));
+      if(success)setAppliedNotice(message+(!result.persisted?' Perubahan Bab lain tetap berada di draf.':''));
+    }
+    else if(result.saved)setAppliedNotice('Selesai: hasil valid dan lengkap tersimpan atomik. Lanjut Step 08 tersedia.');
     else {setAnalysisError(result.issues.join('\n') || 'Gap belum dapat diselesaikan secara pedagogis. Draft aman terakhir dipertahankan.');if(result.persisted)setAppliedNotice('Progres aman tersimpan. Klik Lanjutkan Perbaikan untuk menyelesaikan masalah tersisa.');}
+    }catch(error){
+      if(requestId===analysisRequestIdRef.current){const message=error instanceof Error?error.message:String(error);setAnalysisError(message);if(targetUnitId)setUnitRepairState({unitId:targetUnitId,message,success:false});}
+    }finally{analysisBusyRef.current=false;if(requestId===analysisRequestIdRef.current)setIsAnalyzing(false);}
   };
 
   const handleToggleAction = (findingId: string) => {
@@ -1405,7 +1424,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             <Sparkles className={`w-5 h-5 shrink-0 ${isGeneratingStructure ? 'animate-spin' : ''}`} />
             <span>{isGeneratingStructure ? 'Menyusun...' : 'Susun dengan AI'}</span>
           </button>
-          <button id="btn-analyze-mapping" type="button" onClick={handleAnalyzeMapping}
+          <button id="btn-analyze-mapping" type="button" onClick={()=>handleAnalyzeMapping()}
             disabled={isAnalyzing || isGeneratingStructure || units.length === 0}
             className="flex items-center justify-center gap-2 w-full min-h-12 px-4 py-3 rounded-xl border border-indigo-700 bg-white hover:bg-indigo-50 text-indigo-900 text-sm font-bold shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
             <Sparkles className={`w-5 h-5 shrink-0 ${isAnalyzing ? 'animate-spin' : ''}`} />
@@ -1825,7 +1844,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
         {autoRepair&&!isAnalyzing&&<p className="text-sm">{autoRepair.rounds} putaran · {mappingReadiness.validationResult?.isValid?'Valid':'Belum valid'} · {mappingReadiness.validationResult?.isComplete?'Struktur lengkap':'Struktur belum lengkap'} · {hasChanges?'Draft belum tersimpan':'Tersimpan'}</p>}
         <details><summary>Detail proses</summary><ul>{[...new Set([...(autoRepair?.issues || []),...(analysisError?.split('\n') || [])])].map((issue,index)=><li key={index}>{issue}</li>)}</ul></details>
-        {(autoRepair||checkpointWork)&&!isAnalyzing&&!mappingReadiness.canProceed&&<button id="btn-resume-step07-repair" type="button" onClick={handleAnalyzeMapping} disabled={isGeneratingStructure||units.length===0} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Lanjutkan Perbaikan</button>}
+        {(autoRepair||checkpointWork)&&!isAnalyzing&&!mappingReadiness.canProceed&&<button id="btn-resume-step07-repair" type="button" onClick={()=>handleAnalyzeMapping()} disabled={isGeneratingStructure||units.length===0} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Lanjutkan Perbaikan</button>}
       </section>}
 
       <details id="mapping-action-history" className="rounded-xl border bg-white p-4 text-sm">
@@ -1893,7 +1912,10 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button type="button" id={`btn-analyze-unit-${unit.id}`} onClick={()=>handleAnalyzeMapping(unit.id)} disabled={isAnalyzing||isGeneratingStructure||!atp.items.length||!tp.items.length} aria-busy={isAnalyzing&&unitRepairState?.unitId===unit.id} className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 disabled:opacity-50">
+                    {isAnalyzing&&unitRepairState?.unitId===unit.id?'Menganalisis Bab Ini...':'Analisis Ulang Bab Ini'}
+                  </button>
                   <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
                     {assignedItemIds.length} Langkah ATP
                   </span>
@@ -1917,6 +1939,10 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
 
               {/* SECTION: Lingkup Materi (0..n per Bab) */}
+              {unitRepairState?.unitId===unit.id&&<p id={`step07-unit-status-${unit.id}`} role="status" className={`px-4 py-2 text-sm ${unitRepairState.success===false?'text-rose-700':'text-indigo-700'}`}>
+                {isAnalyzing?`${autoPhase} · ${checkpointWork?.activeUnitId===unit.id?checkpointWork.stage:'ANALYZE'}`:unitRepairState.message}
+                {!isAnalyzing&&unitRepairState.remaining!==undefined&&` Masalah Bab tersisa: ${unitRepairState.remaining}.`}
+              </p>}
               <div className="p-4 sm:p-5 border-b border-slate-200/80 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

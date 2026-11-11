@@ -602,6 +602,7 @@ export interface Step07ReadinessIssue {
 }
 export interface Step07RepairProgress { initial:number; resolved:number; remaining:number; }
 export interface Step07AutoRepairRun {
+  targetUnitId?:string;
   initialIssueIds?:string[];
   progress?:Step07RepairProgress;
   requests?:number;

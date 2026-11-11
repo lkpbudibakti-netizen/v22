@@ -15,6 +15,7 @@ import {recordStep07Diagnostic,type Step07DiagnosticScope} from './step07Diagnos
 export interface Step07RepairOptions {
   diagnosticContext?:Step07DiagnosticScope;
   checkpointContext?:Step07CheckpointContext;
+  targetUnitId?:string;
   activeUnitId?:string;
   isolatedActions?:boolean;
   saveInitialProgress?:boolean;
@@ -49,7 +50,9 @@ const inFocus=(action:AlignmentAction,focus:Step07AutoRequest['focus'],round:num
 
 /** Readiness-driven orchestration; resource guards checkpoint only validated safe progress. */
 export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<Step07RepairResult> {
+  if(options.targetUnitId!==undefined&&(typeof options.targetUnitId!=='string'||!options.targetUnitId.trim()))throw new Error('TARGET_UNIT_NOT_FOUND: ID Bab terpilih tidak valid.');
   if(options.checkpointContext)return runHybridStep07Repair(options,child=>runStep07AutoRepair({...child,checkpointContext:undefined}));
+  if(options.targetUnitId)options={...options,activeUnitId:options.targetUnitId};
   const initial=structuredClone(options.mapping),canonicalKey=JSON.stringify({atp:options.atp,tp:options.tp});
   const previous=initial.step07AutoRepair;
   const continuing=!!previous&&!previous.undone&&previous.outcome!=='COMPLETE'&&previous.resultFingerprint===computeMappingFingerprint(initial.units,options.atp,options.tp);
@@ -132,7 +135,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       const candidates=(analysis.alignmentProposals || []).slice(0,200).filter(p=>p.validationStatus==='READY'&&p.action).map(p=>p.action!).filter(action=>{
         if(options.globalReconciliationOnly&&(!action.sourceUnitId||action.sourceUnitId===action.targetUnitId)){const reasons=['STRUCTURAL_CONFLICT: GLOBAL tidak memperbaiki ulang tindakan lokal; tinjau Bab terkait.'];failure('FILTER',action.id,reasons);options.onCheckpoint?.('FILTER',{mapping:current,action,issues:reasons,success:false});return false;}
         if(options.activeUnitId&&(action.targetUnitId!==options.activeUnitId||(action.sourceUnitId||action.targetUnitId)!==options.activeUnitId)){
-          options.onCheckpoint?.('FILTER',{mapping:current,action,issues:['GLOBAL_RECONCILIATION: tindakan lintas Bab ditunda ke rekonsiliasi global.'],success:false});return false;
+          options.onCheckpoint?.('FILTER',{mapping:current,action,issues:[options.targetUnitId?'TARGET_UNIT_CONFLICT: analisis Bab tidak boleh mengubah Bab lain atau menjalankan tindakan lintas Bab.':'GLOBAL_RECONCILIATION: tindakan lintas Bab ditunda ke rekonsiliasi global.'],success:false});return false;
         }
         if(!inFocus(action,focus,round))return false;
         const unit=current.units.find(u=>u.id===action.targetUnitId),material=current.units.flatMap(u=>u.materials).find(m=>m.id===action.targetMaterialId);
@@ -222,6 +225,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   if(outcome!=='COMPLETE')issues.push(...readiness.blockers);
   const existingIds=new Set(beforeUnits.flatMap(u=>u.materials.map(m=>m.id)));
   const meta:Step07AutoRepairRun={scope:'STEP07_AUTO_REPAIR',version:1,runId:`step07-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,beforeUnits,
+    ...(options.targetUnitId?{targetUnitId:options.targetUnitId}:{}),
     verifiedFingerprint:outcome==='COMPLETE'?step07VerificationKey(current.units,options.atp,options.tp):undefined,
     resultFingerprint:computeMappingFingerprint(current.units,options.atp,options.tp),
     expectedStoredFingerprint:options.persistedMapping?step07PersistedKey(options.persistedMapping,options.atp,options.tp):'NONE',
@@ -252,7 +256,13 @@ export function undoStep07AutoRepair(mapping:ATPUnitMappingData,atp:ATPData,tp:T
   if(run.resultFingerprint?run.resultFingerprint!==computeMappingFingerprint(mapping.units,atp,tp):run.verifiedFingerprint!==step07VerificationKey(mapping.units,atp,tp))return {success:false,issues:['Undo ditolak: redaksi, relasi, struktur atau sumber berubah setelah auto-repair. Edit manual dipertahankan.']};
   const validation=validateATPUnitMappingCanonical({...mapping,units:run.beforeUnits},atp,tp);
   if(!validation.isValid)return {success:false,issues:validation.issues};
-  const units=recordMappingBatch(mapping.units,run.beforeUnits,'Guru membatalkan auto-repair dan memulihkan snapshot awal.',true);
+  let units:ATPUnitMappingData['units'];
+  if(run.targetUnitId){
+    const selected=mapping.units.find(u=>u.id===run.targetUnitId),before=run.beforeUnits.find(u=>u.id===run.targetUnitId);
+    if(!selected||!before)return {success:false,issues:['Bab pada snapshot undo tidak ditemukan.']};
+    const restored=recordMappingBatch([selected],[before],'Guru membatalkan auto-repair Bab terpilih.',true)[0];
+    units=mapping.units.map(u=>u.id===run.targetUnitId?restored:structuredClone(u));
+  }else units=recordMappingBatch(mapping.units,run.beforeUnits,'Guru membatalkan auto-repair dan memulihkan snapshot awal.',true);
   const next={...mapping,units,step07AutoRepair:{...run,runId:`undo-${run.runId}`,undone:true,expectedStoredFingerprint:persistedMapping?step07PersistedKey(persistedMapping,atp,tp):'NONE',verifiedFingerprint:undefined,resultFingerprint:computeMappingFingerprint(units,atp,tp),outcome:'INCOMPLETE' as const,issues:['Auto-repair dibatalkan. Snapshot awal dipulihkan ke draft; simpan untuk menyimpan.']}};
   return {success:true,issues:[],mapping:next};
 }

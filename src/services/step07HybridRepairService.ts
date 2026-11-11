@@ -19,6 +19,17 @@ export function detectStep07Mode(mapping:ATPUnitMappingData,o:Pick<Step07RepairO
  * It does not classify, authorize or mutate pedagogical actions itself. */
 export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pass):Promise<Step07RepairResult> {
   let current=structuredClone(options.mapping),latest:Step07RepairResult|undefined;
+  let targetDraft:ATPUnitMappingData|undefined;
+  const target=options.targetUnitId;
+  const finishTarget=(result:Step07RepairResult):Step07RepairResult=>{
+    if(!targetDraft||!target)return result;
+    const selected=result.mapping.units.find(u=>u.id===target);
+    const mapping={...result.mapping,units:targetDraft.units.map(u=>u.id===target&&selected?structuredClone(selected):structuredClone(u))};
+    const stored=getATPUnitMappingV5(options.checkpointContext!.yearPlanId);
+    const persisted=!!stored&&JSON.stringify(stored.units)===JSON.stringify(mapping.units)&&result.persisted;
+    const readiness=resolveATPUnitMappingReadiness(mapping,options.atp,options.tp);
+    return {...result,mapping,persisted,saved:result.saved&&persisted&&readiness.canProceed,readiness,validation:readiness.validationResult!};
+  };
   const allApplied=new Set<string>();
   const context=options.checkpointContext!,canonical=step07CanonicalKey(options.atp,options.tp);
   const fallback=(message:string):Step07RepairResult=>{
@@ -51,6 +62,24 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       recordStep07Diagnostic(context,{kind:'SOURCE_REBASE',success:true,persisted:true,reason:'Snapshot V5 terbaru digunakan; edit manual yang tidak berkonflik dipertahankan per Bab.'});
     }
     if(persisted&&!base&&JSON.stringify(current.units)!==JSON.stringify(persisted.units))throw new Error('STEP07_STALE: sumber draft berbeda dari V5 tanpa snapshot dasar; perubahan manual dipertahankan.');
+    if(target){
+      const selected=current.units.find(u=>u.id===target);
+      if(!selected||target==='GLOBAL')throw new Error('TARGET_UNIT_NOT_FOUND: Bab terpilih tidak ditemukan.');
+      targetDraft=structuredClone(current);
+      // Unsaved edits in other Bab stay in the caller's draft, not in this save.
+      if(persisted)current={...persisted,units:persisted.units.some(u=>u.id===target)?persisted.units.map(u=>u.id===target?structuredClone(selected):u):[...persisted.units,structuredClone(selected)]};
+    }
+    const targetStart=target?step07UnitKey(current.units.find(u=>u.id===target)!):'';
+    const protectedOthers=JSON.stringify(current.units.filter(u=>u.id!==target));
+    const assertTargetIsolation=(mapping:ATPUnitMappingData)=>{
+      if(target&&JSON.stringify(mapping.units.filter(u=>u.id!==target))!==protectedOthers)throw new Error('TARGET_UNIT_CONFLICT: tindakan mencoba mengubah Bab lain; tidak disimpan.');
+    };
+    const dependency=(unitId:string,units=current.units)=>{
+      const unit=units.find(u=>u.id===unitId);
+      if(!unit)return canonical;
+      const ids=new Set([...unit.linkedTpIds,...unit.materials.flatMap(m=>m.linkedTpIds)]);
+      return step07CanonicalKey({...options.atp,items:options.atp.items.filter(a=>a.linkedTpIds?.some(id=>ids.has(id))||!!a.tpId&&ids.has(a.tpId))},{...options.tp,items:options.tp.items.filter(t=>ids.has(t.id))});
+    };
     let root=readStep07Checkpoint(context);
     recordStep07Diagnostic(context,{kind:'RUN_START',unitId:root?.activeUnitId,phase:root?.activeUnitId?root.units[root.activeUnitId]?.stage:undefined,cache:root?'RESUME':'NEW',reason:root?`Checkpoint tersedia; revision=${root.revision}`:'Belum ada checkpoint.'});
     const sameIdentity=root?.context.identityFingerprint===context.identityFingerprint;
@@ -59,13 +88,14 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     if(root&&sameIdentity&&root.canonical===canonical&&root.workingMapping){
       const pending=assess(current,options).repairIssues || [];
       current.units=current.units.map(unit=>{
+        if(target&&unit.id!==target)return unit;
         const point=root!.units[unit.id],buffer=root!.workingMapping!.units.find(u=>u.id===unit.id);
         const exact=step07UnitKey(unit);
-        return point&&buffer&&pending.some(issue=>issue.unitId===unit.id)&&point.source===step07UnitKey(buffer)&&exact!==point.source&&
+        return point&&buffer&&point.dependency===(point.status==='DONE'?dependency(unit.id,root!.workingMapping!.units):canonical)&&pending.some(issue=>issue.unitId===unit.id)&&point.source===step07UnitKey(buffer)&&exact!==point.source&&
           (point.status!=='DONE'||root!.baseStoredKey===storedKey)&&point.baseSource===exact?structuredClone(buffer):unit;
       });
     }
-    if(root?.workingMapping)for(const unit of current.units){
+    if(root?.workingMapping)for(const unit of current.units.filter(u=>!target||u.id===target)){
       const buffer=root.workingMapping.units.find(u=>u.id===unit.id);
       if(!buffer||step07UnitKey(unit)!==step07UnitKey(buffer))root.beforeUnits=root.beforeUnits.map(u=>u.id===unit.id?structuredClone(unit):u);
     }
@@ -74,12 +104,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
     root.context=context;root.canonical=canonical;root.mode=detectStep07Mode(current,options);
     root.initialIssueIds ||= (assess(current,options).repairIssues || []).map(i=>i.id);
     const checkpoint:Step07Checkpoint=root;
-    const priorCompleted=new Set(Object.entries(checkpoint.units).filter(([id,p])=>id!=='GLOBAL'&&p.status==='DONE').map(([id])=>id));
+    const priorCompleted=new Set(Object.entries(checkpoint.units).filter(([id,p])=>id!=='GLOBAL'&&(!target||id===target)&&p.status==='DONE').map(([id])=>id));
     const observeProgress=()=>{
       const issues=assess(current,options).repairIssues || [];
       const ready=new Set(current.units.filter(u=>!issues.some(i=>i.unitId===u.id)).map(u=>u.id));
       for(const id of priorCompleted)if(!ready.has(id))recordStep07Diagnostic(context,{kind:'PROGRESS_DECREASE',unitId:id,phase:'VALIDATE',category:'SOURCE_CHANGED',success:false,reason:current.units.some(u=>u.id===id)?issues.filter(i=>i.unitId===id).map(i=>i.id+': '+i.message).join('; '):'Bab dihapus dari sumber draft.'});
-      priorCompleted.clear();ready.forEach(id=>priorCompleted.add(id));
+      priorCompleted.clear();ready.forEach(id=>{if(!target||id===target)priorCompleted.add(id);});
     };
     observeProgress();
     const start=Date.now(),deadline=start+Math.min(options.timeoutMs ?? 180000,300000);
@@ -92,7 +122,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       const actual=getATPUnitMappingV5(context.yearPlanId);
       if((actual?step07PersistedKey(actual,options.atp,options.tp):'NONE')!==storedKey)throw new Error('CHECKPOINT_STALE: draft tersimpan berubah; muat sumber terbaru.');
     };
-    const persist=()=>{checkFresh();observeProgress();checkpoint.workingMapping=structuredClone(current);checkpoint.baseStoredKey=storedKey;writeStep07Checkpoint(checkpoint);};
+    const persist=()=>{checkFresh();observeProgress();const buffered=checkpoint.workingMapping;checkpoint.workingMapping=structuredClone(current);if(target&&buffered)checkpoint.workingMapping.units=checkpoint.workingMapping.units.map(u=>u.id===target?u:structuredClone(buffered.units.find(v=>v.id===u.id) || u));checkpoint.baseStoredKey=storedKey;writeStep07Checkpoint(checkpoint);};
+    if(target&&step07UnitKey(current.units.find(u=>u.id===target)!)===targetStart&&!(assess(current,options).repairIssues || []).some(i=>i.unitId===target)){
+      checkFresh();
+      const readiness=resolveATPUnitMappingReadiness(current,options.atp,options.tp),remaining=assess(current,options).repairIssues?.length || 0;
+      return finishTarget({mapping:current,readiness,validation:readiness.validationResult!,progress:{initial:remaining,resolved:0,remaining},outcome:readiness.canProceed?'COMPLETE':'INCOMPLETE',saved:false,persisted:!!persisted&&JSON.stringify(current.units)===JSON.stringify(persisted.units),stale:false,rounds:0,issues:[],appliedActions:[]});
+    }
     // Mark a previously legacy mapping as in-progress before awaiting AI. Otherwise
     // a reload could expose legacy structural readiness while its semantic review
     // is still pending in the separate checkpoint store.
@@ -100,20 +135,17 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       checkFresh();
       current={...current,step07AutoRepair:{scope:'STEP07_AUTO_REPAIR',version:1,runId:'checkpoint-'+crypto.randomUUID(),beforeUnits:checkpoint.beforeUnits,expectedStoredFingerprint:storedKey,resultFingerprint:computeMappingFingerprint(current.units,options.atp,options.tp),addedMaterialIds:[],rounds:0,outcome:'INCOMPLETE',issues:['Checkpoint per Bab sedang diproses; validasi global belum selesai.']}};
       await withStep07StorageWrite(()=>{
-        checkFresh();if(!options.save(current))throw new Error('CHECKPOINT_SAVE_FAILED: penanda proses belum tersimpan; AI tidak dijalankan.');
+        checkFresh();const draftUnits=current.units;
+        const marker=target&&persisted?{...current,units:persisted.units,step07AutoRepair:{...current.step07AutoRepair!,resultFingerprint:computeMappingFingerprint(persisted.units,options.atp,options.tp)}}:current;
+        if(!options.save(marker))throw new Error('CHECKPOINT_SAVE_FAILED: penanda proses belum tersimpan; AI tidak dijalankan.');
         const actual=getATPUnitMappingV5(context.yearPlanId);
         if(!actual||actual.step07AutoRepair?.runId!==current.step07AutoRepair.runId)throw new Error('CHECKPOINT_SAVE_FAILED: penanda proses tidak terkonfirmasi.');
-        persisted=actual;current=structuredClone(actual);storedKey=step07PersistedKey(actual,options.atp,options.tp);
+        persisted=actual;current={...structuredClone(actual),...(target?{units:draftUnits}:{})};storedKey=step07PersistedKey(actual,options.atp,options.tp);
       },deadline-Date.now());
     }
-    const dependency=(unitId:string)=>{
-      const unit=current.units.find(u=>u.id===unitId);
-      if(!unit)return canonical;
-      const ids=new Set([...unit.linkedTpIds,...unit.materials.flatMap(m=>m.linkedTpIds)]);
-      return step07CanonicalKey({...options.atp,items:options.atp.items.filter(a=>a.linkedTpIds?.some(id=>ids.has(id))||!!a.tpId&&ids.has(a.tpId))},{...options.tp,items:options.tp.items.filter(t=>ids.has(t.id))});
-    };
     const source=(id:string)=>id==='GLOBAL'?computeMappingFingerprint(current.units,options.atp,options.tp):step07UnitKey(current.units.find(u=>u.id===id)!);
     for(const [id,entry] of Object.entries(checkpoint.units)){
+      if(target&&id!==target)continue;
       const exists=id==='GLOBAL'||current.units.some(u=>u.id===id);
       const expected=entry.status==='DONE'?dependency(id):canonical;
       if(!exists||entry.source!==source(id)||entry.dependency!==expected){
@@ -126,8 +158,8 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
         delete checkpoint.units[id];
       }
     }
-    checkpoint.beforeUnits=checkpoint.beforeUnits.filter(u=>current.units.some(v=>v.id===u.id));
-    for(const unit of current.units)if(!checkpoint.beforeUnits.some(u=>u.id===unit.id))checkpoint.beforeUnits.push(structuredClone(unit));
+    checkpoint.beforeUnits=checkpoint.beforeUnits.filter(u=>target&&u.id!==target||current.units.some(v=>v.id===u.id));
+    for(const unit of current.units.filter(u=>!target||u.id===target))if(!checkpoint.beforeUnits.some(u=>u.id===unit.id))checkpoint.beforeUnits.push(structuredClone(unit));
     persist();
     const completed=()=>countStep07CompletedUnits(current,options.atp,options.tp);
     const deferred:NonNullable<Step07AutoRequest['actions']>=Object.values(checkpoint.units).flatMap(p=>(p.proposal?.alignmentProposals || []).flatMap(v=>v.action?.sourceUnitId&&v.action.sourceUnitId!==v.action.targetUnitId?[v.action]:[]));
@@ -202,11 +234,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
         }
         return response;
       };
-      const result=await pass({...options,checkpointContext:undefined,repairState:point.repairState,globalReconciliationOnly:id==='GLOBAL',diagnosticContext:context,baselineUnits:checkpoint.beforeUnits,baselineIssueIds:checkpoint.initialIssueIds,activeUnitId:id==='GLOBAL'?undefined:id,isolatedActions:true,mapping:current,persistedMapping:persisted,saveInitialProgress:!persisted||computeMappingFingerprint(current.units,options.atp,options.tp)!==computeMappingFingerprint(persisted.units,options.atp,options.tp),
+      const baselineUnits=target?current.units.map(u=>u.id===target?checkpoint.beforeUnits.find(v=>v.id===target) || u:u):checkpoint.beforeUnits;
+      const result=await pass({...options,checkpointContext:undefined,repairState:point.repairState,globalReconciliationOnly:id==='GLOBAL',diagnosticContext:context,baselineUnits,baselineIssueIds:checkpoint.initialIssueIds,activeUnitId:id==='GLOBAL'?undefined:id,isolatedActions:true,mapping:current,persistedMapping:persisted,saveInitialProgress:!persisted||(target?step07UnitKey(current.units.find(u=>u.id===target)!)!==targetStart:computeMappingFingerprint(current.units,options.atp,options.tp)!==computeMappingFingerprint(persisted.units,options.atp,options.tp)),
         timeoutMs:Math.max(1,deadline-Date.now()),analyze,
         isCurrent:()=>{try{checkFresh();return true;}catch{return false;}},
         onCheckpoint:(phase,data)=>{
-          checkFresh();current=structuredClone(data.mapping);
+          checkFresh();assertTargetIsolation(data.mapping);current=structuredClone(data.mapping);
           const actionId=data.action?.id || data.actionId;
           event(phase,data.success,data.issues?.join('; ') || (data.success?'Tahap selesai.':'Tahap ditolak.'),actionId);
           if(!data.success&&actionId&&['PROPOSE','VERIFY','FILTER','APPLY'].includes(phase)){
@@ -215,7 +248,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
             if(point.verification?.step07SemanticChecks)point.verification.step07SemanticChecks=point.verification.step07SemanticChecks.filter(c=>c.actionId!==actionId);
           }
           if(phase==='VERIFY'&&data.checks){point.verification={summary:{} as any,atpFindings:[],materialFindings:[],...point.verification,step07SemanticChecks:data.checks};}
-          if(phase==='FILTER'&&data.action?.sourceUnitId&&data.action.sourceUnitId!==data.action.targetUnitId)deferred.push(data.action);
+          if(!target&&phase==='FILTER'&&data.action?.sourceUnitId&&data.action.sourceUnitId!==data.action.targetUnitId)deferred.push(data.action);
           if(phase==='APPLY'&&data.success&&data.action&&!point.applied.includes(data.action.id))point.applied.push(data.action.id);
           point.source=source(id);
           if(phase==='VALIDATE'){
@@ -228,7 +261,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
           stage(phase,data);
         },
         persist:async mapping=>withStep07StorageWrite(()=>{
-          checkFresh();current=mapping;point.stage='SAVE';point.status='RUNNING';work('SAVE','Menunggu simpan draft');persist();
+          checkFresh();assertTargetIsolation(mapping);current=mapping;point.stage='SAVE';point.status='RUNNING';work('SAVE','Menunggu simpan draft');persist();
           if(!options.save(mapping)){event('SAVE',false,'Penyimpanan draft ditolak.');persist();return false;}
           const actual=getATPUnitMappingV5(context.yearPlanId);
           if(!actual||computeMappingFingerprint(actual.units,options.atp,options.tp)!==computeMappingFingerprint(mapping.units,options.atp,options.tp))throw new Error('SAVE_NOT_CONFIRMED: hasil penyimpanan tidak sesuai draft.');
@@ -251,6 +284,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       event(point.stage,!result.stale&&point.status==='DONE',result.issues.join('; ') || result.outcome);persist();
       return result;
     };
+    if(target){
+      const result=await execute(target);
+      const ready=assess(current,options);
+      recordStep07Diagnostic(context,{kind:'TARGET_UNIT_RESULT',unitId:target,phase:'VALIDATE',success:!(ready.repairIssues || []).some(i=>i.unitId===target),persisted:result.persisted,reason:`Masalah Bab tersisa=${(ready.repairIssues || []).filter(i=>i.unitId===target).length}; readiness global=${resolveATPUnitMappingReadiness(current,options.atp,options.tp).canProceed}; tidak menjalankan AI Bab lain/GLOBAL.`});
+      return finishTarget({...result,mapping:current,readiness:resolveATPUnitMappingReadiness(current,options.atp,options.tp),validation:ready.validationResult!});
+    }
     const initial=assess(current,options);
     for(const unit of current.units)if(!(initial.repairIssues || []).some(i=>i.unitId===unit.id)&&!checkpoint.units[unit.id]){
       checkpoint.units[unit.id]={source:source(unit.id),baseSource:source(unit.id),dependency:dependency(unit.id),stage:'VALIDATE',status:'DONE',applied:[],events:[{stage:'VALIDATE',success:true,reason:'Validator lokal lengkap; Bab dilewati tanpa AI.'}]};
@@ -284,5 +323,5 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       persist();
     }
     return reconciled;
-  });}catch(error){return fallback(error instanceof Error?error.message:String(error));}
+  });}catch(error){return finishTarget(fallback(error instanceof Error?error.message:String(error)));}
 }

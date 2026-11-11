@@ -101,7 +101,7 @@ try {
   assert.equal(JSON.stringify({ current, candidate, atp, tp }), snapshot, 'Failure must not modify persisted or local sources');
 } finally { globalThis.fetch = originalFetch; }
 const source = readFileSync('src/components/ATPUnitMappingManager.tsx', 'utf8');
-assert(source.includes('onClick={handleGenerateStructure}') && source.includes('onClick={handleAnalyzeMapping}'));
+assert(source.includes('onClick={handleGenerateStructure}') && source.includes('onClick={()=>handleAnalyzeMapping()}'));
 assert(source.includes('onClick={handleApproveStructure}') && source.includes('generationPreviewContext !== generationContextRef.current'));
 const handler = source.slice(source.indexOf('const handleGenerateStructure'), source.indexOf('const handleApproveStructure'));
 assert(!handler.includes('setUnits(') && !handler.includes('onSaveMapping('));
