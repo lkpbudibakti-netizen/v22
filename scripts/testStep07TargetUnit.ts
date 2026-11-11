@@ -25,12 +25,12 @@ function checks(f:Fixture,items:AlignmentAction[]):Step07SemanticCheck[]{return 
 function provider(f:Fixture,calls:Step07AutoRequest[]=[]):Step07RepairOptions['analyze']{return async(m,r)=>{calls.push(structuredClone(r));if(r.execution?.activeUnitId){assert.equal(m.units.length,1);assert.equal(m.units[0].id,r.execution.activeUnitId);assert.equal(r.execution.otherUnits.length,8);}return r.phase==='VERIFY'?{summary:{} as any,atpFindings:[],materialFindings:[],step07SemanticChecks:checks(f,r.actions || [])}:sanitizeMappingAnalysisResult({alignmentProposals:actions(f,m)},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});};}
 function options(f:Fixture,extra:Partial<Step07RepairOptions>={}):Step07RepairOptions{return {...f,mapping:getATPUnitMappingV5('y')!,persistedMapping:getATPUnitMappingV5('y'),targetUnitId:f.mapping.units[0].id,checkpointContext:resolveStep07CheckpointContext('y'),save:m=>{saveATPUnitMappingV5('y',m);return true;},isCurrent:()=>true,analyze:provider(f),...extra};}
 let passed=0;async function test(name:string,run:()=>Promise<void>|void){await run();console.log('PASS '+(++passed)+'. '+name);}
-await test('Real 6/9 fixture: only Bab 1 receives PROPOSE/VERIFY, saves to V5/checkpoint, reload remains 7/9',async()=>{
+await test('Real 6/9 fixture: only Bab 1 receives PROPOSE (no VERIFY), saves to V5/checkpoint, reload remains 7/9',async()=>{
   const f=seed(),id=f.mapping.units[0].id,before=others(f.mapping,id),canonical=JSON.stringify([f.atp,f.tp]),calls:Step07AutoRequest[]=[];
   assert.equal(countStep07CompletedUnits(f.mapping,f.atp,f.tp),6);
   const result=await runStep07AutoRepair(options(f,{analyze:provider(f,calls)}));
   assert(result.persisted);assert(!result.saved&&!result.readiness.canProceed);assert.equal(countStep07CompletedUnits(result.mapping,f.atp,f.tp),7);
-  assert.deepEqual(calls.map(r=>r.phase),['PROPOSE','VERIFY']);assert(calls.every(r=>r.execution?.activeUnitId===id&&!r.execution.reconciliation));
+  assert.deepEqual(calls.map(r=>r.phase),['PROPOSE']);assert(calls.every(r=>r.execution?.activeUnitId===id&&!r.execution.reconciliation));
   assert.equal(others(result.mapping,id),before);assert.equal(others(getATPUnitMappingV5('y')!,id),before);assert.equal(JSON.stringify([f.atp,f.tp]),canonical);
   const checkpoint=readStep07Checkpoint(resolveStep07CheckpointContext('y'))!;assert.equal(checkpoint.units[id].status,'DONE');assert.deepEqual(Object.keys(checkpoint.units),[id]);assert(!checkpoint.units.GLOBAL);
   assert.equal(countStep07CompletedUnits(JSON.parse(JSON.stringify(getATPUnitMappingV5('y'))),f.atp,f.tp),7);
@@ -93,15 +93,9 @@ await test('Preserved checkpoint buffers with changed canonical dependencies can
   assert.equal(JSON.stringify(getATPUnitMappingV5('y')),before);assert.deepEqual(next.mapping.units.find(u=>u.id===other.id),other);
   assert(readStep07Checkpoint(context)!.invalidated?.some(i=>i.unitId===other.id));
 });
-await test('Resume saves verified history-only progress without committing unverified manual edits',async()=>{
-  const f=seed(),unit=f.mapping.units[1],material=unit.materials[0];unit.actionHistory=[];for(const m of unit.materials)m.titleHistory=[];
-  const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=f.mapping;saveStorageV5(state);
-  const a:AlignmentAction={id:'history-only',type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,before:material.title,linkedTpIds:material.linkedTpIds,reason:'Simulated relationship review, preserving title and existing canonical links.',evidence:material.linkedTpIds.map(id=>({tpId:id,tpQuote:f.tp.items.find(t=>t.id===id)!.statement,materialQuote:material.title}))};
-  const proof=checks(f,[a]);for(const e of proof[0].evidence)e.relationshipReason='Simulated independent review: compare the movement activity in its game context to investigate canonical movement concepts and its limits.';
-  const candidate=applyMinimalAlignment(f.mapping.units,[a],f.atp,f.tp,{scope:'STEP07_AUTO_REPAIR',sourceKey:step07SourceKey(f.mapping.units,f.atp,f.tp),checks:proof});assert(candidate.success,candidate.issues.join('; '));
-  const context=resolveStep07CheckpointContext('y');writeStep07Checkpoint({schemaVersion:1,revision:0,context,canonical:step07CanonicalKey(f.atp,f.tp),units:{[unit.id]:{source:step07UnitKey(candidate.nextUnits![1]),baseSource:step07UnitKey(unit),dependency:step07CanonicalKey(f.atp,f.tp),stage:'APPLY',status:'RUNNING',applied:[a.id],events:[]}},beforeUnits:structuredClone(f.mapping.units),baseStoredKey:'legacy',mode:'REPAIR',workingMapping:{...f.mapping,units:candidate.nextUnits!}});
-  const result=await runStep07AutoRepair(options(f,{targetUnitId:unit.id,analyze:async()=>{throw Error('API_FAILURE: continuation unavailable');}}));
-  assert(result.persisted);const saved=getATPUnitMappingV5('y')!;assert.equal(saved.units[1].materials[0].title,material.title);assert(hasTeacherMaterialSupport(saved.units[1],saved.units[1].materials[0],f.tp));assert.equal(others(saved,unit.id),others(f.mapping,unit.id));
+await test('Complete IDs need no history-only repair, AI or checkpoint writes',async()=>{
+  const f=seed(),unit=f.mapping.units[1];unit.actionHistory=[];for(const m of unit.materials)m.titleHistory=[];const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=f.mapping;saveStorageV5(state);const before=JSON.stringify(getATPUnitMappingV5('y'));
+  const result=await runStep07AutoRepair(options(f,{targetUnitId:unit.id,analyze:async()=>{throw Error('No proof-only AI');},save:()=>{throw Error('No proof-only save');}}));assert(result.persisted);assert.equal(JSON.stringify(getATPUnitMappingV5('y')),before);
 });
 await test('Same-profile concurrent calls and missing target fail closed',async()=>{
   const f=seed(),base=provider(f);let release!:()=>void;const gate=new Promise<void>(r=>release=r);let entered!:()=>void;const waiting=new Promise<void>(r=>entered=r);

@@ -1,14 +1,15 @@
 import type { ATPData, TPData, ATPUnitMapping, ATPUnitMappingData, Step07SemanticCheck, MappingChangeRecord } from '../types';
 import type { AlignmentAction } from './mappingAlignmentService';
 import type {MappingAnalysisResult} from './aiService';
-import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
+import { deriveMappingAtpIds } from './atpMappingLineageService';
 
 export interface Step07AutoPermit {
   scope:'STEP07_AUTO_REPAIR';
   sourceKey:string;
-  checks:Step07SemanticCheck[];
+  checks?:Step07SemanticCheck[]; // Legacy history only; no second AI verification.
+  activeUnitId?:string;
 }
-export const STEP07_SEMANTIC_POLICY_VERSION='MAPPING_RELEVANCE_V1';
+export const STEP07_SEMANTIC_POLICY_VERSION='STRUCTURAL_MAPPING_V2';
 export type Step07FailureCategory='EVIDENCE_INVALID'|'SEMANTIC_MISMATCH'|'STRUCTURAL_CONFLICT'|'API_FAILURE'|'NO_PROGRESS';
 export interface Step07ActionFailure {actionId:string;category:Step07FailureCategory;reason:string;phase:string;}
 export interface Step07RepairAttemptState {sourceKey:string;attempts:number;seen:string[];failures:Step07ActionFailure[];status?:'NEEDS_TEACHER_REVIEW';}
@@ -22,7 +23,8 @@ export function classifyStep07Failure(reason:string):Step07FailureCategory {
   if(/CONFLICT|MISMATCH|ID |ID_|fiktif|duplikat|duplicate|tidak ditemukan|struktur|source.changed|stale|BEFORE_/i.test(reason))return 'STRUCTURAL_CONFLICT';
   return 'NO_PROGRESS';
 }
-/** Source citations are pointers, not semantic approval. Never repair a stale before,
+/** Legacy receipt helpers retained for backup/history compatibility only.
+ * Source citations are pointers, not semantic approval. Never repair a stale before,
  * fabricated ID, verdict, competence/context claim, missingEvidence, or material scope. */
 export function normalizeStep07SourceEvidence(action:AlignmentAction,units:ATPUnitMapping[],tp:TPData):{action:AlignmentAction;notes:string[]} {
   const copy=structuredClone(action),notes:string[]=[];
@@ -96,45 +98,27 @@ export function hasStep07StoredSemanticSupport(record:MappingChangeRecord,materi
   });
 }
 
-/** A scoped authority check, not a replacement semantic engine or canonical validator. */
-export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:AlignmentAction[],atp:ATPData,tp:TPData,permit:Step07AutoPermit,isExistingAutomatic:(action:AlignmentAction)=>boolean=()=>false):string[] {
-  const issues:string[]=[];
-  if(permit.scope!=='STEP07_AUTO_REPAIR'||!Array.isArray(permit.checks)||permit.sourceKey!==step07SourceKey(units,atp,tp)) return ['STEP07_SOURCE_CHANGED: sumber atau canonical berubah setelah verifikasi.'];
+/** Single-response AI execution: identity, source and canonical relationships only. */
+export function validateStep07AutoExecution(units:ATPUnitMapping[],actions:AlignmentAction[],atp:ATPData,tp:TPData,permit:Step07AutoPermit,_legacyAutomatic:(action:AlignmentAction)=>boolean=()=>false):string[] {
+  if(permit.scope!=='STEP07_AUTO_REPAIR'||permit.sourceKey!==step07SourceKey(units,atp,tp))return ['STEP07_SOURCE_CHANGED: sumber atau canonical berubah setelah analisis.'];
+  const issues:string[]=[],seen=new Set<string>();
+  const allowed=['LINK_TP','EDIT_MATERIAL','EDIT_UNIT_TITLE','ADD_MATERIAL','MOVE_MATERIAL','RESTRUCTURE_UNIT'];
   for(const action of actions){
-    const fail=(reason:string)=>issues.push(`${action.id}: ${reason}`);
-    if(action.type!=='LINK_TP'&&isExistingAutomatic(action))continue;
-    const unit=units.find(u=>u.id===action.targetUnitId),source=units.find(u=>u.id===(action.sourceUnitId||action.targetUnitId));
-    const material=source?.materials.find(m=>m.id===action.targetMaterialId);
-    const matches=permit.checks.filter(check=>check?.actionId===action.id);
-    const check=matches[0];
+    const fail=(reason:string)=>issues.push(action.id+': '+reason);
+    if(!action.id||seen.has(action.id)||!allowed.includes(action.type)){fail('STRUCTURAL_CONFLICT: ID/jenis tindakan tidak sah atau duplikat.');continue;}seen.add(action.id);
+    const unit=units.find(u=>u.id===action.targetUnitId),source=units.find(u=>u.id===(action.sourceUnitId || action.targetUnitId));
     if(!unit||!source){fail('STRUCTURAL_CONFLICT: Bab sumber/target tidak ditemukan.');continue;}
-    if(matches.length!==1||check?.verdict!=='SUPPORTED'||typeof check.reason!=='string'||!check.reason.trim()||(check.missingEvidence!==undefined&&(!Array.isArray(check.missingEvidence)||check.missingEvidence.length>0))){fail('NEEDS_REVIEW: verifikasi semantik independen belum mendukung tindakan.');continue;}
-    if(action.replaceTpIds){
-      const removed=(material?.linkedTpIds || []).filter(id=>!action.linkedTpIds.includes(id));
-      for(const id of removed){
-        const objective=tp.items.find(t=>t.id===id),evidence=Array.isArray(check.removedRelations)?check.removedRelations.filter(e=>e?.tpId===id):[];
-        if(!material||!objective||evidence.length!==1||typeof evidence[0].reason!=='string'||!evidence[0].reason.trim()||!contains(objective.statement,evidence[0].tpQuote,12)||!contains(material.title,evidence[0].materialQuote,8)||!checkMappingSemanticEvidence({label:material.title,tpItems:[objective]}).hardConflict)fail(`Relasi '${id}' tidak boleh dilepas: bukti konflik sumber yang eksplisit belum tersedia.`);
-      }
-    }
-    const before=action.type==='EDIT_UNIT_TITLE'?unit.title:action.type==='ADD_MATERIAL'?action.after:action.type==='RESTRUCTURE_UNIT'?unit.materials.map(m=>m.title).join('; '):material?.title;
-    const after=action.type==='EDIT_UNIT_TITLE'||action.type==='EDIT_MATERIAL'||action.type==='ADD_MATERIAL'?action.after:before;
-    if(typeof before!=='string'||typeof after!=='string'||!Array.isArray(action.linkedTpIds)||!action.linkedTpIds.length||!Array.isArray(check.evidence)){fail('Sumber, hasil, TP atau bukti tidak lengkap.');continue;}
-    if(['ADD_MATERIAL','MOVE_MATERIAL'].includes(action.type)&&check.targetUnitQuote!==unit.title){fail('Konteks Bab tujuan belum diverifikasi.');continue;}
-    if(action.type==='ADD_MATERIAL'&&(check.additionNecessary!==true||action.linkedTpIds.every(id=>units.some(u=>u.materials.some(m=>m.linkedTpIds.includes(id)))))){fail('Materi baru hanya untuk TP yang belum terwakili oleh materi existing.');continue;}
-    for(const id of action.linkedTpIds){
-      const objective=tp.items.find(t=>t.id===id),entries=check.evidence.filter(e=>e?.tpId===id);
-      if(!objective){fail(`STRUCTURAL_CONFLICT: TP canonical '${id}' tidak ditemukan.`);continue;}
-      if(!entries.length){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
-      for(const evidence of entries){
-      if(!contains(objective.statement,evidence.tpQuote,12)||!contains(before,evidence.materialQuote,8)){fail(`Bukti sumber materi/TP '${id}' tidak dapat ditelusuri.`);continue;}
-      if(!contains(objective.statement,evidence.competenceQuote,4))fail(`EVIDENCE_INVALID: kutipan kompetensi TP '${id}' tidak sesuai sumber kanonikal.`);
-      if(!legacyLiteralProof(after,evidence.competenceQuote,objective.competence || '')&&!hasStep07LinkRationale(evidence))fail(`SEMANTIC_MISMATCH: TP '${id}' memerlukan alasan relevansi substansi, kompetensi dan cakupan dalam konteks Bab, bukan kemiripan kata.`);
-      const context=action.type==='ADD_MATERIAL'?unit.title:before;
-      if(!contains(context,evidence.contextQuote,8)||!contains(after,evidence.contextQuote,8))fail(`Konteks substansi asli untuk TP '${id}' belum dipertahankan.`);
-      if(checkMappingSemanticEvidence({label:after,tpItems:[objective]}).hardConflict)fail(`Konflik substansi eksplisit untuk TP '${id}'.`);
-      if(checkMappingSemanticEvidence({label:action.type==='EDIT_UNIT_TITLE'?after:unit.title,tpItems:[objective]}).hardConflict)fail(`Konflik konteks Bab untuk TP '${id}'.`);
-      }
+    if(permit.activeUnitId&&(unit.id!==permit.activeUnitId||source.id!==permit.activeUnitId)){fail('TARGET_UNIT_CONFLICT: tindakan di luar Bab aktif.');continue;}
+    if(!action.reason?.trim())fail('Alasan relevansi pemetaan wajib tersedia.');
+    if(!Array.isArray(action.linkedTpIds)||!action.linkedTpIds.length||new Set(action.linkedTpIds).size!==action.linkedTpIds.length){fail('Subset TP wajib eksplisit, tidak kosong/duplikat.');continue;}
+    issues.push(...deriveMappingAtpIds(action.linkedTpIds,atp,tp).issues.map(reason=>action.id+': '+reason));
+    if(action.type==='EDIT_UNIT_TITLE'){if(action.before!==unit.title||!action.after?.trim())fail('BEFORE_MISMATCH: judul Bab/sumber tidak valid.');}
+    else if(action.type==='ADD_MATERIAL'){if(!action.after?.trim())fail('Judul materi baru kosong.');}
+    else if(action.type!=='RESTRUCTURE_UNIT'){
+      const material=source.materials.find(m=>m.id===action.targetMaterialId);
+      if(!material||action.before!==material.title)fail('BEFORE_MISMATCH: materi sumber berubah atau tidak ditemukan.');
+      if(action.type==='EDIT_MATERIAL'&&!action.after?.trim())fail('Judul hasil kosong.');
     }
   }
-  return issues;
+  return [...new Set(issues)];
 }

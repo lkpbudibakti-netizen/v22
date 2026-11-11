@@ -232,11 +232,11 @@ const matById = new Map(result.materialFindings.map((f) => [f.id, f]));
 
 assertCase(byId.get('wrong-theme')?.status === 'REVIEW', 'ID benar + tema Bab bertentangan / tidak dipetakan -> REVIEW', byId.get('wrong-theme'));
 assertCase(byId.get('no-evidence')?.status === 'REVIEW', 'AI mengklaim ALIGNED tanpa evidence / salah unit -> REVIEW', byId.get('no-evidence'));
-assertCase(byId.get('strong')?.status === 'REVIEW', 'Overlap kuat tanpa bukti pedagogis/persetujuan -> REVIEW', byId.get('strong'));
-assertCase(byId.get('multi-ok')?.status === 'REVIEW', 'Coverage multi-Bab bukan bukti pedagogis -> REVIEW', byId.get('multi-ok'));
+assertCase(byId.get('strong')?.status === 'ALIGNED', 'Lineage lengkap tanpa bukti pedagogis -> ALIGNED struktural', byId.get('strong'));
+assertCase(byId.get('multi-ok')?.status === 'ALIGNED', 'Coverage multi-Bab lengkap -> ALIGNED struktural', byId.get('multi-ok'));
 assertCase(matById.get('mat-wrong-supported')?.status === 'MANUAL_REVIEW', 'Material ID benar tetapi domain gerak eksplisit bertentangan -> MANUAL_REVIEW', matById.get('mat-wrong-supported'));
-assertCase(matById.get('mat-supported')?.status === 'MANUAL_REVIEW', 'ID dan keyword sesuai belum membuktikan dukungan pedagogis', matById.get('mat-supported'));
-assertCase(matById.get('ambiguous-action')?.status === 'MANUAL_REVIEW' && !matById.get('ambiguous-action')?.action, 'Usulan Gemini tanpa bukti exact tidak actionable', matById.get('ambiguous-action'));
+assertCase(matById.get('mat-supported')?.status === 'SUPPORTED', 'ID/lineage lengkap tidak membutuhkan bukti pedagogis', matById.get('mat-supported'));
+assertCase(matById.get('ambiguous-action')?.status === 'ALIGNABLE' && !!matById.get('ambiguous-action')?.action, 'Usulan kanonikal tanpa kutipan dapat memperbaiki ATP induk', matById.get('ambiguous-action'));
 assertCase(result.summary.alignedAtp === result.atpFindings.filter((f) => f.status === 'ALIGNED').length, 'Summary alignedAtp konsisten dengan findings final', result.summary);
 
 // Additional regression tests for unmapped ATP claiming aligned, actual placement vs currentUnitId mismatch, and REVIEW from AI + strong evidence
@@ -267,7 +267,7 @@ const reviewAiStrongResult = sanitizeMappingAnalysisResult({
   atpFindings: [{ id: 'rev-strong', atpItemId: 'atp-manip', status: 'REVIEW', currentUnitId: 'unit-manip', supportingTpIds: ['tp-manip'], reason: 'AI ragu.' }],
   materialFindings: [],
 }, { tpData, atpData, currentMapping: mapping });
-assertCase(reviewAiStrongResult.atpFindings[0]?.status === 'REVIEW', 'REVIEW dari AI + evidence kuat -> tetap REVIEW', reviewAiStrongResult.atpFindings[0]);
+assertCase(reviewAiStrongResult.atpFindings.find(f=>f.atpItemId==='atp-manip')?.status === 'REVIEW', 'REVIEW dari AI + evidence kuat -> tetap REVIEW', reviewAiStrongResult.atpFindings[0]);
 
 const wrongMultiMapping: ATPUnitMappingData = {
   ...mapping,
@@ -280,7 +280,7 @@ const wrongMulti = sanitizeMappingAnalysisResult({
   atpFindings: [{ id: 'multi-wrong', atpItemId: 'atp-combo', status: 'ALIGNED', supportingTpIds: ['tp-loko', 'tp-non'], reason: 'Union lengkap.' }],
   materialFindings: [],
 }, { tpData, atpData, currentMapping: wrongMultiMapping });
-assertCase(wrongMulti.atpFindings[0]?.status === 'REVIEW', 'Multi-Bab: satu Bab tidak sesuai -> REVIEW', wrongMulti.atpFindings[0]);
+assertCase(wrongMulti.atpFindings.find(f=>f.atpItemId==='atp-combo')?.status === 'REVIEW', 'Multi-Bab: satu Bab tidak sesuai -> REVIEW', wrongMulti.atpFindings[0]);
 
 if (failed > 0) {
   console.error(`P1-D3 mapping semantic evidence regression failed: ${failed} scenario(s).`);

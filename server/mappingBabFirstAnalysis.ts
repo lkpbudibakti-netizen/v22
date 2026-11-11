@@ -4,7 +4,6 @@ import { applyATPMappingActions, computeMappingFingerprint } from '../src/servic
 import { deriveMappingAtpIds, getMappingAtpTpIds } from '../src/services/atpMappingLineageService';
 import { validateATPUnitMappingCanonical } from '../src/services/atpUnitMappingValidationService';
 import { checkMappingSemanticEvidence } from './mappingSemanticEvidence';
-import { hasTeacherMaterialSupport } from '../src/services/mappingAlignmentService';
 
 /** Read-only Bab/Materi -> relevant TP -> exact canonical ATP parents. */
 export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingServerParams): MappingAnalysisResult {
@@ -15,10 +14,6 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
   const materialFindings: MappingAnalysisResult['materialFindings'] = [];
   const rawMaterials: any[] = Array.isArray(raw?.materialFindings) ? raw.materialFindings : [];
   const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every(id => b.includes(id));
-  const evidence = (label: string, ids: string[]) => ids.length > 0 && ids.every(id => {
-    const item = tp.items.find(item => item.id === id);
-    return !!item && checkMappingSemanticEvidence({ label, tpItems: [item] }).supported;
-  });
   const noHardConflict = (label: string, ids: string[]) => ids.every(id =>
     !checkMappingSemanticEvidence({ label, tpItems: tp.items.filter(item => item.id === id) }).hardConflict);
 
@@ -71,26 +66,11 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
       if (parents.issues.length || !tpIds.length) {
         manual('Subset TP canonical tidak valid atau ATP induk belum tersedia. ' + parents.issues.join('; ')); continue;
       }
-      if (geminiProposal && !noHardConflict(title, tpIds)) {
+      if (!noHardConflict(title, tpIds)) {
         manual('Konflik domain gerak eksplisit antara materi dan TP pilihan Gemini; tinjau manual.'); continue;
       }
       const approvedLineage = !!material && sameIds(existingTpIds, tpIds) && sameIds(material.linkedAtpItemIds || [], parents.atpItemIds) &&
-        parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id)) && noHardConflict(title, tpIds) && hasTeacherMaterialSupport(unit, material, tp);
-      const exactEvidence = !!proposal?.reason?.trim() && tpIds.every(id => {
-        const objective = tp.items.find(t => t.id === id), quote = proposal?.evidence?.find((e:any) => e.tpId === id);
-        return objective && typeof quote?.tpQuote === 'string' && quote.tpQuote.length >= Math.min(12, objective.statement.length) && objective.statement.includes(quote.tpQuote) &&
-          typeof quote?.materialQuote === 'string' && quote.materialQuote.length >= Math.min(8, title.length) && title.includes(quote.materialQuote);
-      });
-      if (!approvedLineage && !exactEvidence) {
-        manual('NEEDS_REVIEW: relasi tersimpan dipertahankan, tetapi belum ada bukti kutipan dan alasan pedagogis terverifikasi atau persetujuan guru. Kesamaan kata tidak cukup.'); continue;
-      }
-      if (!geminiProposal && !approvedLineage && !evidence(title, tpIds)) {
-        manual('Keselarasan TP belum dapat dipastikan: label tidak memuat kata kunci substansi yang cukup untuk TP pilihan. ' + parents.issues.join('; ')); continue;
-      }
-      const unitEvidence = checkMappingSemanticEvidence({ label: unit.title, tpItems: tp.items.filter(item => tpIds.includes(item.id)) });
-      if (!material && (geminiProposal ? unitEvidence.hardConflict : !unitEvidence.supported)) {
-        manual('Judul Bab belum mendukung TP materi usulan; materi baru tidak ditambahkan otomatis ke Bab yang tidak relevan.'); continue;
-      }
+        parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id)) && noHardConflict(title, tpIds);
       const staleIds = (material?.linkedAtpItemIds || []).filter(id => !atp.items.some(item => item.id === id));
       const supported = approvedLineage && !!material && sameIds(existingTpIds, tpIds) && sameIds(material.linkedAtpItemIds || [], parents.atpItemIds) &&
         parents.atpItemIds.every(id => unit.linkedAtpItemIds.includes(id)) && tpIds.every(id => unit.linkedTpIds.includes(id));
@@ -156,7 +136,7 @@ export function analyzeBabFirstMapping(raw: any, params: AnalyzeATPUnitMappingSe
       unit.materials.some(material => material.linkedTpIds.includes(id) && materialFindings.some(finding =>
         finding.unitId === unit.id && finding.materialId === material.id && finding.status !== 'MANUAL_REVIEW' && finding.supportingTpIds.includes(id)))));
     const approvedSupport = mappedUnits.every(unit => (unit.linkedTpIds || []).filter(id => canonicalTpIds.includes(id)).every(id =>
-      unit.materials.some(material => material.linkedTpIds.includes(id) && hasTeacherMaterialSupport(unit, material, tp))));
+      unit.materials.some(material => material.linkedTpIds.includes(id))));
     const aligned = mappedUnits.length > 0 && covered && semantic && approvedSupport && rawFinding?.status !== 'REVIEW' &&
       (!rawFinding?.currentUnitId || mappedUnits.some(unit => unit.id === rawFinding.currentUnitId)) &&
       !validation.issues.some(issue => issue.includes('ATP_PROGRESSION_REVERSED') && issue.includes("'"+item.id+"'"));

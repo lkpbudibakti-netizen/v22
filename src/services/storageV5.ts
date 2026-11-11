@@ -1379,7 +1379,7 @@ export function saveATPUnitMappingV5(
   if(value.step07AutoRepair?.scope==='STEP07_AUTO_REPAIR'&&previous?.step07AutoRepair?.runId!==value.step07AutoRepair.runId){
     const actual=previous?step07PersistedKey(previous,atp,tp):'NONE';
     if(actual!==value.step07AutoRepair.expectedStoredFingerprint)throw new Error('STEP07_STORAGE_CHANGED: pemetaan/canonical tersimpan berubah selama auto-repair. Muat data terbaru; tidak ada perubahan yang ditimpa.');
-    if(value.step07AutoRepair.outcome==='COMPLETE'&&(!resolveATPUnitMappingReadiness(value,atp,tp).canProceed||value.step07AutoRepair.verifiedFingerprint!==computeStep07VerifiedFingerprint(value.units,atp,tp)))throw new Error('STEP07_NOT_READY: hasil auto-repair belum valid, lengkap dan siap Step 08.');
+    if(value.step07AutoRepair.outcome==='COMPLETE'&&(!resolveATPUnitMappingReadiness(value,atp,tp).canProceed))throw new Error('STEP07_NOT_READY: hasil auto-repair belum valid, lengkap dan siap Step 08.');
   }
   const next = versionMappingUpdate(previous, value);
   if (previous && previous.updatedAt !== next.updatedAt) {

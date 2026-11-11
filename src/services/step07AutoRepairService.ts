@@ -4,7 +4,7 @@ import { applyMinimalAlignment, isMappingActionAutomatic, suggestMappingCopyedit
 import { computeStep07VerifiedFingerprint, computeMappingFingerprint } from './atpMappingActionApplyService';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
-import { step07SourceKey, step07PersistedKey, validateStep07AutoExecution,normalizeStep07SourceEvidence,normalizeStep07VerificationSources,classifyStep07Failure,step07RepairProposalKey,type Step07RepairAttemptState } from './step07AutoExecutionPolicy';
+import { step07SourceKey, step07PersistedKey, validateStep07AutoExecution,classifyStep07Failure,step07RepairProposalKey,type Step07RepairAttemptState } from './step07AutoExecutionPolicy';
 import { getMappingAtpTpIds } from './atpMappingLineageService';
 import { runHybridStep07Repair } from './step07HybridRepairService';
 import type { Step07CheckpointContext,Step07Stage,Step07WorkStatus } from './step07CheckpointService';
@@ -132,8 +132,9 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       }
       if(!fresh())throw new Error('STEP07_STALE: perubahan manual/konteks dipertahankan.');
       const materialGaps=new Set((readiness.repairIssues || []).flatMap(g=>g.materialId?[g.materialId]:[]));
+      const globalGaps=new Set([...before.uncoveredTpIds,...options.atp.items.filter(a=>before.unmappedAtpIds.includes(a.id)).flatMap(getMappingAtpTpIds)]);
       const candidates=(analysis.alignmentProposals || []).slice(0,200).filter(p=>p.validationStatus==='READY'&&p.action).map(p=>p.action!).filter(action=>{
-        if(options.globalReconciliationOnly&&(!action.sourceUnitId||action.sourceUnitId===action.targetUnitId)){const reasons=['STRUCTURAL_CONFLICT: GLOBAL tidak memperbaiki ulang tindakan lokal; tinjau Bab terkait.'];failure('FILTER',action.id,reasons);options.onCheckpoint?.('FILTER',{mapping:current,action,issues:reasons,success:false});return false;}
+        if(options.globalReconciliationOnly&&(!action.sourceUnitId||action.sourceUnitId===action.targetUnitId)&&!action.linkedTpIds.some(id=>globalGaps.has(id))){const reasons=['STRUCTURAL_CONFLICT: GLOBAL hanya menutup gap cakupan global atau konflik lintas Bab, bukan mengulang perbaikan lokal.'];failure('FILTER',action.id,reasons);options.onCheckpoint?.('FILTER',{mapping:current,action,issues:reasons,success:false});return false;}
         if(options.activeUnitId&&(action.targetUnitId!==options.activeUnitId||(action.sourceUnitId||action.targetUnitId)!==options.activeUnitId)){
           options.onCheckpoint?.('FILTER',{mapping:current,action,issues:[options.targetUnitId?'TARGET_UNIT_CONFLICT: analisis Bab tidak boleh mengubah Bab lain atau menjalankan tindakan lintas Bab.':'GLOBAL_RECONCILIATION: tindakan lintas Bab ditunda ke rekonsiliasi global.'],success:false});return false;
         }
@@ -152,27 +153,16 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
         if(resolvesLocalCoverage)return true;
         if(action.targetMaterialId)return materialGaps.has(action.targetMaterialId);
         return (readiness.repairIssues || []).some(g=>g.unitId===action.targetUnitId);
-      }).map(action=>{const normalized=normalizeStep07SourceEvidence(action,current.units,options.tp);if(normalized.notes.length)recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'PROPOSE',unitId:action.targetUnitId,reason:`action=${action.id}; ${normalized.notes.join('; ')}`,success:true});return normalized.action;});
-      const substantial=candidates.filter(action=>action.type==='LINK_TP'||!isMappingActionAutomatic(action,current.units,options.tp));
-      let checks:Step07SemanticCheck[]=[];
-      if(substantial.length){
-        executionStage='VERIFY';
-        const verified=await analyze({scope:'STEP07_AUTO_REPAIR',phase:'VERIFY',round,focus,actions:substantial,validation,repair:repairRequest});
-        if(verified.analysisNotice)issues.push(verified.analysisNotice);
-        checks=Array.isArray(verified.step07SemanticChecks)?verified.step07SemanticChecks.slice(0,200):[];
-        const exactChecks=normalizeStep07VerificationSources(checks,substantial,current.units,options.tp);
-        for(let i=0;i<checks.length;i++)if(JSON.stringify(exactChecks[i])!==JSON.stringify(checks[i]))recordStep07Diagnostic(diagnosticScope,{kind:'EVIDENCE_NORMALIZED',category:'EVIDENCE_INVALID',phase:'VERIFY',unitId:options.activeUnitId || 'GLOBAL',reason:`action=${checks[i].actionId}; kutipan sumber diperbaiki; verdict, kompetensi, konteks, dan missingEvidence tidak diubah.`,success:true});
-        checks=exactChecks;
-        options.onCheckpoint?.('VERIFY',{mapping:current,checks,success:true});
-      }
+      });
+      // One AI analysis selects relationships; apply is guarded structurally below.
       if(!fresh())throw new Error('STEP07_STALE: perubahan manual/konteks dipertahankan.');
-      const permit={scope:'STEP07_AUTO_REPAIR' as const,sourceKey:step07SourceKey(current.units,options.atp,options.tp),checks};
+      const permit={scope:'STEP07_AUTO_REPAIR' as const,sourceKey:step07SourceKey(current.units,options.atp,options.tp),activeUnitId:options.activeUnitId};
       const priority=['LINK_TP','EDIT_MATERIAL','EDIT_UNIT_TITLE','MOVE_MATERIAL','RESTRUCTURE_UNIT','ADD_MATERIAL'];
       const chosen:AlignmentAction[]=[],targets=new Set<string>();
       executionStage='FILTER';
       for(const action of candidates.sort((a,b)=>priority.indexOf(a.type)-priority.indexOf(b.type))){
         const errors=validateStep07AutoExecution(current.units,[action],options.atp,options.tp,permit,a=>isMappingActionAutomatic(a,current.units,options.tp));
-        if(errors.length){issues.push(...errors);failure('VERIFY',action.id,errors);options.onCheckpoint?.('VERIFY',{mapping:current,action,issues:errors,success:false});continue;}
+        if(errors.length){issues.push(...errors);failure('FILTER',action.id,errors);options.onCheckpoint?.('FILTER',{mapping:current,action,issues:errors,success:false});continue;}
         const target=action.targetMaterialId || `${action.targetUnitId}:${action.type==='ADD_MATERIAL'?action.after:'unit'}`;
         if(targets.has(target)){options.onCheckpoint?.('FILTER',{mapping:current,action,issues:['CONFLICT: alternatif untuk target yang sama; satu tindakan dipilih.'],success:false});continue;}
         if(action.type==='ADD_MATERIAL'&&chosen.some(existing=>existing.type!=='ADD_MATERIAL'&&existing.linkedTpIds.some(id=>action.linkedTpIds.includes(id))))continue;
@@ -205,7 +195,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
       repeatedIssues=resolved?0:repeatedIssues+1;
       const state=computeMappingFingerprint(current.units,options.atp,options.tp);
       if(repair&&!resolved){
-        if(analysis.engine==='pedagogical_engine'||issues.some(i=>classifyStep07Failure(i)==='API_FAILURE')){const reason='API_FAILURE: verifikasi semantik AI/fallback tidak tersedia; progres aman dipertahankan.';failure('PROPOSE','analysis',[reason]);issues.push(reason);outcome='INCOMPLETE';break;}
+        if(analysis.engine==='pedagogical_engine'||issues.some(i=>classifyStep07Failure(i)==='API_FAILURE')){const reason='API_FAILURE: analisis AI tidak tersedia; progres aman dipertahankan.';failure('PROPOSE','analysis',[reason]);issues.push(reason);outcome='INCOMPLETE';break;}
         repair.attempts++;repair.seen.push(proposalKey);
         if(!repair.failures.length)failure('VALIDATE','proposal-set',['NO_PROGRESS: masalah readiness belum berkurang; diperlukan strategi revisi yang berbeda.']);
         if(repair.attempts>=2){outcome='NEEDS_TEACHER_REVIEW';repair.status=outcome;issues.push('NEEDS_TEACHER_REVIEW: dua upaya pada sumber yang sama belum menghasilkan perbaikan aman.');break;}
@@ -226,7 +216,7 @@ export async function runStep07AutoRepair(options:Step07RepairOptions):Promise<S
   const existingIds=new Set(beforeUnits.flatMap(u=>u.materials.map(m=>m.id)));
   const meta:Step07AutoRepairRun={scope:'STEP07_AUTO_REPAIR',version:1,runId:`step07-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,beforeUnits,
     ...(options.targetUnitId?{targetUnitId:options.targetUnitId}:{}),
-    verifiedFingerprint:outcome==='COMPLETE'?step07VerificationKey(current.units,options.atp,options.tp):undefined,
+    verifiedFingerprint:undefined, // Legacy field: structural mapping issues no semantic certificate.
     resultFingerprint:computeMappingFingerprint(current.units,options.atp,options.tp),
     expectedStoredFingerprint:options.persistedMapping?step07PersistedKey(options.persistedMapping,options.atp,options.tp):'NONE',
     addedMaterialIds:current.units.flatMap(u=>u.materials.filter(m=>!existingIds.has(m.id)).map(m=>m.id)),rounds:rounds+(continuing?previous!.rounds:0),outcome,issues:[...new Set(issues)],initialIssueIds,progress:progress!,requests,inputCharacters};

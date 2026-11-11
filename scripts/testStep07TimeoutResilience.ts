@@ -223,7 +223,7 @@ async function runTests() {
     assert.equal(result.saved, false);
     assert(result.issues.some((i) => i.includes('STEP07_TIMEOUT')));
     const cp = readStep07Checkpoint(context)!;
-    const u1Id = raw.units[0].id;
+    const u1Id = cp.activeUnitId!;
     assert.equal(cp.units[u1Id]?.status, 'BLOCKED');
     assert.notEqual(cp.units[u1Id]?.status, 'NEEDS_TEACHER_REVIEW');
   });

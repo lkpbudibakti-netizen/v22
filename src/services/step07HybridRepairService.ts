@@ -80,7 +80,14 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       const ids=new Set([...unit.linkedTpIds,...unit.materials.flatMap(m=>m.linkedTpIds)]);
       return step07CanonicalKey({...options.atp,items:options.atp.items.filter(a=>a.linkedTpIds?.some(id=>ids.has(id))||!!a.tpId&&ids.has(a.tpId))},{...options.tp,items:options.tp.items.filter(t=>ids.has(t.id))});
     };
-    let root=readStep07Checkpoint(context);
+    let root:Step07Checkpoint|undefined;
+    try{root=readStep07Checkpoint(context);}catch(error){
+      const readiness=assess(current,options),noRepair=target?!(readiness.repairIssues || []).some(i=>i.unitId===target):readiness.canProceed;
+      if(!persisted||JSON.stringify(current.units)!==JSON.stringify(persisted.units)||!noRepair)throw error;
+      // No work needs resuming: an obsolete/corrupt cache cannot block valid V5.
+      // Keep its raw data untouched; source/CAS freshness is still checked below.
+      recordStep07Diagnostic(context,{kind:'CHECKPOINT_NOT_REQUIRED',unitId:target,reason:'Snapshot V5 tidak memerlukan perbaikan; checkpoint tidak dibaca ulang atau direset.'});
+    }
     recordStep07Diagnostic(context,{kind:'RUN_START',unitId:root?.activeUnitId,phase:root?.activeUnitId?root.units[root.activeUnitId]?.stage:undefined,cache:root?'RESUME':'NEW',reason:root?`Checkpoint tersedia; revision=${root.revision}`:'Belum ada checkpoint.'});
     const sameIdentity=root?.context.identityFingerprint===context.identityFingerprint;
     // Only unfinished, exact-source stage buffers may supplement the saved source.
@@ -128,9 +135,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
       const readiness=resolveATPUnitMappingReadiness(current,options.atp,options.tp),remaining=assess(current,options).repairIssues?.length || 0;
       return finishTarget({mapping:current,readiness,validation:readiness.validationResult!,progress:{initial:remaining,resolved:0,remaining},outcome:readiness.canProceed?'COMPLETE':'INCOMPLETE',saved:false,persisted:!!persisted&&JSON.stringify(current.units)===JSON.stringify(persisted.units),stale:false,rounds:0,issues:[],appliedActions:[]});
     }
-    // Mark a previously legacy mapping as in-progress before awaiting AI. Otherwise
-    // a reload could expose legacy structural readiness while its semantic review
-    // is still pending in the separate checkpoint store.
+    // Preserve the initial incomplete draft as the existing rollback baseline.
+    // This process marker is metadata only; structural readiness is independent.
+    if(!target&&persisted&&JSON.stringify(current.units)===JSON.stringify(persisted.units)&&assess(current,options).canProceed){
+      checkFresh();options.onStatus?.('Selesai');const readiness=resolveATPUnitMappingReadiness(current,options.atp,options.tp);
+      return {mapping:current,readiness,validation:readiness.validationResult!,progress:{initial:0,resolved:0,remaining:0},outcome:'COMPLETE',saved:true,persisted:true,stale:false,rounds:0,issues:[],appliedActions:[]};
+    }
     if(!current.step07AutoRepair&&!assess(current,options).canProceed&&assess(current,options).canSaveDraft){
       checkFresh();
       current={...current,step07AutoRepair:{scope:'STEP07_AUTO_REPAIR',version:1,runId:'checkpoint-'+crypto.randomUUID(),beforeUnits:checkpoint.beforeUnits,expectedStoredFingerprint:storedKey,resultFingerprint:computeMappingFingerprint(current.units,options.atp,options.tp),addedMaterialIds:[],rounds:0,outcome:'INCOMPLETE',issues:['Checkpoint per Bab sedang diproses; validasi global belum selesai.']}};
@@ -176,17 +186,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
           recordStep07Diagnostic(context,{kind:'SEMANTIC_POLICY_CHANGED',unitId:id,phase:'ANALYZE',reason});
         }
         point.events=[];
-        delete point.analysis;delete point.proposal;delete point.verification;point.responses=[];point.cacheUsable=false;point.rejected=[];point.verifiedDependencies={};
+        delete point.verification;point.responses=[];point.cacheUsable=Boolean(point.proposal || point.analysis);point.rejected=[];point.verifiedDependencies={};
         point.repairState={sourceKey:'',attempts:0,seen:[],failures:[]};point.status='PENDING';
       }
       point.semanticPolicyVersion=STEP07_SEMANTIC_POLICY_VERSION;
       point.rejected ||= point.events.filter(e=>!e.success&&e.actionId&&['PROPOSE','VERIFY','FILTER','APPLY'].includes(e.stage)).map(e=>e.actionId!);
-      if(!point.verifiedDependencies){
-        point.verifiedDependencies={};
-        // Older VERIFY checkpoints bind the exact full source. Retain that
-        // completed stage; later/unknown legacy dependencies require reverify.
-        if(point.stage==='VERIFY'&&point.source===source(id)&&point.dependency===canonical)for(const p of point.proposal?.alignmentProposals || point.analysis?.alignmentProposals || [])if(p.action&&point.verification?.step07SemanticChecks?.some(c=>c.actionId===p.action!.id&&c.verdict==='SUPPORTED'))point.verifiedDependencies[p.action.id]=step07ActionDependency(p.action,current.units,options.atp,options.tp);
-      }
+      point.verifiedDependencies ||= {}; // Legacy metadata, not an execution gate.
       point.repairState ||= {sourceKey:'',attempts:0,seen:[],failures:point.events.filter(e=>!e.success).map(e=>({actionId:e.actionId || 'proposal-set',category:e.failureCategory || classifyStep07Failure(e.reason),reason:e.reason,phase:e.stage}))};
       if(point.analysis || point.proposal)point.cacheUsable=true;
       checkpoint.activeUnitId=id;
@@ -204,6 +209,7 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
         // Full canonical TP/ATP + other-Bab summaries; only the active Bab is editable.
         const projection=id==='GLOBAL'?mapping:{...mapping,units:mapping.units.filter(u=>u.id===id)};
         const phase=request.phase;
+        if(phase!=='PROPOSE')throw new Error('STEP07_PHASE_INVALID: hanya satu analisis pemetaan didukung.');
         let cached:MappingAnalysisResult|undefined;
         if(point.cacheUsable){
           if(phase==='PROPOSE'){
@@ -214,7 +220,6 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
             });
             if(prior&&reusable?.length)cached={...prior,alignmentProposals:reusable};
           }
-          else if(point.verification&&request.actions?.every(a=>point.verification!.step07SemanticChecks?.some(c=>c.actionId===a.id&&c.verdict==='SUPPORTED')&&point.verifiedDependencies![a.id]===step07ActionDependency(a,mapping.units,options.atp,options.tp)))cached=point.verification;
         }
         if(cached){
           recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase,cache:'HIT',success:true,reason:`Tahap dipakai kembali; applied IDs=${point.applied.length}`});
@@ -222,13 +227,12 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
             point.proposal=cached;stage('PROPOSE');
             return structuredClone(cached);
           }
-          stage('VERIFY');return structuredClone(cached);
         }
-        recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase,cache:'MISS',success:false,reason:!point.cacheUsable?'Checkpoint lama/belum memiliki hasil yang dapat digunakan.':phase==='VERIFY'?'Verifikasi tidak valid atau dependensi tindakan berubah.':'Tidak ada proposal pending valid; yang ditolak diperbaiki dengan feedback spesifik.'});
+        recordStep07Diagnostic(context,{kind:'CACHE',unitId:id,phase,cache:'MISS',success:false,reason:!point.cacheUsable?'Checkpoint lama/belum memiliki hasil yang dapat digunakan.':'Tidak ada proposal pending valid; yang ditolak diperbaiki dengan feedback spesifik.'});
         const size=JSON.stringify({mapping:projection,request:enriched,atp:options.atp,tp:options.tp}).length;
         if(calls>=maxCalls||input+size>maxInput)throw new Error('STEP07_BUDGET_LIMIT: anggaran checkpoint tercapai; Lanjutkan Perbaikan tersedia.');
         if(Date.now()>=deadline)throw new Error('STEP07_TIMEOUT: batas waktu checkpoint tercapai.');
-        calls++;input+=size;point.stage=phase==='PROPOSE'?'ANALYZE':'VERIFY';point.status='RUNNING';work(point.stage,'Berjalan');persist();
+        calls++;input+=size;point.stage='ANALYZE';point.status='RUNNING';work(point.stage,'Berjalan');persist();
         let response:MappingAnalysisResult;
         try{response=await options.analyze(structuredClone(projection),enriched,signal);if(signal.aborted)throw new Error('STEP07_TIMEOUT: respons terlambat tidak disimpan.');checkFresh();}
         catch(error){if(!signal.aborted){event(phase,false,error instanceof Error?error.message:String(error));persist();}throw error;}
@@ -240,10 +244,6 @@ export async function runHybridStep07Repair(options:Step07RepairOptions,pass:Pas
           point.proposal=response;event('PROPOSE',true,'Proposal tersimpan; belum diterapkan.');
           for(const p of response.alignmentProposals || [])if(p.validationStatus==='REJECTED')event('PROPOSE',false,(p.validationIssues || [p.reason]).join('; '),p.id);
           stage('PROPOSE');
-        }else{
-          point.verification=response;
-          for(const action of request.actions || [])if(response.step07SemanticChecks?.some(c=>c.actionId===action.id&&c.verdict==='SUPPORTED'))point.verifiedDependencies![action.id]=step07ActionDependency(action,mapping.units,options.atp,options.tp);
-          event('VERIFY',true,'Hasil verifikasi tersimpan; otorisasi tetap diperiksa engine.');stage('VERIFY');
         }
         return response;
       };

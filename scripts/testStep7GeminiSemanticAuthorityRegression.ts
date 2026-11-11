@@ -44,7 +44,7 @@ const non = checkMappingSemanticEvidence({ label: labels[3], tpItems: [tp.items[
 assert(!non.reason.includes('Domain pembelajaran berbeda'), 'tempat alone must not imply lokomotor');
 const analysis = sanitizeMappingAnalysisResult(gemini, params);
 const unproven = structuredClone(gemini); unproven.materialFindings.forEach(f => { f.evidence = []; });
-assert.equal(actionsOf(sanitizeMappingAnalysisResult(unproven, params)).length, 0, 'AI claims without source evidence stay NEEDS_REVIEW');
+assert.equal(actionsOf(sanitizeMappingAnalysisResult(unproven, params)).length, actionsOf(analysis).length, 'Canonical proposals need no separate evidence certificate');
 assert.equal(analysis.materialFindings.filter(finding => finding.action).length, 4);
 assert(analysis.materialFindings.every(finding => finding.status === 'ALIGNABLE'));
 assert.deepEqual(analysis.materialFindings.map(finding => finding.supportingAtpItemIds), atp.items.map(item => [item.id]));

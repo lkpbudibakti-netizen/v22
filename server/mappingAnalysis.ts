@@ -171,7 +171,6 @@ export function buildMappingAnalysisPrompt(params: AnalyzeATPUnitMappingServerPa
         atpItemIds: (u.linkedAtpItemIds || []).filter(id => !(u.materials || []).some(m => (m.linkedAtpItemIds || []).includes(id))),
       },
       materials: (u.materials || []).map((m, mIdx) => ({
-        ...(params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?{requiresSemanticReview:!hasTeacherMaterialSupport(u,m,tpData)}:{}),
         materialId: m.id,
         order: m.order,
         title: m.title || '',
@@ -181,42 +180,17 @@ export function buildMappingAnalysisPrompt(params: AnalyzeATPUnitMappingServerPa
     };
   });
 
-  return `Analisis semantik seluruh TP/ATP dan seluruh Bab/Materi untuk perubahan seminimal mungkin.
-CP/TP/ATP canonical immutable. ID Bab dan materi tetap. Judul Bab/Materi boleh disunting dengan diff sebelum/sesudah.
-COPYEDIT: ejaan, kapitalisasi, tanda baca kosmetik. RENAME: makna dan cakupan tetap, hanya otomatis bila aturan kesetaraan deterministik membuktikannya. Jangan memakai jumlah kata/rasio kemiripan sebagai bukti.
-EDIT_UNIT_TITLE menyunting judul Bab; EDIT_MATERIAL menyunting judul materi. Perubahan makna/cakupan adalah CONTENT_CHANGE dan wajib persetujuan guru; perubahan relasi adalah REALIGN dan wajib persetujuan guru. Jangan terus mengganti judul yang sudah baik pada analisis ulang.
-Bab/Materi → pilih subset TP relevan → derive ATP canonical. Pertahankan stepNumber, focus, linkedTpIds ATP serta unit.order Bab.
-Jangan menjadikan overlap keyword sebagai authority relevansi. Analisis kompetensi, lingkup, progresi dan konteks secara menyeluruh.
-Evaluasi SETIAP materi, termasuk yang belum memiliki relasi meskipun coverage global sudah 100%. TP luas dapat relevan pada bela diri, senam, irama dan aktivitas air tanpa kata yang sama. Nilai relevansi substansi, kompetensi dan cakupan materi menggunakan konteks Bab, mapel, TP dan ATP kanonikal. Step 07 hanya memetakan lingkup materi, bukan merumuskan aktivitas pembelajaran. Judul singkat yang relevan tidak perlu memuat kata kerja TP. Jika konteks belum cukup, jelaskan aspek substansi/cakupan yang perlu dikonfirmasi guru, bukan meminta bukti kegiatan. Ketiadaan keyword bukan alasan penolakan.
-Jangan menambah materi baru untuk menutup coverage sebelum menilai materi existing. ADD/MOVE/perluasan substansi selalu menunggu persetujuan guru. Kepercayaan AI bukan otorisasi AUTO_APPLY; server memeriksa sumber dan riwayat persetujuan secara independen.
-Untuk setiap gap pilih prioritas LINK_TP → EDIT_MATERIAL → ADD_MATERIAL → MOVE_MATERIAL → RESTRUCTURE_UNIT.
-LINK_TP: usulan hubungan materi existing tanpa mengubah teks. EDIT_MATERIAL/EDIT_UNIT_TITLE: before harus exact; after berupa judul yang bermakna jelas. Kutipan kata yang sama bukan bukti dukungan kompetensi.
-ADD_MATERIAL: boleh pada Bab yang SUDAH memiliki materi jika gap tidak dapat ditutup melalui materi existing. Jangan mengganti materi lama.
-MOVE_MATERIAL: sourceUnitId dan targetUnitId existing, targetMaterialId exact. Jangan pindahkan ATP canonical atau ubah Bab.
-RESTRUCTURE_UNIT adalah opsi terakhir: hanya mengurutkan materi existing di satu Bab, materialOrder berisi seluruh ID materi; before = JSON.stringify(urutan ID materi saat ini). Tidak membuat/menghapus/mengurutkan Bab.
-Setiap action memerlukan linkedTpIds canonical, alasan pedagogis spesifik, evidence per TP berupa tpQuote substring exact pernyataan TP dan materialQuote substring exact materi ASLI (atau judul baru untuk ADD_MATERIAL).
-Untuk menghindari kutipan terlalu pendek, COPY pernyataan TP utuh ke tpQuote dan judul materi asli utuh ke materialQuote (ADD_MATERIAL: copy judul after utuh). Jangan parafrase, ubah tanda baca atau rapikan spasi kutipan.
-Minimum kutipan validator: tpQuote >= min(12, panjang pernyataan TP), materialQuote >= min(8, panjang judul sumber). Tetap harus substring exact, bukan keyword generik.
-Gunakan ID tpId/unitId/materialId dari JSON sumber, bukan kode TP atau nomor Bab. before LINK_TP/EDIT_MATERIAL/MOVE_MATERIAL wajib judul asli exact; after EDIT/ADD wajib judul revisi/baru, bukan object atau penjelasan. MOVE sourceUnitId wajib Bab induk asli.
-Gunakan satu type literal (contoh "LINK_TP"), bukan gabungan nama type dengan tanda |. Setiap proposal adalah action flat sesuai schema di bawah; envelope {id, action:{...}} juga didukung jika field yang sama tidak bertentangan. Semua penolakan validator tetap ditampilkan dan tidak dapat dipilih.
-Server memisahkan redaksi otomatis terverifikasi dari usulan yang memerlukan persetujuan guru. Server menurunkan ATP induk, menghitung coverage dan memvalidasi lineage/progression/ID/substansi eksplisit.
-Jangan memaksakan relasi demi Z=0. Untuk SETIAP TP uncovered, ATP unmapped, dan materi review, berikan proposal konkret atau alasan spesifik dalam gapFindings. Jangan mengarang ID.
-Usulkan alternatif terpisah dan terurut prioritas; hindari beberapa perubahan bertentangan pada materi sama. Action harus mandiri/atomic; coverage dari data aktual, bukan klaim AI.
+  return `Petakan Bab/Lingkup Materi ke TP dan ATP kanonikal berdasarkan relevansi substansi, kompetensi, cakupan dan konteks mapel. Utamakan LINK_TP dan pertahankan judul asli yang relevan. Jangan membuat aktivitas, asesmen atau pembuktian kompetensi; itu tanggung jawab modul ajar.
+Bab/Materi → pilih subset TP relevan → derive ATP canonical. CP/TP/ATP immutable. Gunakan hanya ID input. ATP diturunkan server dari TP; jangan mengarang ID atau mengubah sumber kanonikal. Jangan menyalin semua TP ke semua materi demi coverage.
+AI boleh memperbaiki judul dan relasi, menambah materi hanya bila diperlukan, memindahkan materi atau menata ulang urutan materi existing; jangan menghapus materi guru otomatis. before harus exact terhadap sumber. Tindakan wajib mandiri/atomic dan memiliki alasan relevansi singkat, bukan kutipan kompetensi atau sertifikat semantik.
+Jenis: LINK_TP, EDIT_MATERIAL, EDIT_UNIT_TITLE, ADD_MATERIAL, MOVE_MATERIAL, RESTRUCTURE_UNIT. RESTRUCTURE_UNIT hanya permutasi seluruh ID materi Bab, before=JSON.stringify(urutan ID). MOVE hanya pada rekonsiliasi lintas Bab yang diizinkan, sourceUnitId harus induk asli.
+Jika relasi lama perlu dikoreksi gunakan LINK_TP replaceTpIds:true dengan subset TP relevan yang eksplisit. Pertahankan pemetaan manual yang sah dan cakupan global/lokal. Jika konteks tidak cukup, laporkan gap spesifik; jangan memaksakan relasi.
 Subject: ${subject || ''}; grade: ${grade || ''}; phase: ${phase || ''}
-SEMUA TP CANONICAL (termasuk TP tanpa ATP induk): ${JSON.stringify(tpData.items)}
+TP CANONICAL: ${JSON.stringify(tpData.items)}
 ATP CANONICAL: ${JSON.stringify(atpContext)}
 BAB/MATERI ASLI: ${JSON.stringify(unitsContext)}
-Kembalikan JSON:
-{
- "atpFindings": [], "materialFindings": [],
- "materialReviews": [{"unitId":"exact","materialId":"exact","candidates":[{"tpIds":["exact"],"reason":"Jelaskan relevansi substansi, kompetensi, cakupan dan konteks Bab; kandidat bersyarat bukan klaim sudah selaras.","evidence":[{"tpId":"exact","tpQuote":"pernyataan TP asli utuh","materialQuote":"judul materi asli utuh"}],"missingEvidence":["Konteks substansi/cakupan yang belum jelas dan perlu dikonfirmasi guru, kosong bila cukup untuk diusulkan ACC"]}]}],
- "alignmentProposals": [{"id":"unik", "type":"EDIT_UNIT_TITLE|LINK_TP|EDIT_MATERIAL|ADD_MATERIAL|MOVE_MATERIAL|RESTRUCTURE_UNIT",
- "targetUnitId":"exact", "sourceUnitId":"untuk MOVE", "targetMaterialId":"exact kecuali ADD",
- "linkedTpIds":["exact"], "before":"judul asli exact / JSON ID order untuk restructure", "after":"judul revisi/baru",
- "materialOrder":["hanya untuk restructure"], "reason":"alasan pedagogis dan mengapa tindakan lebih kecil tidak cukup",
- "evidence":[{"tpId":"exact", "tpQuote":"kutipan TP exact", "materialQuote":"kutipan materi exact"}]}],
- "gapFindings":[{"kind":"TP|ATP|MATERIAL", "id":"exact", "reason":"alasan spesifik bila belum dapat diselaraskan"}]
-}${params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?buildStep07AutoInstructions(params.step07Auto):''}`;
+Kembalikan JSON {"atpFindings":[],"materialFindings":[],"alignmentProposals":[{"id":"unik","type":"LINK_TP","targetUnitId":"exact","targetMaterialId":"exact kecuali ADD","sourceUnitId":"untuk MOVE","linkedTpIds":["TP ID exact"],"before":"judul asli exact / JSON urutan untuk restructure","after":"judul revisi/baru bila diperlukan","materialOrder":[],"reason":"alasan relevansi singkat"}],"gapFindings":[{"kind":"MATERIAL|TP|ATP","id":"exact","reason":"masalah tersisa"}]}.
+Tidak ada panggilan VERIFY kedua. Aplikasi menerapkan aksi yang lolos validasi struktur, referensi dan lineage lalu menyimpan hasil.${params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?buildStep07AutoInstructions(params.step07Auto):''}`;
 }
 
 function sanitizeStep07AutoRequestForPrompt(request: import('../src/types').Step07AutoRequest): any {
@@ -238,16 +212,10 @@ function sanitizeStep07AutoRequestForPrompt(request: import('../src/types').Step
 
 export function buildStep07AutoInstructions(request:import('../src/types').Step07AutoRequest):string {
   const sanitizedRequest = sanitizeStep07AutoRequestForPrompt(request);
-  return `\nKEBIJAKAN KHUSUS STEP07_AUTO_REPAIR, bukan perubahan approval global: pengguna mengotorisasi perbaikan substantif otomatis setelah verifikasi semantik dan validator. Jangan meminta ACC guru pada jalur ini. Data TP/ATP tetap immutable. Prioritaskan LINK_TP berdasarkan relevansi substansi, kompetensi dan cakupan dalam konteks Bab/mapel/ATP. Pertahankan judul asli yang relevan, termasuk judul singkat tanpa kata kerja TP. Edit hanya bila diperlukan untuk memperjelas atau memperbaiki substansi. Jangan membuat aktivitas pembelajaran di Step 07; aktivitas dirumuskan pada modul ajar. ADD hanya bila TP belum terwakili oleh materi existing, bukan untuk menghindari perbaikan 12 materi tanpa lineage. Tidak ada DELETE atau penghapusan materi manual otomatis.
+  return `\nSTEP07_AUTO_REPAIR: satu analisis menghasilkan tindakan pemetaan otomatis, tanpa ACC atau verifikasi AI kedua. Pemeriksaan kelulusan hanya sumber siap, identitas, stale, kelengkapan struktur, cakupan TP/ATP, referensi dan lineage kanonikal.
 REQUEST: ${JSON.stringify(sanitizedRequest)}
-Jika execution.activeUnitId tersedia, proses hanya Bab aktif ini. execution.otherUnits hanya ringkasan konteks, bukan izin mengubah Bab lain. Usulkan tindakan lintas Bab pada rekonsiliasi global (execution.reconciliation=true), termasuk execution.deferredActions; jangan memindahkan/menghapus isi Bab lain saat pemrosesan lokal. INITIAL_MAPPING membangun relasi dari bukti materi dan TP, bukan menyalin semua TP. REPAIR mempertahankan relasi manual yang sah. VALIDATE cukup memeriksa kesiapan tanpa menulis ulang materi yang sudah baik.
-Periksa juga materi yang sudah memiliki linked IDs tetapi requiresSemanticReview=true. Coverage global 5/5 bukan bukti semua materi mendukung kompetensi TP. Jangan meminta rename atau aktivitas konkret sebagai syarat relasi. Jika substansi/cakupan memang tidak sesuai, jelaskan masalahnya sebelum mengusulkan perbaikan. Materi yang sudah terverifikasi dan tidak memiliki gap harus dipertahankan persis; analisis ulang tanpa perubahan sumber tidak boleh menimbulkan edit baru.
-Koreksi relasi existing boleh memakai LINK_TP replaceTpIds:true hanya jika relasi yang dilepas memiliki konflik substansi eksplisit. Verifier harus menyertakan removedRelations:[{tpId:"ID TP lama",tpQuote:"pernyataan TP lama utuh",materialQuote:"judul materi sumber",reason:"konflik pedagogis spesifik"}]. Tanpa bukti negatif sumber yang jelas, pertahankan relasi manual. Jangan mengosongkan seluruh relasi atau menghapus materi. Validator canonical dan penjagaan coverage tetap berlaku.
-Putaran pertama menilai semua data; putaran berikutnya hanya usulkan tindakan pada focus yang tersisa, dengan seluruh data tetap sebagai konteks.
-validation.issues adalah seluruh masalah aktual dari readiness Step 08. Tangani masalah ini secara terarah, termasuk kegagalan pada validation.rejectedActions; jangan mengulang tindakan yang ditolak tanpa memperbaiki penyebabnya. Status SIAP, identitas, stale sumber atau sumber kanonikal yang bermasalah harus dijelaskan, bukan diubah melalui aksi Bab/Materi. Jika tidak dapat diselesaikan dengan bukti yang ada, jelaskan penyebab spesifik. Jangan menyatakan selesai hanya karena coverage global lengkap.
-repair.failures memuat kategori, fase dan ID tindakan yang ditolak. Jika SEMANTIC_MISMATCH, periksa ulang relevansi substansi dan cakupan dengan konteks Bab, mapel, TP dan ATP. Jangan menganggap tidak adanya kata kerja TP pada judul sebagai mismatch. Gunakan LINK_TP bila relasinya relevan; usulkan edit atau restrukturisasi hanya untuk masalah substansi nyata. Jangan menghapus materi manual. Kurangi redaksi hanya tanpa membuang cakupan kompetensi; jangan menganggap perubahan sedikit kata selalu minor. CHECK_EVIDENCE memperbaiki rujukan kutipan, bukan memberi izin semantik. Revisi strategi/hasil secara nyata; proposal identik pada input sama akan dihentikan sebagai NEEDS_TEACHER_REVIEW. Pada GLOBAL hanya lakukan rekonsiliasi lintas-Bab dan validasi; jangan mengulang perbaikan lokal BLOCKED.
-Jika phase PROPOSE, gunakan alignmentProposals existing dengan sumber exact dan alasan pedagogis spesifik. Kompetensi harus eksplisit pada judul hasil yang diusulkan jika judul asli belum menunjukkan kompetensi itu. Jangan tautkan gerakan dasar ke TP investigasi/transfer hanya karena domain PJOK sama. Jika tidak ada dukungan, jelaskan gap dan jangan memaksakan relasi.
-Jika phase VERIFY, evaluasi actions secara independen dari confidence/alasan AI pengusul. Kembalikan alignmentProposals:[] serta step07SemanticChecks:[{actionId:"ID action exact",verdict:"SUPPORTED|NEEDS_REVIEW|CONFLICT",reason:"alasan pedagogis, kompetensi, cakupan dan konteks",missingEvidence:[],additionNecessary:false,targetUnitQuote:"judul Bab tujuan exact untuk ADD/MOVE",evidence:[{tpId:"exact",tpQuote:"pernyataan TP utuh exact",materialQuote:"judul ASLI utuh exact (ADD: judul after)",competenceQuote:"kata/frasa kompetensi TP exact; tidak wajib literal di judul untuk semua jenis aksi",relationshipReason:"untuk setiap TP: jelaskan relevansi substansi materi terhadap kompetensi dan cakupan TP, dalam konteks Bab, mapel dan ATP kanonikal. Bukan uraian aktivitas pembelajaran. Kesamaan token atau confidence pengusul bukan bukti; jika dasar substansi tidak cukup gunakan NEEDS_REVIEW",contextQuote:"potongan substansi asli >=8 karakter yang juga dipertahankan pada hasil; ADD: potongan judul Bab yang terdapat pada materi baru"}]}]. Semua TP action harus memiliki bukti, bukan keyword generik. SUPPORTED hanya jika makna, kompetensi dan cakupan yang diusulkan sesuai TP, konteks asli tetap, dan tidak ada bukti yang hilang. Jika tidak dapat dipastikan, gunakan NEEDS_REVIEW dengan alasan spesifik. Jangan mengarang kutipan atau id.`;
+Jika execution.activeUnitId tersedia, ubah hanya Bab aktif. otherUnits hanya konteks. Tindakan lintas Bab hanya pada execution.reconciliation=true. GLOBAL boleh menutup TP/ATP yang belum tercakup dengan relasi lokal yang relevan, tetapi jangan menyelesaikan ulang Bab lokal BLOCKED.
+Gunakan validation.issues dan repair.failures untuk memperbaiki gap tersisa; jangan mengulang proposal identik. Pertahankan Bab/materi yang sudah lengkap, judul yang relevan, semua ID kanonikal dan perubahan manual. Jangan mengubah status SIAP/identitas atau menghapus materi. Laporkan kegagalan secara spesifik bila tidak dapat diperbaiki.`;
 }
 
 export function sanitizeMappingAnalysisResult(rawResult: any, params: AnalyzeATPUnitMappingServerParams): MappingAnalysisResult {

@@ -18,7 +18,7 @@ export interface AlignmentAction {
   after?: string;
   materialOrder?: string[];
   reason: string;
-  evidence: { tpId: string; tpQuote: string; materialQuote: string }[];
+  evidence?: { tpId: string; tpQuote: string; materialQuote: string }[];
 }
 export interface AlignmentProposal {
   actionId?:string;
@@ -164,7 +164,7 @@ export function buildMappingPedagogicalReport(units: ATPUnitMapping[], atp: ATPD
       add({ id: `support-${unit.id}-${material.id}-${id}`, unitId: unit.id, materialId: material.id, category: 'MATERIAL_SUPPORT', priority: signal.hardConflict ? 'P1' : 'P2',
         actual: `Materi "${material.title}" tertaut ke ${objective.code || id}.`, evidence: `TP: "${objective.statement}". ${signal.reason} Kecocokan kata saja bukan bukti kesetaraan pedagogis.`,
         recommendation: signal.hardConflict ? 'Tinjau atau lepaskan hubungan yang bertentangan melalui keputusan guru.' : 'Konfirmasikan relevansi substansi, kompetensi dan cakupan; pertahankan relasi manual sampai keputusan guru.',
-        impact: signal.hardConflict ? 'Konflik eksplisit mengunci kesiapan.' : 'Tidak ada relasi atau materi yang diubah oleh laporan.', approval: 'TEACHER', status: signal.hardConflict ? 'OPEN' : hasTeacherMaterialSupport(unit, material, tp) ? 'RESOLVED' : 'NEEDS_REVIEW' });
+        impact: signal.hardConflict ? 'Saran peninjauan relevansi; kesiapan tetap ditentukan struktur dan lineage kanonikal.' : 'Tidak ada relasi atau materi yang diubah oleh laporan.', approval: 'TEACHER', status: signal.hardConflict ? 'OPEN' : material.linkedTpIds.length ? 'RESOLVED' : 'NEEDS_REVIEW' });
     }
     const duplicates = all.filter(other => other.material.id !== material.id && mappingTitleMeaning(other.material.title) === mappingTitleMeaning(material.title));
     if (duplicates.length) add({ id: `duplicate-${unit.id}-${material.id}`, unitId: unit.id, materialId: material.id, category: 'POSSIBLE_DUPLICATE', priority: 'P3',
@@ -207,7 +207,7 @@ export function hasTeacherMaterialSupport(unit: ATPUnitMapping, material: ATPUni
   return material.linkedTpIds.length > 0 && material.linkedTpIds.every(id => approved.has(id));
 }
 
-/** Independent authority: AI confidence cannot authorize a new TP relationship. */
+/** Legacy UI approval classification; scoped Step07 uses structural execution policy. */
 export function isMappingActionAutomatic(action: AlignmentAction, units: ATPUnitMapping[], tp: TPData): boolean {
   if (['COPYEDIT','RENAME'].includes(mappingActionKind(action, units))) return true;
   const unit = units.find(u => u.id === action.targetUnitId), material = unit?.materials.find(m => m.id === action.targetMaterialId);
@@ -258,17 +258,16 @@ export function undoMappingRelation(units:ATPUnitMapping[], unitId:string, recor
 export function buildMappingMaterialResolutions(units: ATPUnitMapping[], atp: ATPData, tp: TPData, proposals: AlignmentProposal[] = [], gaps: {kind:string;id:string;reason:string}[] = []) {
   return units.flatMap(unit => unit.materials.map(material => {
     const matches = proposals.filter(p => p.targetUnitId === unit.id && p.targetMaterialId === material.id);
-    const approved = hasTeacherMaterialSupport(unit, material, tp);
     const parents=deriveMappingAtpIds(material.linkedTpIds, atp, tp);
-    const complete = material.linkedTpIds.length > 0 && !parents.issues.length && parents.atpItemIds.length===material.linkedAtpItemIds.length && parents.atpItemIds.every(id=>material.linkedAtpItemIds.includes(id)) && !checkMappingSemanticEvidence({label:material.title,tpItems:tp.items.filter(t=>material.linkedTpIds.includes(t.id))}).hardConflict;
+    const complete = material.linkedTpIds.length > 0 && !parents.issues.length && parents.atpItemIds.length===material.linkedAtpItemIds.length && parents.atpItemIds.every(id=>material.linkedAtpItemIds.includes(id));
     const actionable = matches.filter(p => p.action && alignmentProposalStatus(p) === 'READY');
     const origin = mappingMaterialOrigin(unit, material);
     return { unitId:unit.id, materialId:material.id, title:material.title, origin,
       linkedTpIds:[...material.linkedTpIds], linkedAtpItemIds:[...material.linkedAtpItemIds],
-      status: complete && approved && origin !== 'UNVERIFIED' ? 'RESOLVED' as const : actionable.length ? 'NEEDS_APPROVAL' as const : 'NEEDS_REVIEW' as const,
-      reason: complete && approved ? 'Relasi tersimpan memiliki bukti persetujuan guru atau kesetaraan proposisi lengkap yang diperiksa independen untuk judul dan TP saat ini.' :
+      status: complete ? 'RESOLVED' as const : actionable.length ? 'NEEDS_APPROVAL' as const : 'NEEDS_REVIEW' as const,
+      reason: complete ? 'Relasi TP/ATP lengkap dan konsisten secara struktural; pembuktian kompetensi dilakukan di modul ajar.' :
         gaps.find(g => g.kind === 'MATERIAL' && g.id === material.id)?.reason || matches.find(p => p.validationIssues?.length)?.reason ||
-        'Belum ada usulan semantik terverifikasi. Judul saja belum membuktikan kompetensi; guru perlu meninjau relevansi substansi dan cakupan.',
+        'Relasi TP/ATP belum lengkap. Pilih TP relevan atau jalankan Analisis & Selaraskan; ATP diturunkan dari relasi kanonikal.',
       proposalIds:actionable.map(p => p.id),
       suggestedReason:matches.find(p=>p.reason?.trim())?.reason,
       candidates: tp.items.map(objective => {
@@ -351,7 +350,7 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
   const scoped=typeof approval==='object';
   if(scoped){const issues=validateStep07AutoExecution(units,actions,atp,tp,approval,action=>isMappingActionAutomatic(action,units,tp));if(issues.length)return {success:false,issues};}
   const recordApproval=scoped?'AUTOMATIC':approval;
-  const authority=(action:AlignmentAction)=>scoped?{executionContext:'STEP07_AUTO_REPAIR' as const,semanticVerification:approval.checks.find(check=>check.actionId===action.id),reviewedUnitTitle:next.find(unit=>unit.id===action.targetUnitId)?.title}:{};
+  const authority=(action:AlignmentAction)=>scoped?{executionContext:'STEP07_AUTO_REPAIR' as const,reviewedUnitTitle:next.find(unit=>unit.id===action.targetUnitId)?.title}:{};
   const next = structuredClone(units);
   const issues: string[] = [];
   const fail = (reason: string) => { issues.push(reason); };
@@ -378,15 +377,6 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
       const kind = classifyMappingTitle(titleEntity.title, action.after);
       if (titleEntity.titleHistory?.some(h => h.kind === 'UNDO' && h.after === titleEntity.title && h.before === action.after)) continue;
       if (kind !== 'CONTENT_CHANGE' && titleEntity.titleHistory?.some(h => h.approval === 'AUTOMATIC' && h.after === titleEntity.title) && action.after !== suggestMappingCopyedit(titleEntity.title)) continue;
-      if (kind === 'CONTENT_CHANGE') {
-        const ids = titleEntity.linkedTpIds;
-        if (!ids.length || ids.some(id => {
-          const objective = tp.items.find(t => t.id === id), evidence = action.evidence?.find(e => e.tpId === id);
-          return !objective || !evidence?.tpQuote || !objective.statement.includes(evidence.tpQuote) || evidence.tpQuote.length < Math.min(12, objective.statement.length) ||
-            !evidence.materialQuote || !titleEntity.title.includes(evidence.materialQuote) || evidence.materialQuote.length < Math.min(8, titleEntity.title.length) ||
-            checkMappingSemanticEvidence({ label: action.after!, tpItems: [objective] }).hardConflict;
-        })) { fail('CONTENT_CHANGE membutuhkan bukti TP/materi yang dapat diverifikasi dan persetujuan guru.'); continue; }
-      }
       const key = `${target.id}:${action.targetMaterialId || 'title'}`;
       if (usedMaterials.has(key)) { fail('Proposal judul bertentangan; pilih satu alternatif.'); continue; }
       usedMaterials.add(key);
@@ -414,24 +404,6 @@ export function applyMinimalAlignment(units: ATPUnitMapping[], actions: Alignmen
       if (action.type !== 'ADD_MATERIAL' && action.before !== original!.title) { fail('BEFORE_MISMATCH: materi telah berubah; analisis ulang.'); continue; }
       if (action.targetMaterialId && usedMaterials.has(action.targetMaterialId)) { fail('Proposal bertentangan untuk materi yang sama; pilih satu alternatif.'); continue; }
       if (action.targetMaterialId) usedMaterials.add(action.targetMaterialId);
-      for (const id of action.linkedTpIds) {
-        const objective = tp.items.find(t => t.id === id)!;
-        const evidence = Array.isArray(action.evidence) ? action.evidence.find(e => e?.tpId === id) : undefined;
-        const sourceText = action.type === 'ADD_MATERIAL' ? title : original!.title;
-        if (typeof evidence?.tpQuote !== 'string' || !evidence.tpQuote.trim() || !objective.statement.includes(evidence.tpQuote) ||
-            typeof evidence.materialQuote !== 'string' || !evidence.materialQuote.trim() || !sourceText.includes(evidence.materialQuote)) {
-          fail(`EVIDENCE_MISSING: kutipan sumber materi dan TP '${id}' harus dapat diverifikasi secara exact.`);
-        } else if (evidence.tpQuote.trim().length < Math.min(12, objective.statement.trim().length) || evidence.materialQuote.trim().length < Math.min(8, sourceText.trim().length)) {
-          fail(`EVIDENCE_TOO_SHORT: kutipan TP '${id}' dan materi harus memuat substansi sumber, bukan satu karakter/kata generik.`);
-        }
-        if (checkMappingSemanticEvidence({ label: title, tpItems: [objective] }).hardConflict) fail(`HARD_CONFLICT: materi berlawanan dengan TP '${id}'.`);
-      }
-      // Substantive edits require independent scoped verification or explicit teacher
-      // authority above. Lexical overlap is a signal, not an additional semantic veto.
-      if(action.type==='EDIT_MATERIAL'&&classifyMappingTitle(original!.title,title!)==='CONTENT_CHANGE'&&!scoped&&
-        !action.evidence?.every(e=>typeof e.materialQuote==='string'&&mappingTitleMeaning(title!).includes(mappingTitleMeaning(e.materialQuote)))){
-        fail('CONTENT_CHANGE: konteks materi sumber tidak dipertahankan; tinjau perubahan substansi sebelum menyetujui relasi.');
-      }
       if (issues.length) continue;
       if (action.type === 'ADD_MATERIAL') {
         const existing = target.materials.find(m => m.title.trim().toLowerCase() === title.trim().toLowerCase());

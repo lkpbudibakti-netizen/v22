@@ -32,23 +32,23 @@ const raw = { alignmentProposals: [link,
   { id: 'finding-add', action: add }, // UI-style envelope uses a distinct finding ID; executable ID stays exact.
   { ...link, id: 'bad-id', targetUnitId: 'missing' },
   { ...link, id: 'bad-before', before: 'Judul rekaan AI' },
-  { ...link, id: 'bad-evidence', evidence: [{ tpId: 't1', tpQuote: 'parafrase', materialQuote: 'Lempar tangkap bola' }] },
-  { ...link, id: 'short', evidence: [{ tpId: 't1', tpQuote: 'Melempar', materialQuote: 'Lempar tangkap bola' }] },
+  { ...link, id: 'bad-evidence', targetMaterialId:'missing-material', evidence: [{ tpId: 't1', tpQuote: 'parafrase', materialQuote: 'Lempar tangkap bola' }] },
+  { ...link, id: 'short', linkedTpIds:['fake'], evidence: [{ tpId: 't1', tpQuote: 'Melempar', materialQuote: 'Lempar tangkap bola' }] },
   { ...link, id: 'bad-lineage', linkedTpIds: ['orphan'] },
-  { ...link, id: 'hard-conflict', targetMaterialId: 'conflict', before: 'Gerak lokomotor', evidence: [{ tpId: 't1', tpQuote: tp.items[0].statement, materialQuote: 'Gerak lokomotor' }] },
+  { ...link, id: 'hard-conflict', sourceUnitId:'u2', targetMaterialId: 'conflict', before: 'Gerak lokomotor', evidence: [{ tpId: 't1', tpQuote: tp.items[0].statement, materialQuote: 'Gerak lokomotor' }] },
   { id: 'envelope-conflict', targetUnitId: 'u1', action: { ...add, id: 'envelope-conflict', targetUnitId: 'u2' } },
 ] };
 const result = sanitizeMappingAnalysisResult(raw, params);
 const proposals = result.alignmentProposals!;
 const diagnostic = alignmentProposalDiagnostics(proposals);
 assert.equal(diagnostic.ready, 2); assert.equal(diagnostic.rejected, 7); assert.equal(diagnostic.alreadyApplied, 0);
-for (const marker of ['EVIDENCE_MISSING', 'EVIDENCE_TOO_SHORT', 'BEFORE_MISMATCH', 'HARD_CONFLICT', 'ACTION_ENVELOPE_CONFLICT', 'ID Bab', 'induk ATP']) {
+for (const marker of ['BEFORE_MISMATCH', 'ACTION_ENVELOPE_CONFLICT', 'ID Bab', 'induk ATP', 'Judul materi']) {
   assert(diagnostic.rejectionReasons.some(r => r.reason.includes(marker)), marker);
 }
 assert(proposals.filter(p => p.validationStatus === 'REJECTED').every(p => !p.action && p.validationIssues!.length));
 assert(proposals.some(p => p.action?.id === 'add'), 'Wrapped valid action must survive the parser');
-assert(buildMappingAnalysisPrompt(params).includes('min(12,'));
-assert(buildMappingAnalysisPrompt(params).includes('before LINK_TP/EDIT_MATERIAL/MOVE_MATERIAL'));
+assert(buildMappingAnalysisPrompt(params).includes('before harus exact'));
+assert(buildMappingAnalysisPrompt(params).includes('Gunakan hanya ID input'));
 
 let selected = new Set<string>();
 const tree = () => AlignmentProposalReview({ proposals, selectedIds: selected, onSelectionChange: ids => { selected = ids; } });

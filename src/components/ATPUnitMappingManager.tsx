@@ -936,7 +936,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
       setAnalysisError(success?null:[result.issues[0],...issues.map(issue=>issue.message)].filter(Boolean).join('\n'));
       if(success)setAppliedNotice(message+(!result.persisted?' Perubahan Bab lain tetap berada di draf.':''));
     }
-    else if(result.saved)setAppliedNotice('Selesai: hasil valid dan lengkap tersimpan atomik. Lanjut Step 08 tersedia.');
+    else if(result.saved)setAppliedNotice('Pemetaan valid, lengkap dan tersimpan. Lanjut Step 08 tersedia.');
     else {setAnalysisError(result.issues.join('\n') || 'Gap belum dapat diselesaikan secara pedagogis. Draft aman terakhir dipertahankan.');if(result.persisted)setAppliedNotice('Progres aman tersimpan. Klik Lanjutkan Perbaikan untuk menyelesaikan masalah tersisa.');}
     }catch(error){
       if(requestId===analysisRequestIdRef.current){const message=error instanceof Error?error.message:String(error);setAnalysisError(message);if(targetUnitId)setUnitRepairState({unitId:targetUnitId,message,success:false});}
@@ -1122,12 +1122,12 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     const reasons=[...new Set([...(proposal?.validationIssues || []),...checks.flatMap(c=>c.verdict!=='SUPPORTED'?[c.reason,...c.missingEvidence]:[]),...(point?.events.filter(e=>!e.success&&belongs(e.actionId)).map(e=>e.reason) || []),...(point?.repairState?.failures.filter(f=>belongs(f.actionId)).map(f=>f.reason) || [])])];
     return <section data-teacher-guidance={material.id} className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs">
       <p className="font-semibold">Perlu tinjauan: {material.title}</p>
-      <p>{material.linkedTpIds.length?'TP sudah dicentang, tetapi alasan relevansi dan persetujuan untuk redaksi saat ini belum lengkap.':'Materi belum dipetakan. Pilih TP berdasarkan relevansi substansi dan cakupan.'} Centang relasi saja belum mencatat bukti pedagogis.</p>
+      <p>{material.linkedTpIds.length?'Relasi TP/ATP belum lengkap atau tidak konsisten.':'Materi belum dipetakan. Pilih TP berdasarkan relevansi substansi dan cakupan.'}</p>
       {proposal&&<div><p>Usulan AI untuk ditinjau — belum dinyatakan valid:</p><p><del>{proposal.before}</del> → <strong>{proposal.after || proposal.before}</strong></p><p>{proposal.reason}</p></div>}
       {reasons.map(reason=><p key={reason}>Belum diterapkan: {reason}</p>)}
       {material.linkedTpIds.map(id=>{const objective=tp.items.find(t=>t.id===id);return objective?<p key={id}>[{objective.code}] {objective.statement}</p>:null;})}
       <p>Edit judul bila perlu, lalu jelaskan relevansi substansi dan cakupan materi terhadap setiap TP. Aktivitas pembelajaran dirumuskan pada modul ajar. Jika TP tidak sesuai, koreksi relasinya. Usulan AI di atas tidak otomatis diterapkan atau dianggap benar.</p>
-      {renderInlineAlignment(unit,material.id)}
+      <p>Perbaiki melalui pilihan Relasi TP/ATP saat ini, lalu Simpan Pemetaan. Tidak diperlukan ACC atau sertifikat semantik.</p>
     </section>;
   };
 
@@ -1868,7 +1868,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         }}>Batalkan batch penyelarasan terakhir</button>
       )}
       {(isAnalyzing||autoRepair||checkpointWork)&&<section id="step07-auto-status" role="status" className="rounded-xl border p-4 space-y-2">
-        <strong>{isAnalyzing?autoPhase:autoRepair?.outcome==='NEEDS_TEACHER_REVIEW'?'Perlu tinjauan guru':(!hasChanges&&mappingReadiness.canProceed?'Selesai':'Belum selesai')}</strong>
+        <strong>{isAnalyzing?autoPhase:(!hasChanges&&mappingReadiness.canProceed?'Selesai':autoRepair?.outcome==='NEEDS_TEACHER_REVIEW'?'Perlu tinjauan pemetaan':'Belum selesai')}</strong>
         {checkpointWork&&<p id="step07-checkpoint-status" className="text-sm">{checkpointWork.mode} · Bab aktif: {checkpointWork.activeUnitId==='GLOBAL'?'Rekonsiliasi global':units.find(u=>u.id===checkpointWork.activeUnitId)?.title || checkpointWork.activeUnitId} · Tahap: {checkpointWork.stage} · Bab selesai: {isAnalyzing?checkpointWork.completed:countStep07CompletedUnits({...mapping,id:mapping?.id || 'temp',academicSettingId:atp.academicSettingId,atpId:atp.id,updatedAt:mapping?.updatedAt || '',units,step07AutoRepair:autoRepair},atp,tp)}/{units.length} · {checkpointWork.checkpointStatus}</p>}
         {displayedRepairProgress&&<p className="text-sm" id="step07-repair-progress">Masalah awal: {displayedRepairProgress!.initial} · Selesai: {displayedRepairProgress!.resolved} · Tersisa: {displayedRepairProgress!.remaining}</p>}
         <p className="text-sm">Merah: redaksi berubah · Hijau: redaksi tetap · Pink: lingkup materi baru hasil AI.</p>
@@ -2107,7 +2107,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
             className="border border-amber-300 bg-amber-50 text-amber-900 rounded-lg p-3 text-sm space-y-2">
             <p className="font-semibold">Belum dapat lanjut Step 08</p>
             <ul className="list-disc pl-5 space-y-1">{mappingReadiness.blockers.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
-            <p>Gunakan Analisis &amp; Selaraskan untuk memperbaiki dan menyimpan hasil yang terverifikasi. Jika bukti belum cukup, periksa Detail proses atau lengkapi draft; Step 08 tetap terkunci.</p>
+            <p>Gunakan Analisis &amp; Selaraskan untuk memperbaiki relasi dan menyimpan pemetaan. Step 08 terbuka setelah sumber siap, struktur dan lineage lengkap, serta hasil tersimpan.</p>
             <button type="button" className="font-semibold text-blue-800 underline" onClick={() => {
               const unitId = mappingReadiness.validationResult?.materialCoverageGaps[0]?.unitId || units[0]?.id;
               const input = document.getElementById(`bab-title-input-${unitId}`);

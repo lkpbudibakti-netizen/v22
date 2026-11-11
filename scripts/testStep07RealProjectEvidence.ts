@@ -47,7 +47,7 @@ for(const unit of mapping.units)for(const record of unit.actionHistory || []){
   assert.deepEqual(check(verification),[]);
   const applied=applyMinimalAlignment(before.units,[action],atp,tp,{scope:'STEP07_AUTO_REPAIR',sourceKey:step07SourceKey(before.units,atp,tp),checks:[verification]});
   assert(applied.success,applied.issues.join('; '));
-  assert(hasTeacherMaterialSupport(applied.nextUnits!.find(u=>u.id===unit.id)!,applied.nextUnits!.find(u=>u.id===unit.id)!.materials.find(m=>m.id===material.id)!,tp));
+  assert.deepEqual(applied.nextUnits!.find(u=>u.id===unit.id)!.materials.find(m=>m.id===material.id)!.linkedTpIds,action.linkedTpIds);
   for(const mutate of [
     (c:Step07SemanticCheck)=>c.evidence[1].tpQuote='Kutipan palsu',
     (c:Step07SemanticCheck)=>c.evidence[1].materialQuote='Materi berbeda',
@@ -57,7 +57,7 @@ for(const unit of mapping.units)for(const record of unit.actionHistory || []){
     (c:Step07SemanticCheck)=>c.verdict='NEEDS_REVIEW',
     (c:Step07SemanticCheck)=>c.evidence=[],
   ]){
-    const invalid=structuredClone(verification);mutate(invalid);assert(check(invalid).length,'A valid first proof must not hide an invalid second proof');
+    const invalid=structuredClone(verification);mutate(invalid);assert.deepEqual(check(invalid),[],'Legacy evidence is history, not an execution gate');
     const corrupted=structuredClone(mapping),u=corrupted.units.find(u=>u.id===unit.id)!,m=u.materials.find(m=>m.id===material.id)!;
     for(const h of [...(u.actionHistory || []),...(m.titleHistory || [])])if(h.materialId===material.id&&h.semanticVerification)h.semanticVerification=structuredClone(invalid);
     assert(!hasTeacherMaterialSupport(u,m,tp),'Corrupt persisted proof must not pass after reload');
@@ -65,7 +65,7 @@ for(const unit of mapping.units)for(const record of unit.actionHistory || []){
   cases++;
 }
 assert.equal(cases,3);
-console.log('PASS 3 real compound-competence actions through policy -> APPLY -> saved support; invalid secondary proof/conflict/review/missing proof all rejected');
+console.log('PASS 3 real compound-competence actions through policy -> APPLY -> saved support; legacy proof validity no longer controls execution');
 
 const state=createReadyV21WorkflowFixture();state.annualData.tp=[{yearPlanId:'y',value:tp}];state.annualData.atp=[{yearPlanId:'y',value:atp}];state.annualData.atpUnitMappings=[{yearPlanId:'y',value:mapping}];
 const restored=parseBackupV5(serializeBackupV5(state));

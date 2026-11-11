@@ -1,9 +1,7 @@
 import { ATPUnitMappingData, ATPData, TPData, AcademicSetting, Step07ReadinessIssue } from '../types';
 import { validateATPUnitMappingCanonical, ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
-import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint, computeStep07VerifiedFingerprint } from './atpMappingActionApplyService';
+import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
 import { isUpstreamStale } from './workflowEngine';
-import { hasTeacherMaterialSupport } from './mappingAlignmentService';
-import { checkMappingSemanticEvidence } from '../../server/mappingSemanticEvidence';
 
 export interface MappingReadiness {
   canSaveDraft: boolean;
@@ -13,15 +11,8 @@ export interface MappingReadiness {
   repairIssues?:Step07ReadinessIssue[];
 }
 
-/** Close a scoped run after an explicit teacher review, using the same full requirements as AI. */
-export function finalizeTeacherReviewedMapping(mapping:ATPUnitMappingData,atp:ATPData,tp:TPData,setting?:AcademicSetting):ATPUnitMappingData {
-  if(!mapping.step07AutoRepair || !mapping.units.some(u=>[...(u.actionHistory || []),...u.materials.flatMap(m=>m.titleHistory || [])].some(r=>r.approval==='TEACHER'&&r.reviewedTitle&&r.reviewedTpIds?.length)))return mapping;
-  const ready=resolveATPUnitMappingReadiness(mapping,atp,tp,setting,{evaluateRepair:true});
-  if(!ready.canProceed)return mapping;
-  // Keep the original undo fingerprint: certifying teacher work must not authorize
-  // the older AI snapshot to overwrite manual changes during auto-repair undo.
-  return {...mapping,step07AutoRepair:{...mapping.step07AutoRepair,outcome:'COMPLETE',resultFingerprint:mapping.step07AutoRepair.resultFingerprint || 'TEACHER_REVIEW_LEGACY_UNDO_UNAVAILABLE',verifiedFingerprint:computeStep07VerifiedFingerprint(mapping.units,atp,tp),issues:[],progress:{initial:mapping.step07AutoRepair.progress?.initial || 0,resolved:mapping.step07AutoRepair.progress?.initial || 0,remaining:0}}};
-}
+/** Legacy API: process metadata is no longer a readiness certificate. */
+export function finalizeTeacherReviewedMapping(mapping:ATPUnitMappingData,_atp:ATPData,_tp:TPData,_setting?:AcademicSetting):ATPUnitMappingData {return mapping;}
 
 export function proceedWithATPUnitMapping(readiness: MappingReadiness,
   saveDraft: (() => boolean) | undefined, onNextStep: () => void): { proceeded: boolean; issues: string[] } {
@@ -145,21 +136,13 @@ export function resolveATPUnitMappingReadiness(
       for(const tpId of gap.tpIds)repairIssues.push({id:`coverage:${gap.unitId}:tp:${tpId}`,unitId:gap.unitId,tpIds:[tpId],message:`TP ${tpId} pada Bab ${gap.unitId} belum didukung gabungan materi.`});
       for(const atpId of gap.atpItemIds)repairIssues.push({id:`coverage:${gap.unitId}:atp:${atpId}`,unitId:gap.unitId,atpIds:[atpId],message:`ATP ${atpId} pada Bab ${gap.unitId} belum didukung gabungan materi.`});
     }
-    for(const unit of mapping?.units || [])for(const material of unit.materials){
-      if(tp&&material.linkedTpIds.length&&(!hasTeacherMaterialSupport(unit,material,tp)||checkMappingSemanticEvidence({label:unit.title,tpItems:tp.items.filter(t=>material.linkedTpIds.includes(t.id))}).hardConflict)){
-        const message=`SEMANTIC_EVIDENCE_MISSING: materi '${material.title}' (${material.id}) di Bab ${unit.id}, TP [${material.linkedTpIds.join(', ')}] belum memiliki dukungan kompetensi/substansi terverifikasi.`;
-        blockers.push(message);repairIssues.push({id:`semantic:${material.id}`,unitId:unit.id,materialId:material.id,tpIds:material.linkedTpIds,message});
-      }
-    }
     // Include every remaining readiness blocker, including upstream/status/source
     // errors which the AI must explain rather than "repair" by editing canonical TP/ATP.
     for(const message of [...new Set(blockers)]){
-      if(message.startsWith('SEMANTIC_EVIDENCE_MISSING:'))continue;
       if(message==='Pemetaan Unit/Bab belum lengkap.'||(validationResult.isValid&&validationResult.issues.includes(message)))continue;
       repairIssues.push({id:`readiness:${message}`,message});
     }
   }
-  if(!options?.evaluateRepair&&auto?.scope==='STEP07_AUTO_REPAIR'&&(auto.outcome!=='COMPLETE'||!atp||!tp||auto.verifiedFingerprint!==computeStep07VerifiedFingerprint(mapping!.units,atp,tp)))blockers.push('Auto-repair Step 07 belum terverifikasi untuk data terkini. Jalankan Analisis & Selaraskan hingga hasil lengkap tersimpan.');
 
   const canProceed =
     canSaveDraft &&

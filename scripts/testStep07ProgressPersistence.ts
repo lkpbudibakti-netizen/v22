@@ -44,7 +44,7 @@ function options(f:Fixture,extra:Partial<Step07RepairOptions>={}):Step07RepairOp
 
 const f=seed();const done=await runStep07AutoRepair(options(f));assert(done.saved,done.issues.join(';'));
 const four=structuredClone(done.mapping);four.step07AutoRepair!.outcome='INCOMPLETE';four.step07AutoRepair!.verifiedFingerprint=undefined;
-for(const u of four.units.slice(4)){u.actionHistory=[];for(const m of u.materials)m.titleHistory=[];}
+for(const u of four.units.slice(4)){u.linkedTpIds=[];u.linkedAtpItemIds=[];for(const m of u.materials){m.linkedTpIds=[];m.linkedAtpItemIds=[];}}
 const state=loadStorageV5();state.annualData.atpUnitMappings![0].value=four;saveStorageV5(state);
 // Remove only this fixture's earlier completed checkpoint to start from the saved four-Bab source.
 memory.delete(step07CheckpointKey(resolveStep07CheckpointContext('y')));
@@ -101,13 +101,13 @@ console.log('PASS 2: timeout and late response preserve exact V5/checkpoint byte
 // Keep newer progress in other Bab while retaining a real unsaved teacher edit.
 const manual=structuredClone(four),manualId=manual.units[0].id;
 const invalidationsBefore=readStep07Checkpoint(resolveStep07CheckpointContext('y'))!.invalidated?.length || 0;
-manual.units[0].materials[0].title+=' — pengamatan tambahan guru';
+manual.units[0].materials[0].title+=' — koreksi guru';manual.units[0].materials[0].linkedTpIds=[];manual.units[0].materials[0].linkedAtpItemIds=[];
 const edited=await runStep07AutoRepair(options(f,{mapping:manual,persistedMapping:four,analyze:async()=>{throw Error('API_FAILURE: manual edit retry');}}));
 assert.equal(edited.mapping.units[0].materials[0].title,manual.units[0].materials[0].title);
 for(const unit of six.units.filter(u=>!four.units.some(old=>old.id===u.id&&JSON.stringify(old)===JSON.stringify(u))))assert.deepEqual(edited.mapping.units.find(u=>u.id===unit.id),unit);
 assert.equal(valid(edited.mapping),5);assert(edited.persisted);assert(!edited.readiness.canProceed);
 const drops=readStep07Diagnostics(resolveStep07CheckpointContext('y')).events.filter(e=>e.kind==='PROGRESS_DECREASE');
-assert(drops.some(e=>e.unitId===manualId&&e.reason?.includes('semantic:')));
+assert(drops.some(e=>e.unitId===manualId&&e.reason?.includes('material:')));
 const cp=readStep07Checkpoint(resolveStep07CheckpointContext('y'))!;
 const invalidated=cp.invalidated!.slice(invalidationsBefore).map(i=>i.unitId);assert.deepEqual([...new Set(invalidated)],[manualId]);
 console.log('PASS 3: real one-Bab manual edit decreases readiness 6 -> 5 with its ID/reason; unrelated saved Bab survive');

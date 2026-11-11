@@ -1,7 +1,7 @@
 import { ALIGNMENT_PRIORITY, applyMinimalAlignment, mappingCoverage, mappingActionKind, isMappingActionAutomatic, hasTeacherMaterialSupport, suggestMappingCopyedit, buildMappingPedagogicalReport, type AlignmentAction, type AlignmentProposal } from '../src/services/mappingAlignmentService';
 import type { AnalyzeATPUnitMappingServerParams, MappingAnalysisResult } from './mappingAnalysis';
 import { getMappingAtpTpIds, deriveMappingAtpIds } from '../src/services/atpMappingLineageService';
-import {normalizeStep07SourceEvidence} from '../src/services/step07AutoExecutionPolicy';
+import {step07SourceKey} from '../src/services/step07AutoExecutionPolicy';
 
 /** AI owns semantic proposals; the server derives impact from real candidate data, not AI counts. */
 export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingServerParams, result: MappingAnalysisResult): MappingAnalysisResult {
@@ -29,12 +29,11 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
     for (const [index,candidate] of (Array.isArray(review?.candidates)?review.candidates.slice(0,20):[]).entries()) actions.push({
       id:`review-${review.materialId}-${index}`,type:'LINK_TP',targetUnitId:review.unitId,targetMaterialId:review.materialId,before:material?.title,
       linkedTpIds:candidate?.tpIds,reason:candidate?.reason,evidence:candidate?.evidence,
-      contractIssue: Array.isArray(candidate?.missingEvidence) && candidate.missingEvidence.length ? `NEEDS_REVIEW: ${candidate.missingEvidence.join('; ')}` : undefined,
     });
   }
   for (const unit of mapping.units) for (const material of unit.materials) {
     const parents = deriveMappingAtpIds(material.linkedTpIds, atp, tp);
-    if (hasTeacherMaterialSupport(unit, material, tp) && !parents.issues.length &&
+    if (material.linkedTpIds.length > 0 && !parents.issues.length &&
       (parents.atpItemIds.length !== material.linkedAtpItemIds.length || parents.atpItemIds.some(id => !material.linkedAtpItemIds.includes(id))) &&
       !actions.some(a => a.targetMaterialId === material.id)) actions.push({id:`repair-parent-${material.id}`,type:'LINK_TP',targetUnitId:unit.id,targetMaterialId:material.id,
         before:material.title,linkedTpIds:material.linkedTpIds,reason:'Pulihkan hanya ATP induk dari TP yang telah disetujui guru; substansi, judul dan TP tetap.',
@@ -62,18 +61,19 @@ export function attachMinimalAlignment(raw: any, params: AnalyzeATPUnitMappingSe
       materialOrder: Array.isArray(candidate.materialOrder) && candidate.materialOrder.every((id: unknown) => typeof id === 'string') ? candidate.materialOrder : undefined,
       reason: typeof candidate.reason === 'string' ? candidate.reason : '', evidence: candidate.evidence,
     };
-    const sourceRepair=params.step07Auto?.scope==='STEP07_AUTO_REPAIR'?normalizeStep07SourceEvidence(action,mapping.units,tp):undefined;
+    const sourceRepair=undefined;
     if(sourceRepair)Object.assign(action,sourceRepair.action);
-    const preview = applyMinimalAlignment(mapping.units, [action], atp, tp);
+    const scoped=params.step07Auto?.scope==='STEP07_AUTO_REPAIR';
+    const preview = applyMinimalAlignment(mapping.units, [action], atp, tp,scoped?{scope:'STEP07_AUTO_REPAIR',sourceKey:step07SourceKey(mapping.units,atp,tp),activeUnitId:params.step07Auto?.execution?.activeUnitId}:'TEACHER');
     const duplicate = seen.has(action.id) || actions.filter(a => a?.id === action.id).length > 1;
     const unchanged = preview.success && JSON.stringify(preview.nextUnits) === JSON.stringify(mapping.units);
     const validationIssues = [candidate.contractIssue, duplicate ? 'PROPOSAL_ID_DUPLICATE: ID proposal duplikat; analisis ulang.' : undefined,
       ...preview.issues].filter((issue): issue is string => typeof issue === 'string' && !!issue);
     const validationStatus = validationIssues.length ? 'REJECTED' : unchanged ? 'ALREADY_APPLIED' : 'READY';
     const changeKind = mappingActionKind(action, mapping.units);
-    const automatic = isMappingActionAutomatic(action, mapping.units, tp);
+    const automatic = scoped || isMappingActionAutomatic(action, mapping.units, tp);
     seen.add(action.id);
-    proposals.push({ id: `minimal-${proposals.length}-${action.id}`,actionId:action.id,sourceEvidenceRepairs:sourceRepair?.notes, targetUnitId: action.targetUnitId,
+    proposals.push({ id: `minimal-${proposals.length}-${action.id}`,actionId:action.id,sourceEvidenceRepairs:undefined, targetUnitId: action.targetUnitId,
       targetMaterialId: action.targetMaterialId, before: typeof action.before === 'string' ? action.before : '',
       after: action.type === 'RESTRUCTURE_UNIT' ? JSON.stringify(action.materialOrder || []) : typeof action.after === 'string' ? action.after : typeof action.before === 'string' ? action.before : '',
       tpIds: Array.isArray(action.linkedTpIds) ? action.linkedTpIds : [],
