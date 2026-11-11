@@ -1,6 +1,6 @@
 import { runStep07AutoRepair, step07RepairColor, undoStep07AutoRepair } from '../services/step07AutoRepairService';
 import { getATPUnitMappingV5 } from '../services/storageV5';
-import { resolveStep07CheckpointContext,readStep07Checkpoint,type Step07WorkStatus } from '../services/step07CheckpointService';
+import { resolveStep07CheckpointContext,readStep07Checkpoint,step07CanonicalKey,step07UnitKey,type Step07WorkStatus } from '../services/step07CheckpointService';
 import { copyCPAnalysisDiagnosis } from '../services/cpAnalysisAIDiagnostics';
 import {buildStep07FullDiagnosticReport} from '../services/step07FullDiagnosticReport';
 import {redactStep07Diagnostic} from '../services/step07DiagnosticsService';
@@ -46,7 +46,7 @@ import {
 } from '../services/aiService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
 import { mappingCoverage, alignmentProposalStatus, refreshAlignmentProposals, isMappingActionAutomatic, formatMappingUnitTitle, confirmMappingMaterialOrigin, applyMinimalAlignment, buildMappingMaterialResolutions, undoMappingTitle, undoMappingRelation, recordMappingBatch } from '../services/mappingAlignmentService';
-import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness, countStep07CompletedUnits } from '../services/atpMappingReadinessService';
+import { proceedWithATPUnitMapping, resolveATPUnitMappingReadiness, countStep07CompletedUnits,finalizeTeacherReviewedMapping } from '../services/atpMappingReadinessService';
 import {
   applyATPMappingActions,
   rollbackATPMappingActions,
@@ -1061,7 +1061,15 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     setAppliedNotice(`Saran diterapkan ke draf. Sisa ATP belum dipetakan: ${actualCoverage.unmappedAtpIds.length}; TP belum tercakup: ${actualCoverage.uncoveredTpIds.length}. Klik Simpan Pemetaan untuk menyimpan.`);
   };
 
-  const materialResolutions=useMemo(()=>buildMappingMaterialResolutions(units,atp,tp,analysisResult?.alignmentProposals,analysisResult?.gapFindings),[units,atp,tp,analysisResult]);
+  // Reuse persisted proposals only for their exact current unit/canonical source.
+  const guidancePoints=useMemo(()=>{
+    try{const cp=readStep07Checkpoint(resolveStep07CheckpointContext(academicSetting?.id || atp.academicSettingId));
+      return cp?.canonical===step07CanonicalKey(atp,tp)?units.flatMap(unit=>{const point=cp.units[unit.id];return point?.source===step07UnitKey(unit)?[{unitId:unit.id,point}]:[];}):[];
+    }catch{return [];}
+  },[units,atp,tp,academicSetting?.id,checkpointWork]);
+  const guidanceProposals=[...guidancePoints.flatMap(({point})=>(point.proposal || point.analysis)?.alignmentProposals || []),...(analysisResult?.alignmentProposals || [])]
+    .filter(p=>units.some(u=>u.id===p.targetUnitId&&u.materials.some(m=>m.id===p.targetMaterialId&&m.title===p.before)));
+  const materialResolutions=buildMappingMaterialResolutions(units,atp,tp,guidanceProposals,analysisResult?.gapFindings);
   const selectedForUnit=(unit:ATPUnitMapping)=>new Set([...selectedAnalysisActionIds].filter(id=>{
     const proposal=analysisResult?.alignmentProposals?.find(p=>p.id===id);
     if(proposal) return proposal.targetUnitId===unit.id||unit.materials.some(material=>material.id===proposal.targetMaterialId);
@@ -1073,7 +1081,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
     return color==='red'?'bg-red-50 border-red-400':color==='pink'?'bg-pink-50 border-pink-400':color==='green'?'bg-emerald-50 border-emerald-400':'bg-white border-slate-200';
   };
   const renderInlineAlignment=(unit:ATPUnitMapping,materialId?:string)=>(
-    <div><AlignmentProposalReview proposals={analysisResult?.alignmentProposals || []} materialResolutions={materialResolutions} inlineScope={{unitId:unit.id,materialId}} baselineUnits={mapping?.units || []} analysis={analysisResult} rejectedIds={rejectedProposalIds}
+    <div><AlignmentProposalReview proposals={[]} materialResolutions={materialResolutions} inlineScope={{unitId:unit.id,materialId}} baselineUnits={units} rejectedIds={rejectedProposalIds}
                 onApproveProposal={(ids,amendment)=>handleApplySelectedActions(ids,amendment)} onRejectProposal={id=>{setRejectedProposalIds(previous=>new Set(previous).add(id));setSelectedAnalysisActionIds(previous=>new Set([...previous].filter(selected=>selected!==id)));setAppliedNotice('Usulan ditolak pada analisis ini. Data draf tidak diubah.');}}
                 gaps={analysisResult?.gapFindings}
                 onConfirmOrigin={(unitId,materialId,title)=>{try {setUnits(confirmMappingMaterialOrigin(unitsRef.current,unitId,materialId,title));setHasChanges(true);} catch(error) {setApplyIssues([error instanceof Error?error.message:String(error)]);}}}
@@ -1102,6 +1110,26 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
   );
 
+  const renderMaterialGuidance=(unit:ATPUnitMapping,material:ATPUnitMaterial)=>{
+    const resolution=materialResolutions.find(r=>r.unitId===unit.id&&r.materialId===material.id);
+    if(!resolution||resolution.status==='RESOLVED')return null;
+    const point=guidancePoints.find(p=>p.unitId===unit.id)?.point;
+    const proposal=[...guidanceProposals].reverse().find(p=>p.targetUnitId===unit.id&&p.targetMaterialId===material.id);
+    const actionId=proposal?.action?.id;
+    const belongs=(id?:string)=>!!id&&(id===actionId||id===proposal?.id||!!proposal?.id.endsWith('-'+id)||id.includes(material.id));
+    const checks=point?.verification?.step07SemanticChecks?.filter(c=>belongs(c.actionId)) || [];
+    const reasons=[...new Set([...(proposal?.validationIssues || []),...checks.flatMap(c=>c.verdict!=='SUPPORTED'?[c.reason,...c.missingEvidence]:[]),...(point?.events.filter(e=>!e.success&&belongs(e.actionId)).map(e=>e.reason) || []),...(point?.repairState?.failures.filter(f=>belongs(f.actionId)).map(f=>f.reason) || [])])];
+    return <section data-teacher-guidance={material.id} className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-2 text-xs">
+      <p className="font-semibold">Perlu tinjauan: {material.title}</p>
+      <p>{material.linkedTpIds.length?'TP sudah dicentang, tetapi bukti aktivitas dan persetujuan untuk redaksi saat ini belum lengkap.':'Materi belum dipetakan. Pilih TP berdasarkan aktivitas yang benar-benar diajarkan.'} Centang relasi saja belum mencatat bukti pedagogis.</p>
+      {proposal&&<div><p>Usulan AI untuk ditinjau — belum dinyatakan valid:</p><p><del>{proposal.before}</del> → <strong>{proposal.after || proposal.before}</strong></p><p>{proposal.reason}</p></div>}
+      {reasons.map(reason=><p key={reason}>Belum diterapkan: {reason}</p>)}
+      {material.linkedTpIds.map(id=>{const objective=tp.items.find(t=>t.id===id);return objective?<p key={id}>[{objective.code}] {objective.statement}</p>:null;})}
+      <p>Edit judul bila perlu, lalu jelaskan aktivitas peserta didik yang menunjukkan kompetensi setiap TP. Jika TP tidak sesuai, koreksi relasinya. Usulan AI di atas tidak otomatis diterapkan atau dianggap benar.</p>
+      {renderInlineAlignment(unit,material.id)}
+    </section>;
+  };
+
   const handleCopyDiagnostic = async () => {
     try {
       const report=buildStep07FullDiagnosticReport({mapping:buildCurrentMappingDraft(),atp,tp,work:checkpointWork,error:analysisError});
@@ -1121,7 +1149,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
   // Save Mapping Canonical
   const handleSave = (): boolean => {
-    const result = buildCurrentMappingDraft();
+    const result = finalizeTeacherReviewedMapping(buildCurrentMappingDraft(),atp,tp,academicSetting);
     const readiness = resolveATPUnitMappingReadiness(result, atp, tp, academicSetting);
 
     if (!readiness.canSaveDraft) {
@@ -1148,6 +1176,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
     const saved = onSaveMapping(result);
     if (saved) {
+      setAutoRepair(result.step07AutoRepair);
       setHasChanges(false);
       setSaveSuccessNotice(true);
       setSaveErrorNotice(null);
@@ -1939,6 +1968,11 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
 
 
               {/* SECTION: Lingkup Materi (0..n per Bab) */}
+              {mappingReadiness.validationResult?.materialCoverageGaps.filter(gap=>gap.unitId===unit.id).map(gap=><div key={gap.unitId} data-unit-coverage-guidance={unit.id} className="px-4 py-2 bg-amber-50 text-sm">
+                <strong>Klaim Bab belum didukung materi.</strong>
+                {gap.tpIds.map(id=><p key={id}>[{tp.items.find(t=>t.id===id)?.code || id}] {tp.items.find(t=>t.id===id)?.statement}</p>)}
+                <p>Tinjau materi yang benar-benar mengajarkan TP ini dan catat buktinya di bawah. Jika TP tidak diajarkan pada Bab ini, hapus centangnya pada “Pilih TP relevan untuk Bab ini”. Jangan menambahkan relasi hanya untuk melengkapi status.</p>
+              </div>)}
               {unitRepairState?.unitId===unit.id&&<p id={`step07-unit-status-${unit.id}`} role="status" className={`px-4 py-2 text-sm ${unitRepairState.success===false?'text-rose-700':'text-indigo-700'}`}>
                 {isAnalyzing?`${autoPhase} · ${checkpointWork?.activeUnitId===unit.id?checkpointWork.stage:'ANALYZE'}`:unitRepairState.message}
                 {!isAnalyzing&&unitRepairState.remaining!==undefined&&` Masalah Bab tersisa: ${unitRepairState.remaining}.`}
@@ -2027,6 +2061,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
                         </div>
 
                         </details>
+                        {renderMaterialGuidance(unit,mat)}
                       </div>
                     ))}
                   </div>

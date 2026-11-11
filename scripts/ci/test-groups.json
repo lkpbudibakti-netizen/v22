@@ -30,6 +30,7 @@
     "scripts/testStep07AutoRepair.ts",
     "scripts/testStep07HybridCheckpoint.ts",
     "scripts/testStep07TargetUnit.ts",
+    "scripts/testStep07TeacherGuidance.tsx",
     "scripts/testStep07ProgressPersistence.ts",
     "scripts/testStep07RealProjectEvidence.ts",
     "scripts/testStep07CheckpointSaveResilience.ts",

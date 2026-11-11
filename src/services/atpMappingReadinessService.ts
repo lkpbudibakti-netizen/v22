@@ -13,6 +13,16 @@ export interface MappingReadiness {
   repairIssues?:Step07ReadinessIssue[];
 }
 
+/** Close a scoped run after an explicit teacher review, using the same full requirements as AI. */
+export function finalizeTeacherReviewedMapping(mapping:ATPUnitMappingData,atp:ATPData,tp:TPData,setting?:AcademicSetting):ATPUnitMappingData {
+  if(!mapping.step07AutoRepair || !mapping.units.some(u=>[...(u.actionHistory || []),...u.materials.flatMap(m=>m.titleHistory || [])].some(r=>r.approval==='TEACHER'&&r.reviewedTitle&&r.reviewedTpIds?.length)))return mapping;
+  const ready=resolveATPUnitMappingReadiness(mapping,atp,tp,setting,{evaluateRepair:true});
+  if(!ready.canProceed)return mapping;
+  // Keep the original undo fingerprint: certifying teacher work must not authorize
+  // the older AI snapshot to overwrite manual changes during auto-repair undo.
+  return {...mapping,step07AutoRepair:{...mapping.step07AutoRepair,outcome:'COMPLETE',resultFingerprint:mapping.step07AutoRepair.resultFingerprint || 'TEACHER_REVIEW_LEGACY_UNDO_UNAVAILABLE',verifiedFingerprint:computeStep07VerifiedFingerprint(mapping.units,atp,tp),issues:[],progress:{initial:mapping.step07AutoRepair.progress?.initial || 0,resolved:mapping.step07AutoRepair.progress?.initial || 0,remaining:0}}};
+}
+
 export function proceedWithATPUnitMapping(readiness: MappingReadiness,
   saveDraft: (() => boolean) | undefined, onNextStep: () => void): { proceeded: boolean; issues: string[] } {
   if (!readiness.canProceed) return { proceeded: false, issues: readiness.blockers };
