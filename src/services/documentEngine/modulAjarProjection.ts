@@ -54,16 +54,7 @@ export interface ModulAjarProjection {
 }
 
 export function buildModulAjarProjection(context: DocumentGenerationContext): ModulAjarProjection {
-  const isBlankMode = context.documentMode === 'blank';
 
-  if (isBlankMode) {
-    return {
-      isReady: true,
-      resolvedTPs: [],
-      resolvedAllocatedJP: undefined,
-      jpResolutionSource: 'UNRESOLVED',
-    };
-  }
 
   const learningPlans = context.learningPlans || [];
   const activePlanId = context.activeLearningPlanId;

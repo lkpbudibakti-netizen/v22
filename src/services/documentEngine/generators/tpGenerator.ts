@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -23,6 +24,7 @@ import {
 export async function generateTP(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, tp } = context;
   const isBlankMode = context.documentMode === 'blank';
 
@@ -67,21 +69,7 @@ export async function generateTP(
 
   const tableDataRows: TableRow[] = [];
 
-  if (isBlankMode) {
-    for (let i = 1; i <= 12; i++) {
-      tableDataRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell(String(i), 5, AlignmentType.CENTER),
-            createTableDataCell(`TP ${i}`, 12, AlignmentType.CENTER),
-            createTableDataCell('..........................................................................................', 47),
-            createTableDataCell('..............................', 20),
-            createTableDataCell('....................', 16),
-          ],
-        })
-      );
-    }
-  } else {
+  {
     const tpItems = tp?.items || [];
     if (tpItems.length > 0) {
       tpItems.forEach((item, idx) => {

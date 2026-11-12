@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import { createDocxSectionProperties } from '../docxStyles';
 import { createSignoffBlock as createModulAjarSignoffBlock } from '../docxStyles';
 import { formatClassLabel } from '../../academicScope';
@@ -366,6 +367,7 @@ function createModulAjarMeetingTable(
  * - Zero AI metadata, zero product branding, zero student count in final output
  */
 export async function generateModulAjar(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, tp, atp } = context;
   const isBlankMode = context.documentMode === 'blank';
 
@@ -375,15 +377,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
   let resolvedTPs: any[] = [];
   let resolvedAllocatedJP: number | undefined;
 
-  if (isBlankMode) {
-    plan = createEmptyLearningPlan({
-      academicSetting,
-      curriculumType: getCurriculumTypeFromSetting(academicSetting),
-      tpIds: [],
-      atpItemIds: [],
-      context: { tp, atp },
-    });
-  } else {
+  {
     const projection = sharedProjection;
     if (!projection.isReady || !projection.plan) {
       throw new Error(projection.error || 'Modul Ajar belum siap.');
@@ -427,11 +421,9 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
   );
 
   // Time / JP allocation resolution
-  const timeAllocationDisplay = isBlankMode
-    ? '................ Jam Pelajaran (JP)'
-    : resolvedAllocatedJP !== undefined
+  const timeAllocationDisplay = (resolvedAllocatedJP !== undefined
     ? `${resolvedAllocatedJP} Jam Pelajaran (JP)`
-    : 'Belum Ditetapkan';
+    : 'Belum Ditetapkan');
 
   // Identity Table
   const isK13Curriculum =
@@ -554,7 +546,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
       : [];
   const dimensionsText = explicitDimensions.length > 0 ? explicitDimensions.join(', ') : '-';
 
-  if (!isBlankMode) {
+  {
     // I. INFORMASI UMUM
     addSectionTitle('I. INFORMASI UMUM');
 
@@ -714,63 +706,6 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
     addProseParagraph(cleanText(plan.reflection?.teacherReflection) || '-');
     addSubSectionTitle('B. Refleksi Murid');
     addProseParagraph(cleanText(plan.reflection?.studentReflection) || '-');
-  } else {
-    // Blank Mode template
-    // I. INFORMASI UMUM
-    addSectionTitle('I. INFORMASI UMUM');
-
-    addSubSectionTitle('A. Kompetensi Awal');
-    addProseParagraph('........................................................................................................................');
-
-    addSubSectionTitle('B. Dimensi Profil Lulusan');
-    addListParagraph('........................................................................................................................');
-
-    addSubSectionTitle('C. Sarana dan Prasarana');
-    addListParagraph('........................................................................................................................');
-
-    addSubSectionTitle('D. Model/Praktik Pembelajaran');
-    addProseParagraph('........................................................................................................................');
-
-    // II. KOMPONEN INTI
-    addSectionTitle('II. KOMPONEN INTI');
-
-    addSubSectionTitle('A. Tujuan Pembelajaran (TP)');
-    addListParagraph('........................................................................................................................');
-
-    addSubSectionTitle('B. Pemahaman Bermakna');
-    addProseParagraph('........................................................................................................................');
-
-    addSubSectionTitle('C. Pertanyaan Pemantik');
-    addListParagraph('........................................................................................................................');
-
-    // III. RENCANA PERTEMUAN
-    addSectionTitle('III. RENCANA PERTEMUAN');
-    addListParagraph('........................................................................................................................');
-
-    // IV. ASESMEN + KKTP
-    addSectionTitle('IV. ASESMEN + KKTP');
-    addSubSectionTitle('A. Rencana Asesmen');
-    addListParagraph('........................................................................................................................');
-    addSubSectionTitle('B. Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)');
-    addListParagraph('........................................................................................................................');
-
-    // V. DIFERENSIASI
-    addSectionTitle('V. DIFERENSIASI');
-    addListParagraph('........................................................................................................................');
-
-    // VI. PENGAYAAN/REMEDIAL
-    addSectionTitle('VI. PENGAYAAN/REMEDIAL');
-    addSubSectionTitle('A. Rencana Pengayaan');
-    addProseParagraph('........................................................................................................................');
-    addSubSectionTitle('B. Rencana Remedial');
-    addProseParagraph('........................................................................................................................');
-
-    // VII. REFLEKSI
-    addSectionTitle('VII. REFLEKSI');
-    addSubSectionTitle('A. Refleksi Guru');
-    addProseParagraph('........................................................................................................................');
-    addSubSectionTitle('B. Refleksi Murid');
-    addProseParagraph('........................................................................................................................');
   }
 
   // Signoff Block in Times New Roman

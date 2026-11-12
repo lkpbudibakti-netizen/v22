@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import { buildJurnalProjection, JURNAL_COLUMNS, JURNAL_WIDTHS, jurnalTableRows } from '../jurnalProjection';
 import {
   Document,
@@ -22,6 +23,7 @@ import {
 } from '../docxStyles';
 
 export async function generateJurnal(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting } = context;
   const projection = buildJurnalProjection(context);
   if (!projection.isReady) throw new Error(projection.reasons.join("; ") + " Gunakan format kosong.");
@@ -30,9 +32,7 @@ export async function generateJurnal(context: DocumentGenerationContext): Promis
   const docChildren: (Paragraph | Table)[] = [];
 
   // 1. Header
-  const headerTitle = isBlankMode
-    ? 'JURNAL HARIAN PEMBELAJARAN (FORMAT KOSONG)'
-    : 'JURNAL HARIAN PEMBELAJARAN';
+  const headerTitle = ('JURNAL HARIAN PEMBELAJARAN');
   docChildren.push(
     ...createDocumentHeader(
       headerTitle,
@@ -44,7 +44,7 @@ export async function generateJurnal(context: DocumentGenerationContext): Promis
   docChildren.push(
     createIdentityMetadataTable(school, profile, academicSetting, [
       ['Semester', `: ${academicSetting.semester || '-'}`],
-      ['Total Murid', isBlankMode ? ': .......... Siswa' : `: ${context.students?.length || 0} Siswa`],
+      ['Total Murid', (`: ${context.students?.length || 0} Siswa`)],
     ])
   );
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -58,7 +58,7 @@ export async function generateJurnal(context: DocumentGenerationContext): Promis
     tableHeader: true,
     children: JURNAL_COLUMNS.map((label, index) => createTableHeaderCell(label, JURNAL_WIDTHS[index])),
   });
-  const dataRows = jurnalTableRows(projection, isBlankMode).map(cells => new TableRow({
+  const dataRows = jurnalTableRows(projection).map(cells => new TableRow({
     cantSplit: false,
     children: cells.map((value, index) => createTableDataCell(value, JURNAL_WIDTHS[index], index === 0 ? AlignmentType.CENTER : AlignmentType.LEFT)),
   }));
@@ -98,13 +98,13 @@ export async function generateJurnal(context: DocumentGenerationContext): Promis
   return {
     success: true,
     type: 'JURNAL',
-    title: isBlankMode ? 'Jurnal Harian Pembelajaran (Format Kosong)' : 'Jurnal Harian Pembelajaran',
+    title: ('Jurnal Harian Pembelajaran'),
     fileName,
     blob,
     record: {
       id: `doc-jurnal-${Date.now()}`,
       type: 'JURNAL',
-      title: isBlankMode ? 'Jurnal Harian Pembelajaran (Format Kosong)' : 'Jurnal Harian Pembelajaran',
+      title: ('Jurnal Harian Pembelajaran'),
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,

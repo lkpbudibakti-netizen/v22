@@ -77,13 +77,13 @@ assert.deepEqual(buildJurnalProjection(resolveEffectiveContext(historical, snaps
 const legacy = { ...snapshot }; delete legacy.jurnalProjection;
 assert(!buildJurnalProjection(resolveEffectiveContext(base, legacy)).isReady);
 assert(buildJurnalProjection({ ...base, snapshot: undefined, documentMode: 'blank' }).isReady);
-assert.equal(jurnalTableRows(projection, true).length, 15);
+assert.deepEqual(jurnalTableRows(projection, true), jurnalTableRows(projection));
 assert(!validateDocumentRequirements('JURNAL', partial).isValid);
-assert(validateDocumentRequirements('JURNAL', { ...partial, documentMode: 'blank' }).isValid);
+assert(!validateDocumentRequirements('JURNAL', { ...partial, documentMode: 'blank' }).isValid);
 assert(validateDocumentRequirements('JURNAL', base).isValid);
 const html = renderToStaticMarkup(<JournalPreview context={base} onBlank={() => {}} />);
 assert(html.includes('CATATAN-GURU-UNIK') && html.includes('2026-10-19'));
-assert(renderToStaticMarkup(<JournalPreview context={partial} onBlank={() => {}} />).includes('Gunakan Format Kosong'));
+assert(renderToStaticMarkup(<JournalPreview context={partial} onBlank={() => {}} />).includes('Lengkapi jadwal'));
 
 // Real renderer bytes: inspect DOCX XML and decompressed PDF content streams.
 const docx = await generateDocument('JURNAL', base);

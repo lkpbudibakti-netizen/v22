@@ -42,11 +42,7 @@ export const K13_DOC_TYPES: DocumentType[] = [
  * 05_Tindak_Lanjut
  * 06_Format_Kosong
  */
-export function getDocumentZipFolder(type: DocumentType, isBlankMode: boolean = false): string {
-  if (isBlankMode) {
-    return '06_Format_Kosong';
-  }
-
+export function getDocumentZipFolder(type: DocumentType, _identityMasked: boolean = false): string {
   switch (type) {
     case 'CP':
     case 'TP':
@@ -180,19 +176,19 @@ export function formatDocumentZipFileName(
   const blankTag = isBlank ? '_Format_Kosong' : '';
 
   // Multi-instance naming with sanitized title
-  if (!isBlank && instanceTitle?.trim()) {
+  if (instanceTitle?.trim()) {
     const sanitizedTitle = sanitizeForFileName(instanceTitle.trim());
     if (type === 'MODUL_AJAR') {
       const cleanModTitle = sanitizedTitle.startsWith('Modul_Ajar')
         ? sanitizedTitle
         : `Modul_Ajar_${sanitizedTitle}`;
-      return `${seqStr}_${cleanModTitle}.${ext}`;
+      return `${seqStr}_${cleanModTitle}${blankTag}.${ext}`;
     }
     if (type === 'ASESMEN') {
       const cleanAssessTitle = sanitizedTitle.startsWith('Asesmen')
         ? sanitizedTitle
         : `Asesmen_${sanitizedTitle}`;
-      return `${seqStr}_${cleanAssessTitle}.${ext}`;
+      return `${seqStr}_${cleanAssessTitle}${blankTag}.${ext}`;
     }
   }
 
@@ -312,7 +308,7 @@ export async function generateZipBundle(
   let pdfCount = 0;
   let docxCount = 0;
   const foldersCreatedSet = new Set<string>();
-  const rootFolder = administrationZipRoot(rawContext);
+  const rootFolder = administrationZipRoot(resolveEffectiveContext({ ...rawContext, documentMode }));
   for (const folder of ['Administrasi_Umum', 'Semester_1', 'Semester_2']) {
     const path = `${rootFolder}/${folder}`;
     zip.folder(path);
@@ -340,17 +336,10 @@ export async function generateZipBundle(
   const itemResults: ZipExportItemStatus[] = [];
   const workItems: ZipWorkItem[] = [];
 
-  if (!isBlank) {
+  {
     const annualPlan = buildAnnualZipWorkItems(targetTypes, effectiveContextBase);
     workItems.push(...annualPlan.items);
     itemResults.push(...annualPlan.skipped);
-  } else {
-    for (const type of targetTypes) {
-      const semester = rawContext.academicSetting?.semester?.startsWith('2') ? 2 : 1;
-      const folderCategory = isAnnualZipDocument(type) ? 'Administrasi_Umum' : semesterZipFolder(semester);
-      folderItemCount[folderCategory] = (folderItemCount[folderCategory] || 0) + 1;
-      workItems.push({ type, context: effectiveContextBase, folderCategory, seqNum: folderItemCount[folderCategory] });
-    }
   }
 
   const totalSteps = workItems.length * (exportFormat === 'both' ? 2 : 1);
@@ -398,7 +387,7 @@ export async function generateZipBundle(
         }
         const pdfResult = await generatePdfDocument(item.type, effectiveContext);
         if (pdfResult.blob && pdfResult.blob.size > 0) {
-          const candidatePdfName = item.fileStem ? `${item.fileStem}.pdf` : formatDocumentZipFileName(
+          const candidatePdfName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.pdf` : formatDocumentZipFileName(
             item.type,
             'pdf',
             effectiveContext,
@@ -435,7 +424,7 @@ export async function generateZipBundle(
         });
 
         if (docxResult.blob && docxResult.blob.size > 0) {
-          const candidateDocxName = item.fileStem ? `${item.fileStem}.docx` : formatDocumentZipFileName(
+          const candidateDocxName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.docx` : formatDocumentZipFileName(
             item.type,
             'docx',
             effectiveContext,

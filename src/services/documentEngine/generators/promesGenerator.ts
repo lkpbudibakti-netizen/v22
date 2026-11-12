@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import { promesAnnualJPNotes } from '../jpPresentation';
 import {
   Document,
@@ -25,11 +26,12 @@ import { buildPromesPresentation } from '../promesPresentation';
 import { buildPromesProjection } from '../promesProjection';
 
 export async function generatePROMES(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting } = context;
 
   const projection = buildPromesProjection(context);
 
-  if (context.documentMode !== 'blank' && !projection.isReady) {
+  if ((!projection.isReady)) {
     throw new Error(
       projection.unreadyReason ||
         'Program Semester belum dapat dibuat karena prasyarat semester aktif belum lengkap.'
@@ -39,7 +41,7 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
   const docChildren: (Paragraph | Table)[] = [];
 
   const semesterLabel = projection.semester === '1' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)';
-  const presentation = buildPromesPresentation(projection, context.documentMode === 'blank');
+  const presentation = buildPromesPresentation(projection);
 
   // 1. Header
   docChildren.push(
@@ -94,7 +96,7 @@ export async function generatePROMES(context: DocumentGenerationContext): Promis
     createSectionHeading('Status & Catatan Pelaksanaan', 2),
     ...presentation.details.map(detail => createProseParagraph(detail, { firstLineIndent: false })),
     createProseParagraph(presentation.notes, { firstLineIndent: false, italics: true }),
-    ...(context.documentMode === 'blank' ? [] : [createProseParagraph(promesAnnualJPNotes(context), { firstLineIndent: false })])
+    ...(([createProseParagraph(promesAnnualJPNotes(context), { firstLineIndent: false })]))
   );
 
   // 4. Signoff Block

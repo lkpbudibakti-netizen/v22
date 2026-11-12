@@ -63,31 +63,12 @@ export interface K13ProtaProjection {
 
 export function buildProtaProjection(context: DocumentGenerationContext): ProtaProjection {
   const academicYear = context.academicSetting?.academicYear || '-';
-  const isBlankMode = context.documentMode === 'blank';
 
   const storedReferenceJP = context.annualJPReference?.officialAnnualJP ?? null;
   const reference = getSubjectJP({ ...context.academicSetting, allocationType: 'INTRAKURIKULER' });
   const officialAnnualJP = reference.isOfficial ? reference.referenceAnnualJP ?? null : null;
   const referenceWeeklyEquivalentJP = context.annualJPReference?.referenceWeeklyEquivalentJP ?? null;
   const regulationReference = context.annualJPReference?.regulationReference;
-
-  if (isBlankMode) {
-    return {
-      isReady: true,
-      academicYear,
-      rows: [],
-      assessmentRows: [],
-      reserveRows: [],
-      semester1AllocatedJP: 0,
-      semester2AllocatedJP: 0,
-      totalAllocatedJP: 0,
-      officialAnnualJP,
-      referenceWeeklyEquivalentJP,
-      regulationReference,
-      remainingAnnualJP: null,
-      validationStatus: 'BALANCED',
-    };
-  }
 
   // Pure Canonical Projection for Kurikulum Merdeka
   const canonical = resolveMerdekaCanonicalTimeProjection(context);
@@ -294,16 +275,6 @@ export function buildProtaProjection(context: DocumentGenerationContext): ProtaP
 
 export function buildK13ProtaProjection(context: DocumentGenerationContext): K13ProtaProjection {
   const academicYear = context.academicSetting?.academicYear || '-';
-  const isBlankMode = context.documentMode === 'blank';
-
-  if (isBlankMode) {
-    return {
-      isReady: true,
-      academicYear,
-      rows: [],
-      totalAllocatedJP: 0,
-    };
-  }
 
   const k13Items = context.k13Analysis?.items || [];
   const bundles = context.protaSemesterAllocations || [];

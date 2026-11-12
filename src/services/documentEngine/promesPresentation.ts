@@ -40,7 +40,7 @@ export function formatAllocationStatusIndonesian(
 }
 
 /** Formatting only: all allocation and semester scope come from buildPromesProjection. */
-export function buildPromesPresentation(projection: PromesProjection, blank = false) {
+export function buildPromesPresentation(projection: PromesProjection, _legacyBlank = false) {
   const months = projection.monthHeaders.map(month => month.monthName);
   const sourceRows = [...projection.rows, ...projection.assessmentRows, ...projection.reserveRows];
   const isK13 = projection.curriculumType === 'K13';
@@ -54,25 +54,23 @@ export function buildPromesPresentation(projection: PromesProjection, blank = fa
     details.push(reference + ' — ' + label + ': ' + text);
     return (reference.length > 64 ? reference.split(' ')[0] : reference) + ' (lihat rincian)';
   };
-  const rows = blank
-    ? Array.from({ length: 15 }, (_, index) => [String(index + 1), ...Array(isK13 ? 2 : 3).fill('........'), '.... JP', '....', ...months.map(() => '-')])
-    : sourceRows.map((row, index) => [
+  const rows = (sourceRows.map((row, index) => [
         String(index + 1),
         ...(isK13
           ? [row.tpCode || '-', compact([row.tpStatement, row.materialScope].filter(Boolean).join('\n'), `R${index + 1}`, 'Indikator/Materi')]
           : [row.unitTitle || row.unitId || '-', compact([row.tpCode, row.tpStatement].filter(Boolean).join('\n'), `R${index + 1} ${row.tpCode || row.unitId || ''}`, 'TP'), compact(row.materialScope, `R${index + 1}`, 'Materi')]),
         `${row.allocatedJP} JP`, formatAllocatedWeeks(row.weekAllocations),
         ...months.map(month => row.monthlyJP[month] == null || row.monthlyJP[month] === 0 ? '-' : String(row.monthlyJP[month])),
-      ]);
+      ]));
   const totalJP = sourceRows.reduce((sum, row) => sum + row.allocatedJP, 0);
   const monthlyTotals = months.map(month => sourceRows.reduce((sum, row) => sum + (row.monthlyJP[month] ?? 0), 0));
   const remainingJP = projection.availableJP === null ? null : projection.availableJP - totalJP;
   const status = remainingJP === null ? '-' : remainingJP < 0 ? 'OVER_ALLOCATED' : remainingJP > 0 ? 'UNDER_ALLOCATED' : 'BALANCED';
   const statusLabel = formatAllocationStatusIndonesian(status, remainingJP);
   const summaryRows = [
-    ['-', '-', 'TOTAL JP SEMESTER', '-', blank ? '-' : `${totalJP} JP`, '-', ...monthlyTotals.map(total => blank ? '-' : String(total))],
-    ['-', '-', 'KAPASITAS KALENDER SEMESTER', '-', blank || projection.availableJP === null ? '-' : `${projection.availableJP} JP`, '-', ...months.map(() => '-')],
-    ['-', '-', 'SISA / DEFISIT KAPASITAS', '-', blank || remainingJP === null ? '-' : `${remainingJP} JP`, '-', ...months.map(() => '-')],
+    ['-', '-', 'TOTAL JP SEMESTER', '-', (`${totalJP} JP`), '-', ...monthlyTotals.map(total => (String(total)))],
+    ['-', '-', 'KAPASITAS KALENDER SEMESTER', '-', (projection.availableJP === null) ? '-' : `${projection.availableJP} JP`, '-', ...months.map(() => '-')],
+    ['-', '-', 'SISA / DEFISIT KAPASITAS', '-', (remainingJP === null) ? '-' : `${remainingJP} JP`, '-', ...months.map(() => '-')],
   ].map(row => isK13 ? row.filter((_, index) => index !== 3) : row);
   const notes = [
     'Angka pada kolom bulan menunjukkan Jam Pelajaran (JP) intrakurikuler tatap muka yang telah dijadwalkan guru.',

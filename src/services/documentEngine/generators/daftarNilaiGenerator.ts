@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -20,15 +21,14 @@ import {
 } from '../docxStyles';
 
 export async function generateDaftarNilai(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, students, assessments, assessmentResults } = context;
   const isBlankMode = context.documentMode === 'blank';
 
   const docChildren: (Paragraph | Table)[] = [];
 
   // Header
-  const headerTitle = isBlankMode
-    ? 'BUKU DAFTAR NILAI & REKAPITULASI ASESMEN (FORMAT KOSONG)'
-    : 'BUKU DAFTAR NILAI & REKAPITULASI ASESMEN';
+  const headerTitle = ('BUKU DAFTAR NILAI & REKAPITULASI ASESMEN');
   docChildren.push(
     ...createDocumentHeader(headerTitle, academicSetting.curriculum)
   );
@@ -40,8 +40,8 @@ export async function generateDaftarNilai(context: DocumentGenerationContext): P
   // Metadata Table
   docChildren.push(
     createIdentityMetadataTable(school, profile, academicSetting, [
-      ['Jumlah Siswa', isBlankMode ? ': .......... Orang' : `: ${studentList.length} Orang`],
-      ['Jumlah Instrumen Asesmen', isBlankMode ? ': .......... Penilaian' : `: ${assessmentList.length} Penilaian`],
+      ['Jumlah Siswa', (`: ${studentList.length} Orang`)],
+      ['Jumlah Instrumen Asesmen', (`: ${assessmentList.length} Penilaian`)],
     ])
   );
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -66,7 +66,7 @@ export async function generateDaftarNilai(context: DocumentGenerationContext): P
     }),
   ];
 
-  if (isBlankMode || studentList.length === 0) {
+  if ((studentList.length === 0)) {
     for (let i = 0; i < 20; i++) {
       tableRows.push(
         new TableRow({
@@ -138,7 +138,7 @@ export async function generateDaftarNilai(context: DocumentGenerationContext): P
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
 
   // Section 2: Daftar Instrumen Asesmen
-  if (isBlankMode || assessmentList.length > 0) {
+  if ((assessmentList.length > 0)) {
     docChildren.push(
       createSectionHeading('B. Rincian Pelaksanaan Instrumen Asesmen', 1)
     );
@@ -156,28 +156,7 @@ export async function generateDaftarNilai(context: DocumentGenerationContext): P
       }),
     ];
 
-    if (isBlankMode) {
-      const defaultBlankAssessments = [
-        ['1', 'Asesmen Formatif TP 1', 'Formatif (Observasi/Tulis)', '..../..../20....', '75'],
-        ['2', 'Asesmen Formatif TP 2', 'Formatif (Kinerja/Produk)', '..../..../20....', '75'],
-        ['3', 'Sumatif Lingkup Materi 1', 'Sumatif Lingkup Materi', '..../..../20....', '75'],
-        ['4', 'Sumatif Lingkup Materi 2', 'Sumatif Lingkup Materi', '..../..../20....', '75'],
-        ['5', 'Sumatif Akhir Semester (SAS)', 'Sumatif Akhir Semester', '..../..../20....', '75'],
-      ];
-      defaultBlankAssessments.forEach(([no, title, type, date, kkm]) => {
-        aRows.push(
-          new TableRow({
-            children: [
-              createTableDataCell(no, 8, AlignmentType.CENTER),
-              createTableDataCell(title, 36),
-              createTableDataCell(type, 26),
-              createTableDataCell(date, 18, AlignmentType.CENTER),
-              createTableDataCell(kkm, 12, AlignmentType.CENTER),
-            ],
-          })
-        );
-      });
-    } else {
+    {
       assessmentList.forEach((a, i) => {
         const typeLabel =
           a.type === 'formatif'
@@ -231,17 +210,13 @@ export async function generateDaftarNilai(context: DocumentGenerationContext): P
   return {
     success: true,
     type: 'DAFTAR_NILAI',
-    title: isBlankMode
-      ? `Daftar Nilai (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-      : `Daftar Nilai - ${academicSetting.subject} ${academicSetting.grade}`,
+    title: (`Daftar Nilai - ${academicSetting.subject} ${academicSetting.grade}`),
     fileName,
     blob,
     record: {
       id: `doc-nilai-${Date.now()}`,
       type: 'DAFTAR_NILAI',
-      title: isBlankMode
-        ? `Daftar Nilai (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-        : `Daftar Nilai - ${academicSetting.subject} ${academicSetting.grade}`,
+      title: (`Daftar Nilai - ${academicSetting.subject} ${academicSetting.grade}`),
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,

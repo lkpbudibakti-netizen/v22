@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -26,6 +27,7 @@ import {
 } from '../docxStyles';
 
 export async function generateATP(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting } = context;
   const projection = buildATPDocumentProjection(context);
   if (!projection.isReady) throw new Error(projection.error || 'ATP belum siap diekspor.');

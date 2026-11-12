@@ -7,6 +7,7 @@ import {
   DEEP_LEARNING_PRINCIPLE_LABELS,
 } from '../src/services/learningPlanService';
 import { generateModulAjar } from '../src/services/documentEngine/generators/modulAjarGenerator';
+import { createIdentityExportFixture } from './fixtures/identityExportFixture';
 import {
   LearningPlan,
   AcademicSetting,
@@ -728,17 +729,13 @@ async function runDocGenTests() {
     confirmedAt: new Date().toISOString(),
   };
 
-  const docResult = await generateModulAjar({
-    school: mockSchool,
-    profile: mockProfile,
-    academicSetting: mockSetting,
-    tp: mockTP,
-    atp: mockATP,
-    learningPlans: [ready2026Plan],
-    activeLearningPlanId: ready2026Plan.id,
-    documentMode: 'blank', // Use blank mode to test doc children generation without requiring full SIAP validation chain
-    skipDownload: true,
-  });
+  // Use a complete canonical fixture instead of bypassing validation with blank mode.
+  const docContext = createIdentityExportFixture().context;
+  const actualPlan = docContext.learningPlans![0];
+  actualPlan.learningExperiences = actualPlan.learningExperiences!.map((activity,i)=>({
+    ...activity, learningMeetingId:actualPlan.learningMeetingIds![0], durationMinutes:[30,60,15][i],
+  }));
+  const docResult = await generateModulAjar({ ...docContext, documentMode:'blank', skipDownload:true });
 
   assert(docResult.fileName.includes('Modul_Ajar') || docResult.title.includes('MODUL AJAR'), 'generateModulAjar returns valid document metadata');
   assert(docResult.success === true, 'generateModulAjar produces successful result');
@@ -774,9 +771,9 @@ async function runDocGenTests() {
   assert(allDocTexts.some((t) => t.includes('Memahami')), 'Case AQ: Generated document contains "Memahami"');
   assert(allDocTexts.some((t) => t.includes('Mengaplikasi')), 'Case AQ: Generated document contains "Mengaplikasi"');
   assert(allDocTexts.some((t) => t.includes('Merefleksi')), 'Case AQ: Generated document contains "Merefleksi"');
-  assert(allDocTexts.some((t) => t === 'A. Memahami'), 'Case AQ: Generated document contains section heading "A. Memahami"');
-  assert(allDocTexts.some((t) => t === 'B. Mengaplikasi'), 'Case AQ: Generated document contains section heading "B. Mengaplikasi"');
-  assert(allDocTexts.some((t) => t === 'C. Merefleksi'), 'Case AQ: Generated document contains section heading "C. Merefleksi"');
+  assert(allDocTexts.some((t) => t.startsWith('Memahami:')), 'Case AQ: Actual meeting contains the Memahami activity label');
+  assert(allDocTexts.some((t) => t.startsWith('Mengaplikasi:')), 'Case AQ: Actual meeting contains the Mengaplikasi activity label');
+  assert(allDocTexts.some((t) => t.startsWith('Merefleksi:')), 'Case AQ: Actual meeting contains the Merefleksi activity label');
 
   // Must NOT contain old English suffixes in headings
   assert(!fullDocumentText.includes('Memahami (Understand)'), 'Case AQ: Generated document does NOT contain "Memahami (Understand)"');

@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -20,22 +21,21 @@ import {
 } from '../docxStyles';
 
 export async function generateKKTP(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, tp, assessmentCriteria } = context;
   const isBlankMode = context.documentMode === 'blank';
 
   const docChildren: (Paragraph | Table)[] = [];
 
   // Header
-  const headerTitle = isBlankMode
-    ? 'KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP) (FORMAT KOSONG)'
-    : 'KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)';
+  const headerTitle = ('KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)');
   docChildren.push(...createDocumentHeader(headerTitle, academicSetting.curriculum));
 
   // Metadata Table
   const tpList = tp?.items || [];
   docChildren.push(
     createIdentityMetadataTable(school, profile, academicSetting, [
-      ['Jumlah Tujuan Pembelajaran', isBlankMode ? ': .......... TP' : `: ${tpList.length} TP`],
+      ['Jumlah Tujuan Pembelajaran', (`: ${tpList.length} TP`)],
       ['Pendekatan KKTP', `: Rubrik / Skala Interval Nilai & Deskripsi Kriteria`],
     ])
   );
@@ -63,25 +63,7 @@ export async function generateKKTP(context: DocumentGenerationContext): Promise<
     }),
   ];
 
-  if (isBlankMode) {
-    for (let i = 0; i < 8; i++) {
-      rows.push(
-        new TableRow({
-          children: [
-            createTableDataCell((i + 1).toString(), 6, AlignmentType.CENTER),
-            createTableDataCell(`TP.${i + 1}`, 12, AlignmentType.CENTER),
-            createTableDataCell('..........................................................................................', 32),
-            createTableDataCell(
-              '1. .....................................................................................\n' +
-              '2. .....................................................................................\n' +
-              '3. Interval Ketercapaian: ..............................................................',
-              50
-            ),
-          ],
-        })
-      );
-    }
-  } else if (tpList.length === 0) {
+  if (tpList.length === 0) {
     throw new Error('Data Tujuan Pembelajaran (TP) belum tersedia. Silakan susun TP terlebih dahulu sebelum mengekspor KKTP.');
   } else {
     tpList.forEach((item, index) => {
@@ -141,17 +123,13 @@ export async function generateKKTP(context: DocumentGenerationContext): Promise<
   return {
     success: true,
     type: 'KKTP',
-    title: isBlankMode
-      ? `KKTP (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-      : `KKTP - ${academicSetting.subject} ${academicSetting.grade}`,
+    title: (`KKTP - ${academicSetting.subject} ${academicSetting.grade}`),
     fileName,
     blob,
     record: {
       id: `doc-kktp-${Date.now()}`,
       type: 'KKTP',
-      title: isBlankMode
-        ? `KKTP (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-        : `KKTP - ${academicSetting.subject} ${academicSetting.grade}`,
+      title: (`KKTP - ${academicSetting.subject} ${academicSetting.grade}`),
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,

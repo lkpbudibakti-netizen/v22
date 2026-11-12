@@ -5,6 +5,7 @@ import { buildJurnalProjection } from './jurnalProjection';
 import { importedTimingIssues } from '../administrationImportPolicy';
 import { getCurriculumType } from '../curriculumRules';
 import { resolveDocumentDate, formatDocumentDate } from '../documentDateService';
+import { maskExportIdentity } from './exportIdentity';
 
 /**
  * Creates an immutable DocumentSnapshot capturing the exact identity and academic context
@@ -34,9 +35,9 @@ export function createDocumentSnapshot(
       ? formatDocumentDate(rawDate)
       : undefined;
 
-  const projection = documentType === 'MODUL_AJAR' && docMode !== 'blank'
+  const projection = documentType === 'MODUL_AJAR'
     ? buildModulAjarProjection(context) : undefined;
-  return {
+  return maskExportIdentity({ documentMode: docMode, snapshot: {
     ...(documentType === 'JURNAL' ? { jurnalProjection: buildJurnalProjection({ ...context, snapshot: undefined, documentMode: docMode }) } : {}),
     ...(projection?.isReady && projection.plan ? { learningPlanId: projection.plan.id } : {}),
     schoolName: (school?.name || '').trim(),
@@ -74,7 +75,7 @@ export function createDocumentSnapshot(
       atpUpdatedAt: atp?.updatedAt,
       ...(projection?.isReady && projection.plan ? { learningPlanUpdatedAt: projection.plan.updatedAt } : {}),
     },
-  };
+  } }).snapshot!;
 }
 
 /**
@@ -92,7 +93,7 @@ export function resolveEffectiveContext(
   const targetTimingApproved = context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_SCHEDULE' && importedTimingIssues(context, !context.zipAnnualSource.semesterPlans.some(plan=>plan.id===context.academicSetting.id)).length===0;
   const notice = frozenNotice || (targetTimingApproved ? undefined : context.zipAnnualSource?.yearPlan.identityOnlyImport?.timingIsSourceReference
     ? 'Kalender, JP, dan jadwal adalah data sumber; belum diverifikasi untuk sekolah tujuan.' : effective.academicSetting?.planningReferenceNotice);
-  return notice || targetTimingApproved ? { ...effective, academicSetting: { ...effective.academicSetting, planningReferenceNotice: notice } } : effective;
+  return maskExportIdentity(notice || targetTimingApproved ? { ...effective, academicSetting: { ...effective.academicSetting, planningReferenceNotice: notice } } : effective);
 }
 
 function resolveSnapshotContext(
@@ -111,13 +112,13 @@ function resolveSnapshotContext(
       school: {
         ...context.school,
         name:
-          snap.schoolName ||
-          context.school?.name ||
+          snap.schoolName ??
+          context.school?.name ??
           '',
         npsn:
-          snap.schoolNpsn ||
-          snap.npsn ||
-          context.school?.npsn ||
+          snap.schoolNpsn ??
+          snap.npsn ??
+          context.school?.npsn ??
           '',
         address:
           snap.schoolAddress !== undefined
@@ -140,8 +141,8 @@ function resolveSnapshotContext(
             ? snap.schoolProvince
             : context.school?.province || '',
         principalName:
-          snap.principalName ||
-          context.school?.principalName ||
+          snap.principalName ??
+          context.school?.principalName ??
           '',
         principalNip:
           snap.principalNip !== undefined
@@ -156,8 +157,8 @@ function resolveSnapshotContext(
       profile: {
         ...context.profile,
         name:
-          snap.teacherName ||
-          context.profile?.name ||
+          snap.teacherName ??
+          context.profile?.name ??
           '',
         nip:
           snap.teacherNip !== undefined
@@ -217,8 +218,8 @@ function resolveSnapshotContext(
         : undefined,
 
       documentMode:
-        snap.documentMode ||
-        context.documentMode ||
+        context.documentMode ??
+        snap.documentMode ??
         'data',
 
       snapshot: snap,

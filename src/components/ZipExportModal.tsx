@@ -297,8 +297,8 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
                 <div className="flex items-center gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                   <div>
-                    <div className="text-xs font-bold">Template Format Kosong</div>
-                    <div className="text-[11px] text-slate-500">Struktur folder 06_Format_Kosong untuk tulis manual</div>
+                    <div className="text-xs font-bold">Format Kosong</div>
+                    <div className="text-[11px] text-slate-500">Isi administrasi lengkap, tanpa identitas guru dan sekolah.</div>
                   </div>
                 </div>
                 {selectedMode === 'blank' && <Check className="w-4 h-4 text-amber-600" />}
@@ -339,7 +339,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
                 <div className="bg-amber-50/80 border border-amber-200 p-3 rounded-lg text-xs text-amber-900 font-semibold flex items-center gap-2">
                   <FolderArchive className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>
-                    Seluruh dokumen format kosong akan dikelompokkan ke dalam folder utama: <strong className="font-mono">06_Format_Kosong</strong>
+                    Format Kosong — isi administrasi lengkap, tanpa identitas guru dan sekolah. Struktur tahunan, semester, dan kelengkapan sama dengan Dokumen dari Data.
                   </span>
                 </div>
               ) : null}

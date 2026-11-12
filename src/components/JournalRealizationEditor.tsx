@@ -7,11 +7,11 @@ export function JournalPreview({ context, onBlank }: { context: DocumentGenerati
   const projection = buildJurnalProjection(context);
   if (!projection.isReady) return <div role="alert" className="p-3 text-sm text-amber-900">
     <ul>{projection.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
-    <button type="button" onClick={onBlank} className="mt-2 underline">Gunakan Format Kosong</button>
+    <p>Lengkapi jadwal dan data jurnal sebelum mengekspor. Format Kosong hanya mengosongkan identitas guru dan sekolah.</p>
   </div>;
   return <div className="overflow-x-auto"><table className="w-full text-left text-[11px] border-collapse">
     <thead><tr>{JURNAL_COLUMNS.map(label => <th className="border p-2" key={label}>{label}</th>)}</tr></thead>
-    <tbody>{jurnalTableRows(projection, context.documentMode === 'blank').map((row,index) => <tr key={index}>{row.map((cell,i) => <td key={i} className="border p-2 whitespace-pre-line">{cell}</td>)}</tr>)}</tbody>
+    <tbody>{jurnalTableRows(projection).map((row,index) => <tr key={index}>{row.map((cell,i) => <td key={i} className="border p-2 whitespace-pre-line">{cell}</td>)}</tr>)}</tbody>
   </table></div>;
 }
 

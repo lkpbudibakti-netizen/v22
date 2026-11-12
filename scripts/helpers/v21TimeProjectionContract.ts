@@ -85,9 +85,10 @@ export async function assertV21TimeProjectionContract(type:'PROTA'|'PROMES'|'ALO
     const xml=await (await JSZip.loadAsync(await doc.blob.arrayBuffer())).file('word/document.xml')!.async('string');assert(xml.includes('Bermain bola'));
     const pdf=await generatePdfDocument(type,c);assert(pdf.blob.size>0);
   });
-  await test('blank-mode templates remain available without canonical schedule prerequisites',async()=>{
+  await test('identity-masked exports retain canonical content and reject missing schedule prerequisites',async()=>{
+    const ready=make();ready.documentMode='blank';assert.deepEqual(project(ready).rows,project({...ready,documentMode:'data'}).rows);
     const c=make();c.documentMode='blank';delete c.atpUnitMapping;delete c.unitExecutionPlan;delete c.learningMeetingSchedules;delete c.calendar;delete c.semesterJPSetting;
-    assert(project(c).isReady);assert.equal(project(c).rows.length,0);assert((await generateDocument(type,c)).success);assert((await generatePdfDocument(type,c)).blob.size>0);
+    assert.equal(project(c).isReady,false);await assert.rejects(()=>generateDocument(type,c));await assert.rejects(()=>generatePdfDocument(type,c));
   });
   console.log(`PASS ${type}: ${count} current-contract cases, including rejection paths and both exporters.`);
 }

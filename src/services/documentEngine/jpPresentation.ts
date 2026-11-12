@@ -15,7 +15,6 @@ export function annualJPNotes(p: { availableAnnualJP?: number | null; totalAlloc
 }
 
 export function promesAnnualJPNotes(context: DocumentGenerationContext): string {
-  if (context.documentMode === 'blank') return '';
   const annual = buildProtaProjection(context);
   return annual.isReady ? annualJPNotes(annual) : 'Perbandingan alokasi aktual dengan acuan regulasi tahunan belum dapat diverifikasi dari data tahunan. Acuan tahunan tidak dibagi otomatis antarsemester.';
 }

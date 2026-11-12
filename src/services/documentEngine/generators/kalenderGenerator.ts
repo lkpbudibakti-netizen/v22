@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -23,6 +24,7 @@ import { resolveSemesterJPFromValues } from '../../semesterJPResolver';
 import { calendarDayLabel } from '../calendarPresentation';
 
 export async function generateKalenderAkademik(context: DocumentGenerationContext, type: 'KALENDER_AKADEMIK' | 'HARI_EFEKTIF' = 'KALENDER_AKADEMIK'): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, calendar, calendarDays } = context;
 
   const title = type === 'HARI_EFEKTIF' ? 'Rincian Hari & Minggu Efektif Belajar' : 'Kalender Pendidikan & Jadwal';

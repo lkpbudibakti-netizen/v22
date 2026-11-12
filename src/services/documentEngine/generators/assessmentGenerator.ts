@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import saveAs from 'file-saver';
 import { DocumentGenerationContext, GeneratedDocumentResult } from '../types';
 import { exportAssessmentDocx } from '../assessmentExportService';
@@ -5,7 +6,8 @@ import { exportAssessmentDocx } from '../assessmentExportService';
 export async function generateAssessment(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
-  const isBlankMode = context.documentMode === 'blank';
+  context = resolveEffectiveContext(context);
+
 
   const exportResult = await exportAssessmentDocx(context, {
     documentMode: context.documentMode,
@@ -20,17 +22,13 @@ export async function generateAssessment(
   return {
     success: true,
     type: 'ASESMEN',
-    title: isBlankMode
-      ? 'Instrumen Asesmen & Rubrik Penilaian (Format Kosong)'
-      : 'Instrumen Asesmen & Rubrik Penilaian',
+    title: ('Instrumen Asesmen & Rubrik Penilaian'),
     fileName: exportResult.fileName,
     blob: exportResult.blob,
     record: {
       id: `doc-asesmen-${Date.now()}`,
       type: 'ASESMEN',
-      title: isBlankMode
-        ? 'Instrumen Asesmen & Rubrik Penilaian (Format Kosong)'
-        : 'Instrumen Asesmen & Rubrik Penilaian',
+      title: ('Instrumen Asesmen & Rubrik Penilaian'),
       status: 'completed',
       lastGenerated: exportResult.snapshot.generatedAt,
       fileName: exportResult.fileName,

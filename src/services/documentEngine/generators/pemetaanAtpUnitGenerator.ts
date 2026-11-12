@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -103,8 +104,9 @@ interface UnitGroup {
 export async function generatePemetaanAtpUnit(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, atp, tp } = context;
-  const isBlankMode = context.documentMode === 'blank';
+
 
   const docChildren: (Paragraph | Table)[] = [];
 
@@ -166,23 +168,7 @@ export async function generatePemetaanAtpUnit(
 
   const availableTps = tp?.items || [];
 
-  if (isBlankMode) {
-    // Blank Mode Placeholders
-    for (let i = 1; i <= 3; i++) {
-      tableDataRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell('', 18, AlignmentType.LEFT),
-            createTableDataCell('', 20, AlignmentType.LEFT),
-            createTableDataCell(`Langkah ${i}`, 14, AlignmentType.CENTER),
-            createTableDataCell('', 26, AlignmentType.LEFT),
-            createTableDataCell('', 12, AlignmentType.CENTER),
-            createTableDataCell('', 10, AlignmentType.CENTER),
-          ],
-        })
-      );
-    }
-  } else {
+  {
     // Canonical Data Mode
     // 1. Sort ATP items by stepNumber
     const sortedItems = [...(atp?.items || [])].sort(

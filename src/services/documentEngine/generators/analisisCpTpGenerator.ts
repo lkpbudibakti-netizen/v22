@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -23,6 +24,7 @@ import {
 export async function generateAnalisisCpTp(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, cp, tp } = context;
 
   const docChildren: (Paragraph | Table)[] = [];
@@ -82,26 +84,11 @@ export async function generateAnalisisCpTp(
   const tableDataRows: TableRow[] = [];
   const cpElements = cp?.elements || [];
   const tpItems = tp?.items || [];
-  const isBlankMode = context.documentMode === 'blank';
+
 
   let rowIndex = 1;
 
-  if (isBlankMode) {
-    for (let i = 1; i <= 10; i++) {
-      tableDataRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell(String(i), 5, AlignmentType.CENTER),
-            createTableDataCell('....................', 16),
-            createTableDataCell('........................................', 25),
-            createTableDataCell('....................', 16),
-            createTableDataCell('....................', 16),
-            createTableDataCell('........................................', 22),
-          ],
-        })
-      );
-    }
-  } else if (cpElements.length > 0) {
+  if (cpElements.length > 0) {
     cpElements.forEach((elem) => {
       // Find TP items that relate to this element
       const matchingTPs = tpItems.filter(

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import { Document, Packer, Paragraph } from 'docx';
 import { createMockContext } from './fixtures/printContext';
+import { createIdentityExportFixture, withK13ExportData } from './fixtures/identityExportFixture';
 import { generateDocument } from '../src/services/documentEngine';
 import { generatePdfDocument } from '../src/services/documentEngine/renderers/pdf/pdfDocGenerators';
 import { PdfDocumentBuilder } from '../src/services/documentEngine/renderers/pdf/pdfRenderer';
@@ -57,12 +58,8 @@ async function checkPdf(blob: Blob, name: string, expectedLandscape: boolean, re
 }
 
 for (const type of types) {
-  const context = createMockContext(); context.documentMode = 'blank';
-  if (type === 'ANALISIS_SKL_KI_KD' || type === 'PENETAPAN_KKM') { context.academicSetting.curriculumType = 'K13'; context.academicSetting.curriculum = 'Kurikulum 2013'; }
-  if (type === 'PENETAPAN_KKM') {
-    context.documentMode = 'data';
-    context.k13KKM = { id:'kkm', academicSettingId:context.academicSetting.id, kkmTotal:75, items:[{id:'kd',kd:'3.1',indikator:'Kompetensi pengujian KKM',kompleksitas:75,dayaDukung:75,intake:75,kkmIndikator:75}] } as any;
-  }
+  let context = createIdentityExportFixture().context; context.documentMode = 'blank';
+  if (type === 'ANALISIS_SKL_KI_KD' || type === 'PENETAPAN_KKM') context = withK13ExportData(context);
   try {
     const doc = await generateDocument(type, context);
     assert(doc.blob);

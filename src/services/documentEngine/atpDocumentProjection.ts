@@ -19,13 +19,6 @@ export interface ATPDocumentProjection {
 
 export function buildATPDocumentProjection(context: DocumentGenerationContext): ATPDocumentProjection {
   const invalid = (error: string): ATPDocumentProjection => ({ isReady: false, error, rationale: '', cpReferenceLines: [], rows: [] });
-  if (context.documentMode === 'blank') return {
-    isReady: true, rationale: '', cpReferenceLines: [],
-    rows: Array.from({ length: 15 }, () => ({
-      stepNumber: null, focus: '', resolvedTPs: [],
-      flowLines: ['................................................'],
-    })),
-  };
   const { cp, tp, atp } = context;
   if (!cp || !tp?.items?.length || !atp?.items?.length) return invalid('Data CP, TP, dan ATP harus lengkap untuk ekspor dokumen ATP.');
   const cpReferenceLines = [

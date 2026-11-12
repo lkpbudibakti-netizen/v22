@@ -1,5 +1,7 @@
 import { createDocxSectionProperties } from './docxStyles';
 import { createPrintSignoff } from './signoffLayout';
+import { resolveEffectiveContext } from './snapshot';
+import { maskExportIdentity } from './exportIdentity';
 import { formatClassLabel } from '../academicScope';
 import {
   Document,
@@ -400,63 +402,10 @@ export function createAssessmentDocumentSnapshot(
   context: DocumentGenerationContext,
   options?: AssessmentExportOptions
 ): AssessmentDocumentSnapshot {
+  context = resolveEffectiveContext({ ...context, documentMode: options?.documentMode ?? context.documentMode });
   if (isAssessmentDocumentSnapshot(context.snapshot)) {
+    if (context.snapshot.mode === 'BLANK_TEMPLATE') throw new Error('Snapshot template lama tidak memuat substansi asesmen. Pilih paket asesmen lengkap untuk ekspor baru.');
     return JSON.parse(JSON.stringify(context.snapshot)) as AssessmentDocumentSnapshot;
-  }
-
-  const isBlankMode = (options?.documentMode || context.documentMode) === 'blank';
-
-  const school = context.school || ({} as SchoolData);
-  const profile = context.profile || ({} as TeacherProfile);
-  const academicSetting = context.academicSetting || ({} as AcademicSetting);
-
-  const location =
-    school.district?.replace(/^Kec\.\s*/i, '') || school.regency || school.village || '';
-
-  if (isBlankMode) {
-    const rawDate = resolveAssessmentDocumentDate(context, options);
-    const dateResult = rawDate ? formatDocumentDate(rawDate, location) : { rawDate: '', formattedDate: '' };
-
-    const snapshot: AssessmentDocumentSnapshot = {
-      snapshotId: `snap-asmt-blank-${Date.now()}`,
-      mode: 'BLANK_TEMPLATE',
-      documentType: 'ASESMEN',
-      documentDate: dateResult.rawDate || undefined,
-      formattedDocumentDate: dateResult.formattedDate || '',
-      schoolName: school.name || '',
-      npsn: school.npsn,
-      schoolNpsn: school.npsn,
-      schoolAddress: school.address,
-      schoolVillage: school.village,
-      schoolDistrict: school.district,
-      schoolRegency: school.regency,
-      schoolProvince: school.province,
-      principalName: school.principalName || '',
-      principalNip: school.principalNip,
-      principalSource: school.principalSource,
-      teacherName: profile.name || '',
-      teacherNip: profile.nip,
-      teacherStatus: profile.status,
-      academicYear: academicSetting.academicYear || '',
-      semester: academicSetting.semester || '',
-      grade: formatClassLabel(academicSetting),
-      subject: academicSetting.subject || '',
-      phase: academicSetting.phase,
-      curriculum: academicSetting.curriculum || '',
-      curriculumType: academicSetting.curriculumType,
-      documentMode: 'blank',
-      studentCount: context.students?.length,
-      studentNames: context.students?.map((s) => s.name),
-      generatedAt: new Date().toISOString(),
-      blueprintItems: [],
-      instruments: [],
-      answerKeys: [],
-      scoringGuides: [],
-      rubrics: [],
-      resolvedObjectives: {},
-    };
-
-    return snapshot;
   }
 
   const eligibility = checkAssessmentExportEligibility(context);
@@ -482,6 +431,7 @@ export function createAssessmentPreviewSnapshot(
   context: DocumentGenerationContext,
   options?: AssessmentExportOptions
 ): AssessmentDocumentSnapshot {
+  context = resolveEffectiveContext({ ...context, documentMode: options?.documentMode ?? context.documentMode });
   if (!context.activeAssessmentPackageId) {
     throw new Error('Pratinjau asesmen memerlukan ID paket aktif yang spesifik.');
   }
@@ -561,10 +511,12 @@ export function sanitizeAssessmentVisibleTitle(
 export function buildNormalizedAssessmentDocumentModel(
   snapshot: AssessmentDocumentSnapshot
 ): NormalizedAssessmentDocument {
-  const isBlank = snapshot.documentMode === 'blank' || snapshot.mode === 'BLANK_TEMPLATE';
+  if (snapshot.mode === 'BLANK_TEMPLATE') throw new Error('Snapshot template lama tidak memuat substansi asesmen lengkap.');
+  snapshot = maskExportIdentity({ documentMode: snapshot.documentMode, snapshot }).snapshot;
+  const isBlank = false; // Format Kosong changes identity only; never the assessment model content.
 
   // 1. Metadata
-  const rawSubTitle = snapshot.packageTitle || (isBlank ? 'Format Instrumen dan Rubrik Asesmen' : 'Paket Instrumen dan Rubrik Asesmen');
+  const rawSubTitle = snapshot.packageTitle || (('Paket Instrumen dan Rubrik Asesmen'));
   const metadata = {
     title: 'PERANGKAT ASESMEN PEMBELAJARAN',
     subTitle: sanitizeAssessmentVisibleTitle(rawSubTitle) || rawSubTitle,
@@ -588,17 +540,7 @@ export function buildNormalizedAssessmentDocumentModel(
   };
 
   // 2. Kisi-Kisi / Blueprint
-  const kisiKisiRows: NormalizedAssessmentKisiKisiRow[] = isBlank
-    ? [
-        {
-          no: 1,
-          tpCodeAndStatement: '',
-          indicator: '',
-          material: '',
-          instrumentType: '',
-        },
-      ]
-    : snapshot.blueprintItems.map((bp) => {
+  const kisiKisiRows: NormalizedAssessmentKisiKisiRow[] = (snapshot.blueprintItems.map((bp) => {
         const obj = snapshot.resolvedObjectives[bp.objectiveRefId];
         let tpText = bp.objectiveRefId || '-';
         if (obj) {
@@ -619,12 +561,10 @@ export function buildNormalizedAssessmentDocumentModel(
           material: bp.materialOrContext || '-',
           instrumentType: bp.instrumentType || '-',
         };
-      });
+      }));
 
   // 3. Instruments
-  const instruments: NormalizedAssessmentInstrument[] = isBlank
-    ? []
-    : snapshot.instruments.map((inst) => {
+  const instruments: NormalizedAssessmentInstrument[] = (snapshot.instruments.map((inst) => {
         const base: NormalizedAssessmentInstrument = {
           id: inst.id,
           type: inst.type,
@@ -708,12 +648,10 @@ export function buildNormalizedAssessmentDocumentModel(
         }
 
         return base;
-      });
+      }));
 
   // 4. Answer Keys
-  const answerKeys: NormalizedAssessmentAnswerKey[] = isBlank
-    ? []
-    : snapshot.answerKeys.map((ak, idx) => {
+  const answerKeys: NormalizedAssessmentAnswerKey[] = (snapshot.answerKeys.map((ak, idx) => {
         const linkedInstrument = snapshot.instruments.find(
           (inst) => inst.id === ak.instrumentId
         );
@@ -790,12 +728,10 @@ export function buildNormalizedAssessmentDocumentModel(
           value: valueStr,
           notes: ak.notes,
         };
-      });
+      }));
 
   // 5. Scoring Guides
-  const scoringGuides: NormalizedAssessmentScoringGuide[] = isBlank
-    ? []
-    : snapshot.scoringGuides.map((sg) => ({
+  const scoringGuides: NormalizedAssessmentScoringGuide[] = (snapshot.scoringGuides.map((sg) => ({
         id: sg.id,
         instrumentId: sg.instrumentId,
         instrumentItemId: sg.instrumentItemId,
@@ -804,12 +740,10 @@ export function buildNormalizedAssessmentDocumentModel(
         maxScore: sg.maxScore,
         instructions: sg.instructions,
         notes: sg.notes,
-      }));
+      })));
 
   // 6. Rubrics
-  const rubrics: NormalizedAssessmentRubric[] = isBlank
-    ? []
-    : snapshot.rubrics.map((r) => {
+  const rubrics: NormalizedAssessmentRubric[] = (snapshot.rubrics.map((r) => {
         const sortedScale = [...(r.scale || [])].sort(
           (a, b) => a.order - b.order
         );
@@ -839,7 +773,7 @@ export function buildNormalizedAssessmentDocumentModel(
           scale: scaleHeaders,
           criteria: criteriaRows,
         };
-      });
+      }));
 
   // 7. Signoff
   const signoff = {
@@ -1144,11 +1078,10 @@ export async function renderAssessmentDocx(
   model: NormalizedAssessmentDocument,
   projection: AssessmentDocumentProjection = 'COMPLETE'
 ): Promise<Blob> {
-  const isBlank = model.metadata.isBlankMode;
   const docChildren: any[] = [];
 
   const extraIdentityRows: [string, string][] = [];
-  if (!isBlank && model.metadata.packageRevision !== undefined) {
+  if ((model.metadata.packageRevision !== undefined)) {
     extraIdentityRows.push(['Nomor Revisi Paket', `: Revisi ${model.metadata.packageRevision}`]);
   }
   if (model.metadata.formattedDocumentDate) {
@@ -1672,9 +1605,7 @@ export async function renderAssessmentDocx(
         new Paragraph({
           children: [
             new TextRun({
-              text: isBlank
-                ? '(Kolom instrumen dapat dituliskan langsung oleh guru)'
-                : 'Belum ada instrumen yang dimuat dalam paket ini.',
+              text: ('Belum ada instrumen yang dimuat dalam paket ini.'),
               italics: true,
               size: FONT_SIZE_DOCX_BODY,
               font: ASSESSMENT_DOCX_FONT,
@@ -2105,10 +2036,9 @@ export function renderAssessmentPdf(
   model: NormalizedAssessmentDocument,
   projection: AssessmentDocumentProjection = 'COMPLETE'
 ): Blob {
-  const isBlank = model.metadata.isBlankMode;
 
   const extraIdentityRows: [string, string][] = [];
-  if (!isBlank && model.metadata.packageRevision !== undefined) {
+  if ((model.metadata.packageRevision !== undefined)) {
     extraIdentityRows.push(['Nomor Revisi', `: Revisi ${model.metadata.packageRevision}`]);
   }
   if (model.metadata.formattedDocumentDate) {
@@ -2483,9 +2413,7 @@ export function renderAssessmentPdf(
   if (model.instruments.list.length === 0) {
     sections.push({
       type: 'paragraph',
-      text: isBlank
-        ? '(Kolom instrumen dapat dituliskan langsung oleh guru)'
-        : 'Belum ada instrumen yang dimuat dalam paket ini.',
+      text: ('Belum ada instrumen yang dimuat dalam paket ini.'),
     });
   }
 
@@ -2804,15 +2732,14 @@ export function generateAssessmentDocumentFileName(
   const cleanGrade = (snapshot.grade || '').replace(/[^a-zA-Z0-9]/g, '');
   const gradeSuffix = cleanGrade ? `_Kelas_${cleanGrade}` : '';
 
-  if (snapshot.mode === 'BLANK_TEMPLATE' || snapshot.documentMode === 'blank') {
-    return `Format_Asesmen_${cleanSubject}${gradeSuffix}_Template.${extension}`;
-  }
+  if (snapshot.mode === 'BLANK_TEMPLATE') throw new Error('Snapshot template lama tidak memuat substansi asesmen lengkap.');
+  const suffix = snapshot.documentMode === 'blank' ? '_Format_Kosong' : '';
 
   if (projection === 'STUDENT_INSTRUMENT') {
-    return `Lembar_Soal_${cleanSubject}${gradeSuffix}.${extension}`;
+    return `Lembar_Soal_${cleanSubject}${gradeSuffix}${suffix}.${extension}`;
   }
   if (projection === 'SCORING_GUIDE') {
-    return `Panduan_Penilaian_${cleanSubject}${gradeSuffix}.${extension}`;
+    return `Panduan_Penilaian_${cleanSubject}${gradeSuffix}${suffix}.${extension}`;
   }
 
   if (!isValidAssessmentPackageRevision(snapshot.assessmentPackageRevision)) {
@@ -2821,7 +2748,7 @@ export function generateAssessmentDocumentFileName(
     );
   }
 
-  return `Perangkat_Asesmen_${cleanSubject}${gradeSuffix}_Rev${snapshot.assessmentPackageRevision}.${extension}`;
+  return `Perangkat_Asesmen_${cleanSubject}${gradeSuffix}_Rev${snapshot.assessmentPackageRevision}${suffix}.${extension}`;
 }
 
 /**

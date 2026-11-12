@@ -73,6 +73,7 @@ const {school,profile}=v21DocumentContext(createReadyV21WorkflowFixture());
       ],
       documentMode: 'data',
       skipDownload: true,
+      documentDate: '2026-07-15',
     };
 
     const docxRes = await generateAlokasiWaktu(ctx);
@@ -85,7 +86,7 @@ const {school,profile}=v21DocumentContext(createReadyV21WorkflowFixture());
   });
 
   // K13 CASE E — missing K13 analysis
-  await runTest('K13 Case E. Missing K13 analysis fails validation in data mode, succeeds in blank mode', () => {
+  await runTest('K13 Case E. Missing K13 analysis fails validation in both modes', () => {
     const invalidCtx: DocumentGenerationContext = {
       school,
       profile,
@@ -100,7 +101,7 @@ const {school,profile}=v21DocumentContext(createReadyV21WorkflowFixture());
 
     const blankCtx: DocumentGenerationContext = { ...invalidCtx, documentMode: 'blank' };
     const valBlank = validateDocumentRequirements('ALOKASI_WAKTU', blankCtx);
-    assert.strictEqual(valBlank.isValid, true);
+    assert.strictEqual(valBlank.isValid, false);
   });
 
   // K13 CASE F — no Merdeka contamination

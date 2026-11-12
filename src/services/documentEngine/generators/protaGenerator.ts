@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import { annualJPNotes } from '../jpPresentation';
 import {
   Document,
@@ -27,6 +28,7 @@ import {
 import { buildProtaProjection, buildK13ProtaProjection, ProtaProjectionRow, K13ProtaProjectionRow } from '../protaProjection';
 
 export async function generatePROTA(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting } = context;
   const isK13Curriculum = academicSetting.curriculumType === 'K13' || academicSetting.curriculum === 'Kurikulum 2013';
   const isBlankMode = context.documentMode === 'blank';
@@ -38,14 +40,14 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
   const k13Projection = buildK13ProtaProjection(context);
 
   if (isK13Curriculum) {
-    if (context.documentMode === 'data' && !k13Projection.isReady) {
+    if ((!k13Projection.isReady)) {
       throw new Error(
         k13Projection.unreadyReason ||
           'Program Tahunan belum dapat dibuat karena data analisis KD Kurikulum 2013 belum tersedia.'
       );
     }
   } else {
-    if (context.documentMode === 'data' && !projection.isReady) {
+    if ((!projection.isReady)) {
       throw new Error(
         projection.unreadyReason ||
           'Program Tahunan belum dapat dibuat karena distribusi ATP tahunan ke Semester 1 dan Semester 2 belum lengkap.'
@@ -66,13 +68,13 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
 
   if (isK13Curriculum) {
     metadataRows.push(
-      ['Total Alokasi Pembelajaran', `: ${isBlankMode ? '—' : `${k13Projection.totalAllocatedJP} JP`}`]
+      ['Total Alokasi Pembelajaran', `: ${(`${k13Projection.totalAllocatedJP} JP`)}`]
     );
   } else {
     metadataRows.push(
-      ['Alokasi Semester 1', `: ${isBlankMode ? '—' : `${projection.semester1AllocatedJP} JP`}`],
-      ['Alokasi Semester 2', `: ${isBlankMode ? '—' : `${projection.semester2AllocatedJP} JP`}`],
-      ['Total Alokasi Tahunan', `: ${isBlankMode ? '—' : `${projection.totalAllocatedJP} JP`}`],
+      ['Alokasi Semester 1', `: ${(`${projection.semester1AllocatedJP} JP`)}`],
+      ['Alokasi Semester 2', `: ${(`${projection.semester2AllocatedJP} JP`)}`],
+      ['Total Alokasi Tahunan', `: ${(`${projection.totalAllocatedJP} JP`)}`],
       ['Acuan Intrakurikuler Tahunan', `: ${projection.officialAnnualJP !== null ? `${projection.officialAnnualJP} JP` : '—'}`],
       ['Selisih terhadap Acuan JP', `: ${projection.remainingAnnualJP !== null ? `${projection.remainingAnnualJP} JP` : '—'}`],
     );
@@ -146,22 +148,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
   const tableDataRows: TableRow[] = [];
 
   if (isK13Curriculum) {
-    if (isBlankMode) {
-      // Placeholder blank rows
-      for (let i = 1; i <= 3; i++) {
-        tableDataRows.push(
-          new TableRow({
-            children: [
-              createTableDataCell(`${i}`, 6, AlignmentType.CENTER),
-              createTableDataCell('', 14, AlignmentType.CENTER),
-              createTableDataCell('', 55, AlignmentType.LEFT),
-              createTableDataCell('', 12, AlignmentType.CENTER),
-              createTableDataCell('', 13, AlignmentType.CENTER),
-            ],
-          })
-        );
-      }
-    } else {
+    {
       k13Projection.rows.forEach((r, idx) => {
         tableDataRows.push(
           new TableRow({
@@ -177,23 +164,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
       });
     }
   } else {
-    if (isBlankMode) {
-      // Placeholder blank rows
-      for (let i = 1; i <= 3; i++) {
-        tableDataRows.push(
-          new TableRow({
-            children: [
-              createTableDataCell(`${i}`, 6, AlignmentType.CENTER),
-              createTableDataCell('', 14, AlignmentType.CENTER),
-              createTableDataCell('', 35, AlignmentType.LEFT),
-              createTableDataCell('', 20, AlignmentType.LEFT),
-              createTableDataCell('', 12, AlignmentType.CENTER),
-              createTableDataCell('', 13, AlignmentType.CENTER),
-            ],
-          })
-        );
-      }
-    } else {
+    {
       // S1 rows
       const s1Atp = projection.rows.filter((r) => r.semester === 1);
       const s1Assess = projection.assessmentRows.filter((r) => r.semester === 1);
@@ -265,7 +236,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
           }),
         ],
       }),
-      createTableDataCell(isBlankMode ? '' : `${totalJPToDisplay} JP`, 12, AlignmentType.CENTER, true),
+      createTableDataCell((`${totalJPToDisplay} JP`), 12, AlignmentType.CENTER, true),
       new TableCell({
         width: { size: 13, type: WidthType.PERCENTAGE },
         children: [new Paragraph({})],
@@ -281,7 +252,7 @@ export async function generatePROTA(context: DocumentGenerationContext): Promise
   docChildren.push(protaTable);
 
   // Status Alokasi Waktu
-  if (!isK13Curriculum && !isBlankMode) {
+  if ((!isK13Curriculum)) {
     const allocationStatusText = annualJPNotes(projection);
 
     docChildren.push(

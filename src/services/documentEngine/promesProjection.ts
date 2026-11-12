@@ -161,7 +161,7 @@ export function buildPromesProjection(context: DocumentGenerationContext): Prome
   let isReady = true;
   let unreadyReason: string | undefined = undefined;
 
-  if (documentMode !== 'blank') {
+  {
     if (hasMismatchedSemesterJP) {
       isReady = false;
       unreadyReason = 'Pengaturan JP bukan milik SemesterPlan aktif. Pilih pengaturan semester yang sesuai.';
@@ -260,7 +260,7 @@ export function buildPromesProjection(context: DocumentGenerationContext): Prome
 
   if (!isK13) {
     // KURIKULUM MERDEKA: Pure Canonical Scheduled Learning Meetings
-    if (documentMode !== 'blank') {
+    {
       const canonical = resolveMerdekaCanonicalTimeProjection(context);
 
       if (!canonical.isReady) {

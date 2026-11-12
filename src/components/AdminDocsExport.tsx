@@ -213,7 +213,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     )
   );
   const isK13KKMValid = !!(k13KKM?.items && k13KKM.items.length > 0);
-  const isBulkExportEligible = documentMode === 'blank' || (isK13Curriculum ? isK13KDValid : isCPValid);
+  const isBulkExportEligible = isK13Curriculum ? isK13KDValid : isCPValid;
 
   const totalJP = (atp?.items || []).reduce((acc, curr) => acc + (Number(curr.jp) || 0), 0);
 
@@ -375,6 +375,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       }
 
       if (type === 'MODUL_AJAR') setExportDiagnostic(getLastModulAjarExportDiagnostic());
+      if (documentMode === 'blank') {
+        setExportSuccessMessage('Format Kosong berhasil diunduh dengan isi administrasi lengkap, tanpa identitas guru dan sekolah. Snapshot tersimpan tidak diubah.');
+        return;
+      }
       if (historicalModul) {
         setExportSuccessMessage('Snapshot lama berhasil diunduh.');
         return; // Historical downloads never replace the latest document record.
@@ -456,35 +460,15 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       includeKkm: isK13KKMValid,
     });
     let successCount = 0;
+    const skipped: string[] = [];
     const newRecords: AppDocumentRecord[] = [...localDocs];
 
-    const snapshot: DocumentSnapshot = {
-      generatedAt: new Date().toISOString(),
-      format,
-      documentMode,
-      schoolName: school.name || '',
-      npsn: school.npsn,
-      principalName: school.principalName || '',
-      principalNip: school.principalNip,
-      teacherName: profile.name || '',
-      teacherNip: profile.nip,
-      subject: academicSetting.subject || '',
-      grade: academicSetting.grade || '',
-      academicYear: academicSetting.academicYear || '',
-      semester: academicSetting.semester || '',
-      curriculum: academicSetting.curriculum || '',
-      curriculumType: getCurriculumType(academicSetting.curriculum || academicSetting.curriculumType),
-      studentCount: context.students?.length || 0,
-      sourceVersions: {
-        cpUpdatedAt: cp?.updatedAt,
-        tpUpdatedAt: tp?.updatedAt,
-        atpUpdatedAt: atp?.updatedAt,
-      },
-    };
+    const snapshot: DocumentSnapshot = createDocumentSnapshot(context, format, documentMode);
 
     try {
       for (const type of docTypes) {
         const val = validateDocumentRequirements(type, context);
+        if (!val.isValid) { skipped.push(`${type}: ${val.message || val.missingFields.join('; ')}`); continue; }
         if (val.isValid) {
           if (format === 'pdf') {
             const pdfRes = await generatePdfDocument(type, context);
@@ -535,14 +519,12 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
           await new Promise((r) => setTimeout(r, 600));
         }
       }
-      setLocalDocs(newRecords);
-      if (onUpdateDocuments) {
-        onUpdateDocuments(newRecords);
+      if (documentMode !== 'blank') {
+        setLocalDocs(newRecords);
+        if (onUpdateDocuments) onUpdateDocuments(newRecords);
       }
       setExportSuccessMessage(
-        documentMode === 'blank'
-          ? `Sukses! ${successCount} format dokumen kosong (.${format}) siap cetak/tulis telah selesai diunduh.`
-          : `Sukses! ${successCount} dokumen administrasi berbasis data (.${format}) telah selesai diunduh.`
+        `${successCount} dokumen administrasi (.${format}) diunduh${documentMode === 'blank' ? ' tanpa identitas guru dan sekolah' : ''}.${skipped.length ? ` Belum siap: ${skipped.join(' | ')}` : ''}`
       );
       setTimeout(() => setExportSuccessMessage(null), 8000);
     } catch (err: unknown) {
@@ -753,7 +735,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
           </span>
           <span className="text-slate-600">
             {documentMode === 'blank'
-              ? 'Template dokumen siap cetak (PDF) atau siap edit (Word) dengan tabel kosong & format tanda tangan formal untuk pengisian manual.'
+              ? 'Format Kosong — isi administrasi lengkap, tanpa identitas guru dan sekolah.'
               : 'Menghasilkan dokumen otomatis berdasarkan data sekolah, guru, siswa, kurikulum, capaian pembelajaran (CP), dan tujuan pembelajaran (TP).'}
           </span>
         </div>
@@ -1102,20 +1084,21 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               ? historicalModulSnapshot || activeRecord?.snapshot : activeRecord?.snapshot;
             const activeSnapshot = activePreviewType === 'MODUL_AJAR' ? undefined : storedSnapshot;
 
-            const previewSchoolName = activeSnapshot?.schoolName || school.name || '-';
-            const previewSchoolNpsn = activeSnapshot?.schoolNpsn || activeSnapshot?.npsn || school.npsn || '-';
-            const previewSchoolAddress = activeSnapshot?.schoolAddress || school.address || '-';
-            const previewPrincipalName = activeSnapshot?.principalName || school.principalName || '';
-            const previewPrincipalNip = activeSnapshot?.principalNip || school.principalNip || '';
-            const previewTeacherName = activeSnapshot?.teacherName || profile.name || '';
-            const previewTeacherNip = activeSnapshot?.teacherNip || profile.nip || '';
+            const previewContext = resolveEffectiveContext(context, activeSnapshot);
+            const previewSchoolName = previewContext.school.name || '-';
+            const previewSchoolNpsn = previewContext.school.npsn || '-';
+            const previewSchoolAddress = previewContext.school.address || '-';
+            const previewPrincipalName = previewContext.school.principalName;
+            const previewPrincipalNip = previewContext.school.principalNip;
+            const previewTeacherName = previewContext.profile.name;
+            const previewTeacherNip = previewContext.profile.nip;
             const previewCurriculum = activeSnapshot?.curriculum || academicSetting.curriculum || '-';
             const previewAcademicYear = activeSnapshot?.academicYear || academicSetting.academicYear || '-';
             const previewSemester = activeSnapshot?.semester || academicSetting.semester || '-';
             const previewGrade = formatClassLabel({ grade: activeSnapshot?.grade || academicSetting.grade, classSection: activeSnapshot ? activeSnapshot.classSection : academicSetting.classSection });
             const previewPhase = activeSnapshot?.phase || academicSetting.phase || '-';
             const previewSubject = activeSnapshot?.subject || academicSetting.subject || '-';
-            const previewDate = activeSnapshot?.generatedAt
+            const previewDate = documentMode === 'blank' ? (previewContext.snapshot?.formattedDocumentDate || (previewContext.documentDate ? formatOfficialSnapshotDate(previewContext.documentDate) : '-')) : activeSnapshot?.generatedAt
               ? formatOfficialSnapshotDate(activeSnapshot.generatedAt)
               : dateFormatted;
 
@@ -1195,11 +1178,11 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         <span className="font-bold">Dokumen Historis Terkunci:</span>{' '}
                         <span>
                           Dibuat {formatOfficialSnapshotDate(activeSnapshot.generatedAt)} · Kepala Sekolah:{' '}
-                          <strong>{activeSnapshot.principalName || '-'}</strong>
+                          <strong>{previewPrincipalName || '-'}</strong>
                         </span>
                       </div>
                     </div>
-                    {isContextDriftedFromSnapshot(context, activeSnapshot) && (
+                    {documentMode !== 'blank' && isContextDriftedFromSnapshot(context, activeSnapshot) && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                         Data sistem saat ini berbeda ({school.principalName})
                       </span>
@@ -1234,7 +1217,6 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       {activePreviewType === 'KALENDER_AKADEMIK' && 'KALENDER PENDIDIKAN SATUAN PENDIDIKAN'}
                       {activePreviewType === 'ANALISIS_SKL_KI_KD' && 'ANALISIS SKL, KI, DAN KD (K13)'}
                       {activePreviewType === 'PENETAPAN_KKM' && 'PENETAPAN KRITERIA KETUNTASAN MINIMAL (KKM)'}
-                      {documentMode === 'blank' && ' (FORMAT KOSONG)'}
                     </h2>
                     <h3 className="text-xs sm:text-sm font-bold uppercase text-slate-700">
                       {previewCurriculum} — TP {previewAcademicYear}
@@ -1365,7 +1347,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
             {/* 1. ATP PREVIEW */}
             {activePreviewType === 'ATP' && (() => {
               const atpProj = buildATPDocumentProjection(context);
-              if (!atpProj.isReady && documentMode !== 'blank') {
+              if ((!atpProj.isReady)) {
                 return (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium space-y-2">
                     <div className="font-bold flex items-center gap-1.5 text-amber-900">
@@ -1460,7 +1442,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               if (isK13Curriculum) {
                 const k13Proj = buildK13ProtaProjection(context);
 
-                if (!k13Proj.isReady && documentMode !== 'blank') {
+                if ((!k13Proj.isReady)) {
                   return (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium space-y-2">
                       <div className="font-bold flex items-center gap-1.5 text-amber-900">
@@ -1472,16 +1454,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                   );
                 }
 
-                const rows = documentMode === 'blank'
-                  ? Array.from({ length: 3 }, (_, idx) => ({
-                      id: `${idx}`,
-                      kd: '',
-                      materi: '',
-                      kegiatan: '',
-                      allocatedJP: 0,
-                      semester: 1 as const,
-                    }))
-                  : k13Proj.rows;
+                const rows = (k13Proj.rows);
 
                 return (
                   <div className="space-y-4">
@@ -1504,28 +1477,28 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                                 <td className="p-1.5 border border-slate-300 text-center font-bold">{idx + 1}</td>
                                 <td className="p-1.5 border border-slate-300 font-mono font-bold text-blue-900 text-center">{r.kd}</td>
                                 <td className="p-1.5 border border-slate-300">
-                                  {documentMode === 'blank' ? '' : (
+                                  {((
                                     <>
                                       <div className="font-medium">{r.materi}</div>
                                       <div className="text-[10px] text-slate-500 italic">Kegiatan: {r.kegiatan}</div>
                                     </>
-                                  )}
+                                  ))}
                                 </td>
                                 <td className="p-1.5 border border-slate-300 text-center font-bold">
-                                  {documentMode === 'blank' ? '' : `${r.allocatedJP} JP`}
+                                  {(`${r.allocatedJP} JP`)}
                                 </td>
                                 <td className="p-1.5 border border-slate-300 text-center">
-                                  {documentMode === 'blank' ? '' : `Semester ${r.semester}`}
+                                  {(`Semester ${r.semester}`)}
                                 </td>
                               </tr>
                             ))}
-                            {documentMode !== 'blank' && (
+                            {((
                               <tr className="bg-slate-100 font-bold">
                                 <td colSpan={3} className="p-1.5 border border-slate-300 text-right">TOTAL ALOKASI JP TERCATAT:</td>
                                 <td className="p-1.5 border border-slate-300 text-center text-blue-900">{k13Proj.totalAllocatedJP} JP</td>
                                 <td className="p-1.5 border border-slate-300"></td>
                               </tr>
-                            )}
+                            ))}
                           </tbody>
                         </table>
                       </div>
@@ -1536,7 +1509,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
               const projection = buildProtaProjection(context);
 
-              if (!projection.isReady && documentMode !== 'blank') {
+              if ((!projection.isReady)) {
                 return (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium space-y-2">
                     <div className="font-bold flex items-center gap-1.5 text-amber-900">
@@ -1548,30 +1521,21 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                 );
               }
 
-              const rows = documentMode === 'blank'
-                ? Array.from({ length: 3 }, (_, idx) => ({
-                    id: `${idx}`,
-                    tpCode: '',
-                    tpStatement: '',
-                    materialScope: '',
-                    allocatedJP: 0,
-                    semester: 1 as const,
-                  }))
-                : [
+              const rows = ([
                     ...projection.rows.filter((r) => r.semester === 1),
                     ...projection.assessmentRows.filter((r) => r.semester === 1),
                     ...projection.reserveRows.filter((r) => r.semester === 1),
                     ...projection.rows.filter((r) => r.semester === 2),
                     ...projection.assessmentRows.filter((r) => r.semester === 2),
                     ...projection.reserveRows.filter((r) => r.semester === 2),
-                  ];
+                  ]);
 
               return (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <h5 className="font-bold text-slate-900 uppercase">Distribusi Alokasi Waktu Pembelajaran Tahunan</h5>
-                      {documentMode !== 'blank' && (
+                      {((
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                           projection.validationStatus === 'BALANCED'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -1581,7 +1545,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         }`}>
                           {projection.validationStatus} ({projection.totalAllocatedJP} {projection.officialAnnualJP !== null ? `/ ${projection.officialAnnualJP}` : ''} JP)
                         </span>
-                      )}
+                      ))}
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-[11px] border border-slate-300 border-collapse">
@@ -1607,14 +1571,14 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                                 <div className="text-slate-600">{r.materialScope}</div>
                               </td>
                               <td className="p-1.5 border border-slate-300 text-center font-bold">
-                                {documentMode === 'blank' ? '' : `${r.allocatedJP} JP`}
+                                {(`${r.allocatedJP} JP`)}
                               </td>
                               <td className="p-1.5 border border-slate-300 text-center">
-                                {documentMode === 'blank' ? '' : `Semester ${r.semester}`}
+                                {(`Semester ${r.semester}`)}
                               </td>
                             </tr>
                           ))}
-                          {documentMode !== 'blank' && (
+                          {((
                             <>
                               <tr className="bg-slate-100 font-bold">
                                 <td colSpan={4} className="p-1.5 border border-slate-300 text-right">TOTAL ALOKASI JP TERCATAT:</td>
@@ -1622,13 +1586,13 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                                 <td className="p-1.5 border border-slate-300"></td>
                               </tr>
                             </>
-                          )}
+                          ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
 
-                  {documentMode !== 'blank' && (
+                  {((
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
                       <div className="font-bold text-slate-800">Status & Ringkasan Alokasi:</div>
                       <div>• Alokasi Semester 1: <strong>{projection.semester1AllocatedJP} JP</strong></div>
@@ -1640,7 +1604,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         <div>• Referensi Ekuivalen JP per Minggu: <strong>{projection.referenceWeeklyEquivalentJP} JP / Minggu</strong></div>
                       )}
                     </div>
-                  )}
+                  ))}
                 </div>
               );
             })()}
@@ -1651,7 +1615,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               const months = promesProj.monthHeaders.map((m) => m.monthName);
               const allRows = [...promesProj.rows, ...promesProj.assessmentRows, ...promesProj.reserveRows];
 
-              if (!promesProj.isReady && documentMode !== 'blank') {
+              if ((!promesProj.isReady)) {
                 return (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium space-y-2">
                     <div className="font-bold flex items-center gap-1.5 text-amber-900">
@@ -1780,7 +1744,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               const projection = buildAlokasiWaktuProjection(context);
               const allRows = [...projection.rows, ...projection.assessmentRows, ...projection.reserveRows];
 
-              if (!projection.isReady && documentMode !== 'blank') {
+              if ((!projection.isReady)) {
                 return (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium space-y-2">
                     <div className="font-bold flex items-center gap-1.5 text-amber-900">
@@ -1869,31 +1833,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
             {/* 4. MODUL AJAR PREVIEW */}
             {activePreviewType === 'MODUL_AJAR' && (() => {
-              if (documentMode === 'blank') {
-                return (
-                  <div className="space-y-3 text-slate-800">
-                    <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 space-y-1">
-                      <div className="font-bold text-blue-950 uppercase text-[11px]">I. Informasi Umum & Alokasi Waktu (Format Kosong)</div>
-                      <div className="text-[11px] text-slate-600 leading-relaxed font-mono space-y-1">
-                        <div>Model: ....................................</div>
-                        <div>Alokasi Waktu: ........ JP</div>
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
-                      <div className="font-bold text-slate-900 uppercase text-[11px]">II. Tujuan Pembelajaran (Format Kosong)</div>
-                      <div className="text-[11px] text-slate-600 font-mono">
-                        Tujuan Pembelajaran: ....................................
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
-                      <div className="font-bold text-slate-900 uppercase text-[11px]">III. Kegiatan Pembelajaran (Format Kosong)</div>
-                      <div className="text-[11px] text-slate-600 font-mono">
-                        Kegiatan Pembelajaran: ....................................
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
+              ;
 
               const projection = buildModulAjarProjection(context);
 
@@ -1971,40 +1911,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                 (assessmentPackages || []).find((p) => p.id === selectedAssessmentPackageId) ||
                 (readyAssessmentPackages.length === 1 ? readyAssessmentPackages[0] : undefined);
 
-              if (documentMode === 'blank') {
-                return (
-                  <div className="space-y-4">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-                      <strong>Mode Format Kosong:</strong> Dokumen asesmen akan diekspor dengan format tabel kisi-kisi, lembar soal, dan rubrik kosong siap isi/tulis tangan.
-                    </div>
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-slate-900 uppercase">I. Kisi-Kisi Asesmen Pembelajaran (Format Kosong)</h5>
-                      <table className="w-full text-left text-[11px] border border-slate-300 border-collapse">
-                        <thead>
-                          <tr className="bg-blue-900 text-white font-semibold">
-                            <th className="p-1.5 border border-blue-800 text-center w-10">No</th>
-                            <th className="p-1.5 border border-blue-800">Tujuan Pembelajaran</th>
-                            <th className="p-1.5 border border-blue-800">Indikator Asesmen</th>
-                            <th className="p-1.5 border border-blue-800">Materi</th>
-                            <th className="p-1.5 border border-blue-800">Bentuk</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <tr key={i}>
-                              <td className="p-1.5 border border-slate-300 text-center">{i}</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400 italic">........................................</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400 italic">........................................</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400 italic">....................</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400 italic">....................</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              }
+              ;
 
               if (readyAssessmentPackages.length === 0) {
                 return (
@@ -2111,14 +2018,14 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               );
             })()}
 
-            {activePreviewType === 'JURNAL' && <JournalPreview context={documentMode === 'blank' ? { ...context, snapshot: undefined } : resolveEffectiveContext(context, activeSnapshot)} onBlank={() => setDocumentMode('blank')} />}
+            {activePreviewType === 'JURNAL' && <JournalPreview context={(resolveEffectiveContext(context, activeSnapshot))} onBlank={() => setDocumentMode('blank')} />}
 
             {/* 7. KKTP PREVIEW */}
             {activePreviewType === 'KKTP' && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h5 className="font-bold text-slate-900 uppercase">
-                    {documentMode === 'blank' ? 'Format Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)' : 'Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)'}
+                    {('Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)')}
                   </h5>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[11px] border border-slate-300 border-collapse">
@@ -2131,20 +2038,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {documentMode === 'blank' ? (
-                          Array.from({ length: 6 }, (_, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                              <td className="p-1.5 border border-slate-300 text-center font-bold">{idx + 1}</td>
-                              <td className="p-1.5 border border-slate-300 text-center font-mono text-blue-900">TP.{idx + 1}</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400">....................................................................................</td>
-                              <td className="p-1.5 border border-slate-300 text-slate-400">
-                                <div>1. ................................................................................</div>
-                                <div>2. ................................................................................</div>
-                                <div>• Interval Ketercapaian: ............................................</div>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (tp?.items && tp.items.length > 0) ? (
+                        {((tp?.items && tp.items.length > 0) ? (
                           tp.items.slice(0, 6).map((item, idx) => (
                             <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                               <td className="p-1.5 border border-slate-300 text-center font-bold">{idx + 1}</td>
@@ -2159,10 +2053,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         ) : (
                           <tr>
                             <td colSpan={4} className="p-4 text-center text-slate-400 italic">
-                              Tujuan Pembelajaran belum terisi. Beralih ke Format Kosong untuk mencetak template.
+                              Tujuan Pembelajaran belum terisi. Lengkapi data sebelum mengekspor dokumen.
                             </td>
                           </tr>
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2175,7 +2069,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h5 className="font-bold text-slate-900 uppercase">
-                    {documentMode === 'blank' ? 'Format Daftar Presensi Kehadiran Siswa' : 'Daftar Presensi Kehadiran Siswa'}
+                    {('Daftar Presensi Kehadiran Siswa')}
                   </h5>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[10px] border border-slate-300 border-collapse">
@@ -2195,23 +2089,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {documentMode === 'blank' ? (
-                          Array.from({ length: 8 }, (_, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                              <td className="p-1 border border-slate-300 text-center font-bold">{idx + 1}</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">..........</td>
-                              <td className="p-1 border border-slate-300 text-slate-400">................................................</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">....</td>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
-                                <td key={p} className="p-1 border border-slate-300 text-center"></td>
-                              ))}
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                            </tr>
-                          ))
-                        ) : (students && students.length > 0) ? (
+                        {((students && students.length > 0) ? (
                           students.slice(0, 8).map((st, idx) => (
                             <tr key={st.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                               <td className="p-1 border border-slate-300 text-center font-bold">{idx + 1}</td>
@@ -2230,10 +2108,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         ) : (
                           <tr>
                             <td colSpan={18} className="p-4 text-center text-slate-400 italic">
-                              Belum ada data siswa terdaftar. Beralih ke Format Kosong untuk mencetak template presensi.
+                              Belum ada data siswa terdaftar. Lengkapi data siswa sebelum mengekspor dokumen.
                             </td>
                           </tr>
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2246,7 +2124,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h5 className="font-bold text-slate-900 uppercase">
-                    {documentMode === 'blank' ? 'Format Buku Daftar Nilai Asesmen' : 'Buku Daftar Nilai & Rekapitulasi Asesmen'}
+                    {('Buku Daftar Nilai & Rekapitulasi Asesmen')}
                   </h5>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[10px] border border-slate-300 border-collapse">
@@ -2265,22 +2143,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {documentMode === 'blank' ? (
-                          Array.from({ length: 8 }, (_, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                              <td className="p-1 border border-slate-300 text-center font-bold">{idx + 1}</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">..........</td>
-                              <td className="p-1 border border-slate-300 text-slate-400">................................................</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">....</td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-center"></td>
-                              <td className="p-1 border border-slate-300 text-slate-400">....................</td>
-                            </tr>
-                          ))
-                        ) : (students && students.length > 0) ? (
+                        {((students && students.length > 0) ? (
                           students.slice(0, 8).map((st, idx) => (
                             <tr key={st.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                               <td className="p-1 border border-slate-300 text-center font-bold">{idx + 1}</td>
@@ -2298,10 +2161,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         ) : (
                           <tr>
                             <td colSpan={10} className="p-4 text-center text-slate-400 italic">
-                              Belum ada data nilai tersimpan. Beralih ke Format Kosong untuk mencetak format nilai.
+                              Belum ada data nilai tersimpan. Lengkapi data nilai sebelum mengekspor dokumen.
                             </td>
                           </tr>
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2314,7 +2177,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h5 className="font-bold text-slate-900 uppercase">
-                    {documentMode === 'blank' ? 'Format Program Remedial & Pengayaan' : 'Program & Laporan Pelaksanaan Remedial dan Pengayaan'}
+                    {('Program & Laporan Pelaksanaan Remedial dan Pengayaan')}
                   </h5>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[10px] border border-slate-300 border-collapse">
@@ -2331,20 +2194,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {documentMode === 'blank' ? (
-                          Array.from({ length: 6 }, (_, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                              <td className="p-1 border border-slate-300 text-center font-bold">{idx + 1}</td>
-                              <td className="p-1 border border-slate-300 text-slate-400">................................................</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">TP .....</td>
-                              <td className="p-1 border border-slate-300 text-slate-400">................................................</td>
-                              <td className="p-1 border border-slate-300 text-slate-400">................................................</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">.....</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">.....</td>
-                              <td className="p-1 border border-slate-300 text-center text-slate-400">..................</td>
-                            </tr>
-                          ))
-                        ) : (remedials && remedials.length > 0) ? (
+                        {((remedials && remedials.length > 0) ? (
                           remedials.map((r, idx) => {
                             const st = (students || []).find((s) => s.id === r.studentId);
                             const t = (tp?.items || []).find((item) => item.id === r.tpId);
@@ -2364,10 +2214,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                         ) : (
                           <tr>
                             <td colSpan={8} className="p-4 text-center text-slate-400 italic">
-                              Belum ada catatan remedial/pengayaan tersimpan. Beralih ke Format Kosong untuk format manual.
+                              Belum ada catatan remedial/pengayaan tersimpan. Lengkapi catatan sebelum mengekspor dokumen.
                             </td>
                           </tr>
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2377,28 +2227,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
             {/* Official Sign-off Block Preview */}
             <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-8 text-xs text-slate-800">
-              {documentMode === 'blank' ? (
-                <>
-                  <div className="space-y-1">
-                    <div>Mengetahui,</div>
-                    <div className="font-semibold">Kepala Sekolah</div>
-                    <div className="h-14" />
-                    <div>(........................)</div>
-                    <div className="text-[11px] text-slate-600">
-                      NIP. ....................
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="font-semibold">Guru Mata Pelajaran</div>
-                    <div className="h-14" />
-                    <div>(........................)</div>
-                    <div className="text-[11px] text-slate-600">
-                      NIP. ....................
-                    </div>
-                  </div>
-                </>
-              ) : (
+              {((
                 <>
                   <div className="space-y-1">
                     <div>Mengetahui,</div>
@@ -2426,7 +2255,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                     </div>
                   </div>
                 </>
-              )}
+              ))}
             </div>
           </div>
         </>

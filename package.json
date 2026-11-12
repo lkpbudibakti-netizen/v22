@@ -72,7 +72,8 @@
     "test:empty-unit-materials": "tsx scripts/testEmptyUnitMaterialsMappingRegression.ts",
     "test:mapping-apply": "tsx scripts/testATPUnitMappingActionApplyRegression.ts",
     "ci:tests": "node scripts/runCIGroup.mjs",
-    "test:print-layout": "tsx scripts/testPrintLayoutRegression.ts"
+    "test:print-layout": "tsx scripts/testPrintLayoutRegression.ts",
+    "test:blank-export": "tsx scripts/testBlankIdentityExport.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

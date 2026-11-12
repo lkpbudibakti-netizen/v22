@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -20,15 +21,14 @@ import {
 } from '../docxStyles';
 
 export async function generateDaftarHadir(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, students, attendanceSessions, attendanceRecords } = context;
   const isBlankMode = context.documentMode === 'blank';
 
   const docChildren: (Paragraph | Table)[] = [];
 
   // Header
-  const headerTitle = isBlankMode
-    ? 'DAFTAR HADIR SISWA & REKAPITULASI PRESENSI (FORMAT KOSONG)'
-    : 'DAFTAR HADIR SISWA & REKAPITULASI PRESENSI';
+  const headerTitle = ('DAFTAR HADIR SISWA & REKAPITULASI PRESENSI');
   docChildren.push(...createDocumentHeader(headerTitle, academicSetting.curriculum));
 
   // Metadata Table
@@ -36,8 +36,8 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
   const sessionList = attendanceSessions || [];
   docChildren.push(
     createIdentityMetadataTable(school, profile, academicSetting, [
-      ['Jumlah Siswa Terdaftar', isBlankMode ? ': .......... Siswa' : `: ${studentList.length} Siswa`],
-      ['Total Pertemuan Tercatat', isBlankMode ? ': .......... Pertemuan' : `: ${sessionList.length} Kali Pertemuan`],
+      ['Jumlah Siswa Terdaftar', (`: ${studentList.length} Siswa`)],
+      ['Total Pertemuan Tercatat', (`: ${sessionList.length} Kali Pertemuan`)],
     ])
   );
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -64,7 +64,7 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
     }),
   ];
 
-  if (isBlankMode || studentList.length === 0) {
+  if ((studentList.length === 0)) {
     for (let i = 0; i < 20; i++) {
       tableRows.push(
         new TableRow({
@@ -114,7 +114,7 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
 
   // Section 2: Jurnal Pertemuan Presensi
-  if (isBlankMode || sessionList.length > 0) {
+  if ((sessionList.length > 0)) {
     docChildren.push(
       createSectionHeading('B. Catatan Agenda & Tanggal Pertemuan', 1)
     );
@@ -131,20 +131,7 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
       }),
     ];
 
-    if (isBlankMode) {
-      for (let i = 0; i < 8; i++) {
-        sessionRows.push(
-          new TableRow({
-            children: [
-              createTableDataCell(`Pertemuan ${i + 1}`, 14, AlignmentType.CENTER),
-              createTableDataCell('..../..../20....', 20, AlignmentType.CENTER),
-              createTableDataCell('', 46),
-              createTableDataCell('', 20),
-            ],
-          })
-        );
-      }
-    } else {
+    {
       sessionList.forEach((s) => {
         sessionRows.push(
           new TableRow({
@@ -190,17 +177,13 @@ export async function generateDaftarHadir(context: DocumentGenerationContext): P
   return {
     success: true,
     type: 'DAFTAR_HADIR',
-    title: isBlankMode
-      ? `Daftar Hadir (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-      : `Daftar Hadir - ${academicSetting.subject} ${academicSetting.grade}`,
+    title: (`Daftar Hadir - ${academicSetting.subject} ${academicSetting.grade}`),
     fileName,
     blob,
     record: {
       id: `doc-hadir-${Date.now()}`,
       type: 'DAFTAR_HADIR',
-      title: isBlankMode
-        ? `Daftar Hadir (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-        : `Daftar Hadir - ${academicSetting.subject} ${academicSetting.grade}`,
+      title: (`Daftar Hadir - ${academicSetting.subject} ${academicSetting.grade}`),
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,

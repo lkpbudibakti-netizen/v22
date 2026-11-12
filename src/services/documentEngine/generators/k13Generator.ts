@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -19,6 +20,7 @@ import {
 } from '../docxStyles';
 
 export async function generateAnalisisK13(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, k13Analysis } = context;
 
   const docChildren: (Paragraph | Table)[] = [];
@@ -45,21 +47,7 @@ export async function generateAnalisisK13(context: DocumentGenerationContext): P
     }),
   ];
 
-  if (context.documentMode === 'blank') {
-    for (let i = 1; i <= 10; i++) {
-      rows.push(
-        new TableRow({
-          children: [
-            createTableDataCell(String(i), 6, AlignmentType.CENTER),
-            createTableDataCell('....................', 20),
-            createTableDataCell('....................', 20),
-            createTableDataCell('....................', 24),
-            createTableDataCell('........................................', 30),
-          ],
-        })
-      );
-    }
-  } else if (items.length === 0) {
+  if (items.length === 0) {
     rows.push(
       new TableRow({
         children: [
@@ -135,6 +123,7 @@ export async function generateAnalisisK13(context: DocumentGenerationContext): P
 }
 
 export async function generatePenetapanKKM(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, k13KKM } = context;
 
   const docChildren: (Paragraph | Table)[] = [];

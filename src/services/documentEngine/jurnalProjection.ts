@@ -26,7 +26,6 @@ export function buildJurnalProjection(context: DocumentGenerationContext): Jurna
   if (context.snapshot?.jurnalProjection) return structuredClone(context.snapshot.jurnalProjection);
   const semesterPlanId = context.academicSetting.id;
   const result: JurnalProjection = { version: 1, semesterPlanId, rows: [], isReady: false, reasons: [], warnings: [] };
-  if (context.documentMode === 'blank') return { ...result, isReady: true };
   if (context.snapshot) return { ...result, reasons: ['Snapshot lama belum menyimpan isi jurnal per pertemuan. Gunakan format kosong atau buat dokumen baru dari data saat ini.'] };
   const canonical = resolveMerdekaCanonicalTimeProjection({ ...context, learningMeetingSchedules: context.learningMeetingSchedules?.filter(bundle => bundle.semesterPlanId === semesterPlanId) });
   result.reasons.push(...canonical.errors);
@@ -109,6 +108,6 @@ export function jurnalRowCells(row: JurnalRow, index: number): string[] {
     '\n\n\n'  // Tindak Lanjut
   ];
 }
-export function jurnalTableRows(projection: JurnalProjection, blank = false): string[][] {
-  return blank ? Array.from({ length: 15 }, (_, i) => [String(i+1), ...Array(6).fill('')]) : projection.rows.map(jurnalRowCells);
+export function jurnalTableRows(projection: JurnalProjection, _legacyBlank = false): string[][] {
+  return (projection.rows.map(jurnalRowCells));
 }

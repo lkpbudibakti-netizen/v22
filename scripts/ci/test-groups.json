@@ -46,6 +46,7 @@
     "scripts/testAutoSemesterTimeAllocation.ts"
   ],
   "documents": [
+    "scripts/testBlankIdentityExport.ts",
     "scripts/testPrintLayoutRegression.ts",
     "scripts/testCanonicalPromesProjection.ts",
     "scripts/testCanonicalAlokasiWaktuDocument.ts",

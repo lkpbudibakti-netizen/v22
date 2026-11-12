@@ -472,8 +472,8 @@ async function runAudit9C8Regression() {
     assert(snapshot.formattedDocumentDate.includes('15 Januari 2030'), 'Formatted date must be 15 Januari 2030');
   });
 
-  // Test 11: Missing documentDate in canonical mode is blocked, while blank template allows empty documentDate
-  await test('9C.8.11 — Missing documentDate in canonical mode throws error, while blank template allows empty documentDate', () => {
+  // Identity masking must not bypass package or document-date requirements.
+  await test('9C.8.11 — Both modes reject missing documentDate or missing assessment package', () => {
     const canonicalContextWithoutDate: DocumentGenerationContext = {
       school: mockSchool,
       profile: mockProfile,
@@ -504,9 +504,9 @@ async function runAudit9C8Regression() {
       documentDate: undefined,
     };
 
-    const blankSnap = createAssessmentDocumentSnapshot(blankContextWithoutDate);
-    assert(blankSnap.mode === 'BLANK_TEMPLATE', 'Blank snapshot mode must be BLANK_TEMPLATE');
-    assert(blankSnap.documentDate === undefined || blankSnap.documentDate === '', 'Blank snapshot documentDate can be empty');
+    let blankThrew = false;
+    try { createAssessmentDocumentSnapshot(blankContextWithoutDate); } catch { blankThrew = true; }
+    assert(blankThrew, 'Format Kosong must reject incomplete content instead of creating a successful empty template');
   });
 
   // Test 12: Missing curriculum does NOT inject fake 'Kurikulum Merdeka' fallback
@@ -877,8 +877,7 @@ async function runAudit9C8Regression() {
     assert(res.blockers.some((b) => b.includes('DRAFT')), 'Must contain DRAFT blocker');
   });
 
-  // Test 17: Blank template mode produces BLANK_TEMPLATE snapshot without fake package ID/revision/status
-  await test('9C.8.17 — Blank template mode produces BLANK_TEMPLATE snapshot without fake package ID/revision/status', () => {
+  await test('9C.8.17 — Identity-masked mode retains the canonical package, instruments and revision', () => {
     const blankContext: DocumentGenerationContext = {
       school: mockSchool,
       profile: mockProfile,
@@ -886,22 +885,23 @@ async function runAudit9C8Regression() {
       documentMode: 'blank',
       tp: mockTP,
       assessmentPlans: [mockPlan],
-      assessmentPackages: [],
+      assessmentPackages: [mockValidSiapPackage],
+      documentDate: '2026-09-20',
     };
 
     const blankSnap = createAssessmentDocumentSnapshot(blankContext);
-    assert(blankSnap.mode === 'BLANK_TEMPLATE', 'Snapshot mode must be BLANK_TEMPLATE');
-    assert(blankSnap.assessmentPackageId === undefined, 'Must not invent fake package ID');
-    assert(blankSnap.assessmentPackageRevision === undefined, 'Must not invent fake package revision');
-    assert(blankSnap.blueprintItems.length === 0, 'Blank snapshot must have 0 blueprint items');
-    assert(blankSnap.instruments.length === 0, 'Blank snapshot must have 0 instruments');
+    assert(blankSnap.mode === 'CANONICAL_PACKAGE', 'Identity masking must retain canonical package mode');
+    assert(blankSnap.assessmentPackageId === mockValidSiapPackage.id, 'Retain real package ID');
+    assert(blankSnap.assessmentPackageRevision === mockValidSiapPackage.revision, 'Retain real revision');
+    assert(blankSnap.blueprintItems.length === mockValidSiapPackage.blueprintItems.length, 'Retain blueprint');
+    assert(blankSnap.instruments.length === mockValidSiapPackage.instruments.length, 'Retain instruments');
+    assert(blankSnap.teacherName === '' && blankSnap.schoolName === '', 'Mask identity');
 
     const model = buildNormalizedAssessmentDocumentModel(blankSnap);
-    assert(model.metadata.isBlankMode === true, 'Model isBlankMode must be true');
-    assert(model.metadata.packageId === undefined, 'Model packageId must be undefined');
-    assert(model.metadata.packageRevision === undefined, 'Model packageRevision must be undefined');
-    assert(model.kisiKisi.rows.length === 1, 'Blank model should contain 1 empty template row');
-    assert(model.instruments.list.length === 0, 'Blank model instruments must be empty list');
+    assert(model.metadata.packageId === mockValidSiapPackage.id, 'Model retains package ID');
+    assert(model.metadata.packageRevision === mockValidSiapPackage.revision, 'Model retains revision');
+    assert(model.kisiKisi.rows.length === mockValidSiapPackage.blueprintItems.length, 'Retain all blueprint rows');
+    assert(model.instruments.list.length === mockValidSiapPackage.instruments.length, 'Retain all instruments');
   });
 
   // Test 18: DOCX renderer generates non-empty Blob and valid file name from normalized model
@@ -980,6 +980,10 @@ async function runAudit9C8Regression() {
       profile: { ...mockProfile, name: '' },
       academicSetting: { ...mockAcademicSetting, curriculum: '', semester: '' as any, academicYear: '' },
       documentMode: 'blank',
+      tp: mockTP,
+      assessmentPlans: [mockPlan],
+      assessmentPackages: [mockValidSiapPackage],
+      documentDate: '2026-09-20',
     };
 
     const blankSnapshot = createAssessmentDocumentSnapshot(minimalBlankContext);

@@ -5,7 +5,6 @@ import { buildJurnalProjection } from './jurnalProjection';
 
 /** Do not rewrite pedagogical prose to hide old identity. Block only affected exports for explicit review. */
 export function sourceIdentityExportIssue(type: DocumentType, context: Partial<DocumentGenerationContext>): string | undefined {
-  if (context.documentMode === 'blank') return;
   const tokens = context.zipAnnualSource?.yearPlan.identityOnlyImport?.sourceIdentityTokens;
   if (!tokens?.length) return;
   const plans = (context.learningPlans || []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId);

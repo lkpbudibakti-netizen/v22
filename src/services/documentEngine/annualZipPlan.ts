@@ -2,6 +2,7 @@ import { resolveCalendarSubjectCapacity } from '../jpEngine';
 import { resolveSemesterJPFromValues } from '../semesterJPResolver';
 import type { DocumentGenerationContext, DocumentType, ZipExportItemStatus, LearningPlan } from './types';
 import { resolveUnitSemesterPlacement } from '../unitSemesterPlanningService';
+import { maskExportIdentity } from './exportIdentity';
 
 export interface AnnualZipWorkItem {
   type: DocumentType;
@@ -23,6 +24,7 @@ export const semesterZipFolder = (semester: 1 | 2) => semester === 1 ? 'Semester
 
 /** Keep spaces, punctuation and Unicode names; replace only filesystem-invalid characters. */
 export function administrationZipRoot(context: DocumentGenerationContext): string {
+  context = maskExportIdentity(context);
   const safe = (value: string) => value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_');
   const grade = context.academicSetting?.grade || 'Kelas';
   const label = (/^\d+$/.test(grade) ? `Kelas_${grade}` : grade) + (context.academicSetting?.classSection?.trim() ? ` (${context.academicSetting.classSection.trim()})` : '');

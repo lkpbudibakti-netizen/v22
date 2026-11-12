@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { generateModulAjar } from '../src/services/documentEngine/generators/modulAjarGenerator';
 import JSZip from 'jszip';
+import { buildModulAjarProjection } from '../src/services/documentEngine/modulAjarProjection';
 
 console.log('=== RUNNING MODUL AJAR DOCX PRESENTATION REGRESSION ===');
 
@@ -11,6 +12,7 @@ const atpIds = ['atp-1', 'atp-2'];
 const setting: any = {
   id: 'sem-1',
   curriculumType: 'KURIKULUM_MERDEKA',
+  level: 'SMP',
   curriculum: 'Kurikulum Merdeka',
   semester: '1',
   subject: 'Matematika',
@@ -187,6 +189,14 @@ const context: any = {
   learningPlans: [plan],
   activeLearningPlanId: 'lp-main',
   assessmentCriteria: criteria,
+  documentDate: '2026-10-17',
+};
+
+// Complete per-meeting fixture: SMP 2 JP × 40 minutes, with explicit linkage.
+plan.learningSteps = {
+  opening: rawMeetings.map(m=>({id:'open-'+m.id,learningMeetingId:m.id,description:'Pengantar '+m.title,durationMinutes:10})),
+  core: rawMeetings.map(m=>({id:'core-'+m.id,learningMeetingId:m.id,description:m.title,durationMinutes:60})),
+  closing: rawMeetings.map(m=>({id:'close-'+m.id,learningMeetingId:m.id,description:'Refleksi '+m.title,durationMinutes:10})),
 };
 
 // Generate DOCX
@@ -239,9 +249,11 @@ assert(xml.includes('Perlu Bimbingan:'), 'Missing Perlu Bimbingan tier');
 assert(xml.includes('Cukup:'), 'Missing Cukup tier');
 assert(xml.includes('Baik:'), 'Missing Baik tier');
 assert(xml.includes('Sangat Baik:'), 'Missing Sangat Baik tier');
-// Verify KKTP is NOT pipe-delimited single line
-assert(!xml.includes('Mampu menjelaskan pengertian bilangan bulat |'), 'KKTP must not be pipe-delimited raw line');
-console.log('[PASS] KKTP terpecah rapi per TP dengan tingkat capaian terstruktur');
+// Existing data-mode rendering consumes the shared meeting summaries. Identity
+// masking must not replace or abbreviate these canonical summaries.
+for (const summary of buildModulAjarProjection(context).meetings!.flatMap(meeting=>meeting.kktpSummaryLines))
+  assert(xml.includes(summary), 'Canonical KKTP meeting summary must remain complete');
+console.log('[PASS] Seluruh ringkasan KKTP per TP tetap lengkap sesuai projection');
 
 // 6. Narrative paragraph justified
 console.log('--- Checking 6: Narrative paragraph justified ---');
@@ -262,9 +274,10 @@ const blankDocx = await generateModulAjar({ ...context, documentMode: 'blank', s
 assert(blankDocx.success, 'Blank mode document generation failed');
 const blankZip = await JSZip.loadAsync(await blankDocx.blob!.arrayBuffer());
 const blankXml = await blankZip.file('word/document.xml')!.async('string');
-assert(blankXml.includes('........................................................................................................................'));
+assert(blankXml.includes('Bilangan Bulat') && blankXml.includes('PERTEMUAN 1'), 'Identity masking must retain the actual learning plan');
+assert(!blankXml.includes(context.school.name) && !blankXml.includes(context.profile.name), 'Identity must be masked');
 assert(!blankXml.includes('undefined'), 'Blank document must not contain undefined');
-console.log('[PASS] Blank mode export generates clean dotted placeholder format');
+console.log('[PASS] Blank mode retains learning content and masks identity');
 
 console.log('======================================================');
 console.log('ALL MODUL AJAR PRESENTATION REGRESSION TESTS PASSED!');

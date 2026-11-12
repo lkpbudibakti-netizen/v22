@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -20,15 +21,14 @@ import {
 } from '../docxStyles';
 
 export async function generateRemedialPengayaan(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, students, remedials, enrichments } = context;
   const isBlankMode = context.documentMode === 'blank';
 
   const docChildren: (Paragraph | Table)[] = [];
 
   // Header
-  const headerTitle = isBlankMode
-    ? 'PROGRAM & LAPORAN PELAKSANAAN REMEDIAL DAN PENGAYAAN (FORMAT KOSONG)'
-    : 'PROGRAM & LAPORAN PELAKSANAAN REMEDIAL DAN PENGAYAAN';
+  const headerTitle = ('PROGRAM & LAPORAN PELAKSANAAN REMEDIAL DAN PENGAYAAN');
   docChildren.push(
     ...createDocumentHeader(headerTitle, academicSetting.curriculum)
   );
@@ -40,8 +40,8 @@ export async function generateRemedialPengayaan(context: DocumentGenerationConte
   // Metadata Table
   docChildren.push(
     createIdentityMetadataTable(school, profile, academicSetting, [
-      ['Jumlah Siswa Terfasilitasi Remedial', isBlankMode ? ': .......... Orang' : `: ${remedialList.length} Orang`],
-      ['Jumlah Siswa Diberi Pengayaan', isBlankMode ? ': .......... Orang' : `: ${enrichmentList.length} Orang`],
+      ['Jumlah Siswa Terfasilitasi Remedial', (`: ${remedialList.length} Orang`)],
+      ['Jumlah Siswa Diberi Pengayaan', (`: ${enrichmentList.length} Orang`)],
     ])
   );
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
@@ -64,21 +64,7 @@ export async function generateRemedialPengayaan(context: DocumentGenerationConte
     }),
   ];
 
-  if (isBlankMode) {
-    for (let i = 0; i < 15; i++) {
-      remRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell((i + 1).toString(), 6, AlignmentType.CENTER),
-            createTableDataCell('', 24),
-            createTableDataCell('', 26),
-            createTableDataCell('', 24),
-            createTableDataCell('..../..../20...\nNilai: .....', 20, AlignmentType.CENTER),
-          ],
-        })
-      );
-    }
-  } else if (remedialList.length === 0) {
+  if (remedialList.length === 0) {
     remRows.push(
       new TableRow({
         children: [
@@ -128,22 +114,7 @@ export async function generateRemedialPengayaan(context: DocumentGenerationConte
     }),
   ];
 
-  if (isBlankMode) {
-    for (let i = 0; i < 15; i++) {
-      enrRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell((i + 1).toString(), 6, AlignmentType.CENTER),
-            createTableDataCell('', 26),
-            createTableDataCell('', 38),
-            createTableDataCell('..../..../20...', 30, AlignmentType.CENTER),
-          ],
-        })
-      );
-    }
-  }
-
-  if (!isBlankMode) {
+  {
     if (enrichmentList.length === 0) {
       enrRows.push(
         new TableRow({
@@ -202,17 +173,13 @@ export async function generateRemedialPengayaan(context: DocumentGenerationConte
   return {
     success: true,
     type: 'REMEDIAL_PENGAYAAN',
-    title: isBlankMode
-      ? `Remedial & Pengayaan (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-      : `Remedial & Pengayaan - ${academicSetting.subject} ${academicSetting.grade}`,
+    title: (`Remedial & Pengayaan - ${academicSetting.subject} ${academicSetting.grade}`),
     fileName,
     blob,
     record: {
       id: `doc-rem-${Date.now()}`,
       type: 'REMEDIAL_PENGAYAAN',
-      title: isBlankMode
-        ? `Remedial & Pengayaan (Format Kosong) - ${academicSetting.subject} ${academicSetting.grade}`
-        : `Remedial & Pengayaan - ${academicSetting.subject} ${academicSetting.grade}`,
+      title: (`Remedial & Pengayaan - ${academicSetting.subject} ${academicSetting.grade}`),
       status: 'completed',
       lastGenerated: new Date().toISOString(),
       fileName,

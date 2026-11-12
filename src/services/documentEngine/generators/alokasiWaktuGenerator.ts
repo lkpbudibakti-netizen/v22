@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -51,6 +52,7 @@ function formatDateIndonesian(dateStr: string): string {
 }
 
 export async function generateAlokasiWaktu(context: DocumentGenerationContext): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, calendar, timeAllocations, k13Analysis } = context;
 
   const docChildren: (Paragraph | Table)[] = [];
@@ -75,7 +77,7 @@ export async function generateAlokasiWaktu(context: DocumentGenerationContext): 
   const projection = buildPromesProjection(context);
   const merdekaCanonical = !isK13Curriculum ? resolveMerdekaCanonicalTimeProjection(context) : null;
 
-  if (!isK13Curriculum && context.documentMode !== 'blank') {
+  if ((!isK13Curriculum)) {
     if (!merdekaCanonical?.isReady) {
       throw new Error(
         merdekaCanonical?.errors.length
@@ -267,7 +269,7 @@ export async function generateAlokasiWaktu(context: DocumentGenerationContext): 
   docChildren.push(new Paragraph({ spacing: { after: 240 } }));
 
   // Ringkasan Alokasi Waktu Pembelajaran Semester
-  if (context.documentMode !== 'blank') {
+  {
     const statusDesc = formatAllocationStatusIndonesian(projection.remainingJP);
     const summaryLines = isK13Curriculum
       ? [

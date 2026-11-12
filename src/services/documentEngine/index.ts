@@ -268,10 +268,10 @@ export function validateDocumentRequirements(
   const missingFields: string[] = [];
 
   // Common: School & Teacher Profile
-  if (!context.school?.name?.trim()) {
+  if (context.documentMode !== 'blank' && !context.school?.name?.trim()) {
     missingFields.push('Nama Satuan Pendidikan belum diisi');
   }
-  if (!context.profile?.name?.trim()) {
+  if (context.documentMode !== 'blank' && !context.profile?.name?.trim()) {
     missingFields.push('Nama Guru Penyusun belum diisi');
   }
   if (!context.academicSetting?.subject?.trim()) {
@@ -287,12 +287,12 @@ export function validateDocumentRequirements(
     missingFields.push('Tahun Pelajaran belum diisi');
   }
 
-  // Document Date check for official mode (blank mode bypasses)
+  // Identity masking never bypasses the document-date or substance requirements.
   const identityIssue = sourceIdentityExportIssue(type, context);
   if (identityIssue) return { isValid: false, missingFields: [identityIssue], message: identityIssue, targetStep: 'academic' };
   const importIssue = importDocumentPolicyIssue(type, context);
   if (importIssue) return { isValid: false, missingFields: [importIssue], message: importIssue, targetStep: 'academic' };
-  if (context.documentMode !== 'blank') {
+  {
     const rawDate =
       context.snapshot
         ? context.snapshot.documentDate
@@ -352,17 +352,9 @@ export function validateDocumentRequirements(
     }
   }
 
-  // If document mode is 'blank' (Format Kosong Siap Cetak/Tulis), data presence (CP/TP/ATP/Students) is NOT required.
-  if (context.documentMode === 'blank') {
-    return {
-      isValid: true,
-      missingFields: [],
-    };
-  }
-
   if (type === 'JURNAL') {
     const journal = buildJurnalProjection(context as DocumentGenerationContext);
-    if (!journal.isReady) missingFields.push(...journal.reasons, 'Gunakan Format Kosong untuk jurnal yang belum memiliki pertemuan/jadwal lengkap.');
+    if (!journal.isReady) missingFields.push(...journal.reasons);
     return { isValid: missingFields.length === 0, missingFields, message: missingFields.join('; '), targetStep: 'academic' };
   }
 
@@ -394,7 +386,7 @@ export function validateDocumentRequirements(
 
     if (missingFields.length > 0) {
       let targetStep: DocumentValidationResult['targetStep'] = 'profile';
-      if (!context.school?.name || !context.profile?.name) {
+      if (context.documentMode !== 'blank' && (!context.school?.name || !context.profile?.name)) {
         targetStep = 'profile';
       } else {
         targetStep = 'academic';
@@ -511,6 +503,7 @@ export function validateDocumentRequirements(
 
       case 'ASESMEN': {
         if (isAssessmentDocumentSnapshot(context.snapshot)) {
+          if (context.snapshot.mode === 'BLANK_TEMPLATE') missingFields.push('Snapshot template lama tidak memuat substansi asesmen lengkap.');
           break;
         }
 

@@ -1,4 +1,5 @@
 import { annualJPNotes, promesAnnualJPNotes } from '../../jpPresentation';
+import { validateDocumentRequirements } from '../../index';
 import { buildJurnalProjection, JURNAL_COLUMNS, JURNAL_WIDTHS, jurnalTableRows } from '../../jurnalProjection';
 import { buildPromesPresentation, formatAllocationStatusIndonesian } from '../../promesPresentation';
 import { sourceIdentityExportIssue } from '../../sourceIdentityGuard';
@@ -121,6 +122,8 @@ export async function generatePdfDocument(
   rawContext: DocumentGenerationContext
 ): Promise<{ blob: Blob; fileName: string; title: string; snapshot: DocumentSnapshot }> {
   const context = resolveEffectiveContext(rawContext);
+  const validation = validateDocumentRequirements(type, context);
+  if (!validation.isValid) throw new Error(validation.message || validation.missingFields.join('; '));
   const identityIssue = sourceIdentityExportIssue(type, context);
   if (identityIssue) throw new Error(identityIssue);
   const importIssue = importDocumentPolicyIssue(type, context);
@@ -163,7 +166,7 @@ export async function generatePdfDocument(
       subTitle = `${subject} — ${grade} (${academicSetting?.phase || 'Fase A'})`;
       fileName = `CP_${cleanSubject}_${cleanGrade}.pdf`;
 
-      if (cp?.source && !isBlankMode) {
+      if ((cp?.source)) {
         sections.push({
           type: 'callout',
           title: 'Sumber Rujukan Resmi',
@@ -177,13 +180,11 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const cpGeneralText = isBlankMode
-        ? '........................................................................................................................................................................................................................................................................................'
-        : cp?.generalDescription?.trim()
+      const cpGeneralText = (cp?.generalDescription?.trim()
         ? cp.generalDescription.trim()
         : (cp?.elements && cp.elements.length > 0)
         ? 'Capaian Pembelajaran pada fase ini dirinci melalui elemen-elemen berikut.'
-        : '-';
+        : '-');
 
       sections.push({
         type: 'paragraph',
@@ -197,15 +198,13 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const rows = isBlankMode
-        ? Array.from({ length: 12 }, (_, idx) => [idx + 1, '....................', '..........................................................................................'])
-        : (cp?.elements && cp.elements.length > 0)
+      const rows = ((cp?.elements && cp.elements.length > 0)
         ? cp.elements.map((elem, idx) => [
             idx + 1,
             elem.name || '—',
             elem.content || '—',
           ])
-        : [[1, 'Semua Elemen', cp?.generalDescription || '-']];
+        : [[1, 'Semua Elemen', cp?.generalDescription || '-']]);
 
       sections.push({
         type: 'table',
@@ -230,13 +229,11 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const cpAnalysisGeneralText = isBlankMode
-        ? '................................................................................................................................................................................................................................'
-        : cp?.generalDescription?.trim()
+      const cpAnalysisGeneralText = (cp?.generalDescription?.trim()
         ? cp.generalDescription.trim()
         : (cp?.elements && cp.elements.length > 0)
         ? 'Capaian Pembelajaran pada fase ini dirinci melalui elemen-elemen berikut.'
-        : '-';
+        : '-');
 
       sections.push({
         type: 'paragraph',
@@ -250,16 +247,7 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const rows: (string | number)[][] = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            '....................',
-            '....................',
-            '....................',
-            '........................................',
-            '....................',
-          ])
-        : (tp?.items || []).length > 0
+      const rows: (string | number)[][] = ((tp?.items || []).length > 0
         ? (tp?.items || []).map((it, idx) => [
             idx + 1,
             it.elementName || '—',
@@ -268,7 +256,7 @@ export async function generatePdfDocument(
             it.statement || '—',
             (it.p3Dimensions || []).join(', ') || '-',
           ])
-        : [[1, '—', '—', '—', '-', '—']];
+        : [[1, '—', '—', '—', '-', '—']]);
 
       sections.push({
         type: 'table',
@@ -296,15 +284,7 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            `TP ${idx + 1}`,
-            '..........................................................................................',
-            '....................',
-            '....................',
-          ])
-        : (tp?.items || []).length > 0
+      const rows = ((tp?.items || []).length > 0
         ? (tp?.items || []).map((it, idx) => [
             idx + 1,
             it.code || `TP ${idx + 1}`,
@@ -312,7 +292,7 @@ export async function generatePdfDocument(
             it.contentScope || '-',
             (it.p3Dimensions || []).join(', ') || '-',
           ])
-        : [[1, '—', '-', '—', '—']];
+        : [[1, '—', '-', '—', '—']]);
 
       sections.push({
         type: 'table',
@@ -387,16 +367,7 @@ export async function generatePdfDocument(
       const availableTps = tp?.items || [];
       let rows: (string | number)[][];
 
-      if (isBlankMode) {
-        rows = Array.from({ length: 8 }, (_, idx) => [
-          idx === 0 ? 'Unit 1' : '',
-          idx === 0 ? 'TP-01 → TP-02' : '',
-          `Langkah ${idx + 1}`,
-          '..................................................',
-          'Minggu .....',
-          '..... JP',
-        ]);
-      } else {
+      {
         const sortedItems = [...(atp?.items || [])].sort(
           (a, b) => (a.stepNumber || 0) - (b.stepNumber || 0)
         );
@@ -499,7 +470,7 @@ export async function generatePdfDocument(
       if (isK13) {
         const k13Proj = buildK13ProtaProjection(context);
 
-        if (!isBlankMode && !k13Proj.isReady) {
+        if ((!k13Proj.isReady)) {
           throw new Error(
             k13Proj.unreadyReason ||
               'Program Tahunan belum dapat dibuat karena data analisis KD Kurikulum 2013 belum tersedia.'
@@ -511,15 +482,7 @@ export async function generatePdfDocument(
         fileName = `PROTA_${cleanSubject}_${cleanGrade}.pdf`;
 
         let rows: any[] = [];
-        if (isBlankMode) {
-          rows = Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            '....................',
-            '..........................................................................................',
-            '..... JP',
-            '....................',
-          ]);
-        } else {
+        {
           rows = k13Proj.rows.map((r, idx) => [
             idx + 1,
             r.kd,
@@ -553,7 +516,7 @@ export async function generatePdfDocument(
 
       const projection = buildProtaProjection(context);
 
-      if (!isBlankMode && !projection.isReady) {
+      if ((!projection.isReady)) {
         throw new Error(
           projection.unreadyReason ||
             'Program Tahunan belum dapat dibuat karena alokasi distribusi semester belum lengkap.'
@@ -565,16 +528,7 @@ export async function generatePdfDocument(
       fileName = `PROTA_${cleanSubject}_${cleanGrade}.pdf`;
 
       let rows: any[] = [];
-      if (isBlankMode) {
-        rows = Array.from({ length: 15 }, (_, idx) => [
-          idx + 1,
-          '....................',
-          '..........................................................................................',
-          '....................',
-          '..... JP',
-          '....................',
-        ]);
-      } else {
+      {
         const s1Atp = projection.rows.filter((r) => r.semester === 1);
         const s1Assess = projection.assessmentRows.filter((r) => r.semester === 1);
         const s1Reserve = projection.reserveRows.filter((r) => r.semester === 1);
@@ -626,7 +580,7 @@ export async function generatePdfDocument(
         rows,
       });
 
-      if (!isBlankMode) {
+      {
         const lines = [annualJPNotes(projection), 'Alokasi Semester 1: '+projection.semester1AllocatedJP+' JP; Semester 2: '+projection.semester2AllocatedJP+' JP.'];
         sections.push({
           type: 'heading',
@@ -644,7 +598,7 @@ export async function generatePdfDocument(
     case 'PROMES': {
       const projection = buildPromesProjection(context);
 
-      if (context.documentMode !== 'blank' && !projection.isReady) {
+      if ((!projection.isReady)) {
         throw new Error(
           projection.unreadyReason ||
             'Program Semester belum dapat dibuat karena prasyarat semester aktif belum lengkap.'
@@ -681,7 +635,7 @@ export async function generatePdfDocument(
         level: 1,
       });
 
-      const presentation = buildPromesPresentation(projection, isBlankMode);
+      const presentation = buildPromesPresentation(projection);
       const contentWidth = 297 - PDF_THEME.margins.landscape.left - PDF_THEME.margins.landscape.right;
       sections.push({
         type: 'table',
@@ -693,14 +647,14 @@ export async function generatePdfDocument(
       sections.push({ type: 'heading', text: 'Status & Catatan Pelaksanaan', level: 2 });
       for (const detail of presentation.details) sections.push({ type: 'paragraph', text: detail });
       sections.push({ type: 'paragraph', text: presentation.notes });
-      if (!isBlankMode) sections.push({ type: 'paragraph', text: promesAnnualJPNotes(context) });
+      sections.push({ type: 'paragraph', text: promesAnnualJPNotes(context) });
       break;
     }
 
     case 'MODUL_AJAR': {
       const projection = buildModulAjarProjection(context);
 
-      if (!isBlankMode) {
+      {
         if (!projection.isReady || !projection.plan) {
           throw new Error(projection.error || 'PDF Modul Ajar belum siap.');
         }
@@ -708,11 +662,11 @@ export async function generatePdfDocument(
 
       const matchedPlan = projection.plan;
 
-      title = isBlankMode ? 'Format Kosong Modul Ajar / RPP Berdiferensiasi' : 'Modul Ajar / RPP Berdiferensiasi';
+      title = ('Modul Ajar / RPP Berdiferensiasi');
       subTitle = `${subject} — ${grade} (${academicSetting?.phase || '-'}) — Semester ${semester}`;
       fileName = `Modul_Ajar_${cleanSubject}_${cleanGrade}.pdf`;
 
-      if (!isBlankMode) {
+      {
         sections.push({ type: 'paragraph', text: [
           'Satuan Pendidikan: ' + (school.name || '-'), 'NPSN: ' + (school.npsn || '-'),
           'Guru Mata Pelajaran: ' + (profile.name || '-'), 'NIP: ' + (profile.nip || '-'),
@@ -752,13 +706,7 @@ export async function generatePdfDocument(
         : '-';
 
       const infoUmumLines: string[] = [];
-      if (isBlankMode) {
-        infoUmumLines.push('Alokasi Waktu: ........ JP');
-        infoUmumLines.push('Kompetensi Awal: ........................................................');
-        infoUmumLines.push('Dimensi Profil Lulusan: ........................................................');
-        infoUmumLines.push('Sarana & Prasarana: ........................................................');
-        infoUmumLines.push('Model Pembelajaran: ........................................................');
-      } else {
+      {
         infoUmumLines.push(`Alokasi Waktu: ${alokasiWaktuStr}`);
         infoUmumLines.push(`Kompetensi Awal: ${matchedPlan?.initialCompetency || '-'}`);
         infoUmumLines.push(`Dimensi Profil Lulusan: ${dimensionsStr}`);
@@ -786,9 +734,7 @@ export async function generatePdfDocument(
       });
       sections.push({
         type: 'paragraph',
-        text: isBlankMode
-          ? 'Tujuan Pembelajaran: ........................................................................................................................................................\n\nPemahaman Bermakna: ........................................................................................................................................................\n\nPertanyaan Pemantik: ........................................................................................................................................................'
-          : `Tujuan Pembelajaran:\n${tpStatements}\n\nPemahaman Bermakna:\n${matchedPlan?.meaningfulUnderstanding || '-'}\n\nPertanyaan Pemantik:\n${matchedPlan?.triggerQuestions && matchedPlan.triggerQuestions.length > 0 ? matchedPlan.triggerQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n') : '-'}`,
+        text: (`Tujuan Pembelajaran:\n${tpStatements}\n\nPemahaman Bermakna:\n${matchedPlan?.meaningfulUnderstanding || '-'}\n\nPertanyaan Pemantik:\n${matchedPlan?.triggerQuestions && matchedPlan.triggerQuestions.length > 0 ? matchedPlan.triggerQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n') : '-'}`),
       });
 
       sections.push({
@@ -849,15 +795,7 @@ export async function generatePdfDocument(
       fileName = `KKTP_${cleanSubject}_${cleanGrade}.pdf`;
 
       const criteria = context.assessmentCriteria || [];
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            `TP ${idx + 1}`,
-            '..........................................................................................',
-            '....................',
-            '..........................................................................................',
-          ])
-        : criteria.length > 0
+      const rows = (criteria.length > 0
         ? criteria.map((c, idx) => {
             const matchingTp = (tp?.items || []).find((t) => t.id === c.tpId);
             const approachLabel = c.approach === 'rubrik' ? 'Rubrik Deskripsi' : c.approach === 'skala_interval' ? 'Interval Nilai' : 'Deskripsi Kriteria';
@@ -877,7 +815,7 @@ export async function generatePdfDocument(
             t.statement,
             'Rubrik Deskripsi',
             'Kriteria: Siswa mampu mendemonstrasikan kompetensi dengan tepat dan mandiri (Ketercapaian: Min. Kategori Cukup/75%)',
-          ]);
+          ]));
 
       sections.push({
         type: 'table',
@@ -901,15 +839,7 @@ export async function generatePdfDocument(
 
       const studentList = students || [];
       const resultsList = context.assessmentResults || [];
-      const rows = isBlankMode
-        ? Array.from({ length: 20 }, (_, idx) => [
-            idx + 1,
-            '....................',
-            '..........................................................................................',
-            '....',
-            '', '', '', '', '', '',
-          ])
-        : studentList.map((st, idx) => {
+      const rows = (studentList.map((st, idx) => {
             const studentResults = resultsList.filter((r) => r.studentId === st.id);
             const hasResults = studentResults.length > 0;
             const avgScore = hasResults
@@ -932,7 +862,7 @@ export async function generatePdfDocument(
               avgScore !== null ? avgScore : '-',
               avgScore !== null ? (avgScore >= 75 ? 'Tercapai' : 'Perlu Bimbingan') : '-',
             ];
-          });
+          }));
 
       sections.push({
         type: 'table',
@@ -961,16 +891,7 @@ export async function generatePdfDocument(
 
       const studentList = students || [];
       const recordsList = context.attendanceRecords || [];
-      const rows = isBlankMode
-        ? Array.from({ length: 20 }, (_, idx) => [
-            idx + 1,
-            '....................',
-            '..........................................................................................',
-            '....',
-            '', '', '', '', '', '', '', '', '', '', '', '',
-            '', '', '', '',
-          ])
-        : studentList.map((st, idx) => {
+      const rows = (studentList.map((st, idx) => {
             const studentRecs = recordsList.filter((r) => r.studentId === st.id);
             const sCount = studentRecs.filter((r) => r.status === 'S').length;
             const iCount = studentRecs.filter((r) => r.status === 'I').length;
@@ -990,7 +911,7 @@ export async function generatePdfDocument(
               ...presenceMarks,
               sCount, iCount, aCount, pct,
             ];
-          });
+          }));
 
       sections.push({
         type: 'table',
@@ -1028,14 +949,7 @@ export async function generatePdfDocument(
       fileName = `${type === 'KALENDER_AKADEMIK' ? 'Kalender_Akademik' : 'Hari_Efektif'}_${cleanSubject}_${cleanGrade}.pdf`;
 
       const days = calendarDays || [];
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            '.... / .... / 20...',
-            '....................',
-            '..........................................................................................',
-          ])
-        : days.length > 0
+      const rows = (days.length > 0
         ? days.map((d, idx) => [
             idx + 1,
             d.date,
@@ -1044,7 +958,7 @@ export async function generatePdfDocument(
           ])
         : [
             [1, '—', '—', 'Belum ada agenda kalender akademik yang ditetapkan'],
-          ];
+          ]);
 
       sections.push({
         type: 'table',
@@ -1082,16 +996,7 @@ export async function generatePdfDocument(
           ['Total Alokasi Pembelajaran Terdata', `: ${totalAllocatedJP} Jam Pelajaran (JP)`],
         ];
 
-        const rows = isBlankMode
-          ? Array.from({ length: 15 }, (_, idx) => [
-              idx + 1,
-              `KD ${idx + 1}`,
-              '..........................................................................................',
-              '...............',
-              '..... JP',
-              '....................',
-            ])
-          : k13Rows.length > 0
+        const rows = (k13Rows.length > 0
           ? k13Rows.map((r, idx) => [
               idx + 1,
               r.kdCode,
@@ -1100,9 +1005,9 @@ export async function generatePdfDocument(
               `${r.allocatedJP} JP`,
               '-',
             ])
-          : [[1, '—', 'Belum ada analisis KD yang disusun.', '—', '—', '—']];
+          : [[1, '—', 'Belum ada analisis KD yang disusun.', '—', '—', '—']]);
 
-        if (!isBlankMode && k13Rows.length > 0) {
+        if ((k13Rows.length > 0)) {
           rows.push([
             'TOTAL',
             '',
@@ -1126,7 +1031,7 @@ export async function generatePdfDocument(
           rows,
         });
 
-        if (!isBlankMode) {
+        {
           sections.push({
             type: 'heading',
             text: 'Ringkasan Alokasi Waktu Pembelajaran Semester',
@@ -1147,7 +1052,7 @@ export async function generatePdfDocument(
       const projection = buildPromesProjection(context);
       const canonical = resolveMerdekaCanonicalTimeProjection(context);
 
-      if (!isBlankMode && !canonical.isReady) {
+      if ((!canonical.isReady)) {
         throw new Error(
           canonical.errors.length
             ? `Distribusi Alokasi Waktu belum dapat dibuat karena: ${canonical.errors.join(' ')}`
@@ -1196,15 +1101,7 @@ export async function generatePdfDocument(
       subTitle = `${subject} — ${grade} — Semester ${activeSemesterNum} | Total ${totalAllocatedJP} JP`;
       fileName = `Alokasi_Waktu_${cleanSubject}_${cleanGrade}.pdf`;
 
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            `Pertemuan ${idx + 1}`,
-            '..........................................................................................',
-            '..... JP',
-            '....................',
-          ])
-        : merdekaMeetings.length > 0
+      const rows = (merdekaMeetings.length > 0
         ? merdekaMeetings.map((r, idx) => {
             const materialText =
               r.materials.map((m) => m.title).filter(Boolean).join(', ') || '—';
@@ -1218,9 +1115,9 @@ export async function generatePdfDocument(
               dateWeekText,
             ];
           })
-        : [[1, '—', 'Belum ada alokasi waktu yang disusun.', '—', '—']];
+        : [[1, '—', 'Belum ada alokasi waktu yang disusun.', '—', '—']]);
 
-      if (!isBlankMode && merdekaMeetings.length > 0) {
+      if ((merdekaMeetings.length > 0)) {
         rows.push([
           'TOTAL',
           '',
@@ -1242,7 +1139,7 @@ export async function generatePdfDocument(
         rows,
       });
 
-      if (!isBlankMode) {
+      {
         sections.push({
           type: 'heading',
           text: 'Ringkasan Alokasi Waktu Pembelajaran Semester',
@@ -1264,13 +1161,13 @@ export async function generatePdfDocument(
     case 'JURNAL': {
       const projection = buildJurnalProjection(context);
       if (!projection.isReady) throw new Error(projection.reasons.join('; ') + ' Gunakan format kosong.');
-      title = isBlankMode ? 'Jurnal Harian Pembelajaran (Format Kosong)' : 'Jurnal Harian Pembelajaran';
+      title = ('Jurnal Harian Pembelajaran');
       subTitle = subject + ' — ' + grade + ' — Semester ' + semester;
       fileName = 'Jurnal_Mengajar_' + cleanSubject + '_' + cleanGrade + '.pdf';
       orientation = 'landscape';
       sections.push({ type: 'table',
         columns: JURNAL_COLUMNS.map((header, index) => ({ header, dataKey: 'j'+index, width: JURNAL_WIDTHS[index]*2.52, align: index === 0 ? 'center' as const : 'left' as const })),
-        rows: jurnalTableRows(projection, isBlankMode),
+        rows: jurnalTableRows(projection),
       });
       break;
     }
@@ -1281,17 +1178,7 @@ export async function generatePdfDocument(
       fileName = `Remedial_Pengayaan_${cleanSubject}_${cleanGrade}.pdf`;
 
       const remedials = context.remedials || [];
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            '..........................................................................................',
-            '..........',
-            '....................',
-            '..........................................................................................',
-            '..........',
-            '..........',
-          ])
-        : remedials.length > 0
+      const rows = (remedials.length > 0
         ? remedials.map((r, idx) => {
             const student = (context.students || []).find((s) => s.id === r.studentId);
             const matchingTp = (tp?.items || []).find((t) => t.id === r.tpId);
@@ -1307,7 +1194,7 @@ export async function generatePdfDocument(
           })
         : [
             [1, '—', '—', 'Belum ada data remedial', '—', '—', '—'],
-          ];
+          ]);
 
       sections.push({
         type: 'table',
@@ -1330,23 +1217,14 @@ export async function generatePdfDocument(
       subTitle = `${subject} — ${grade} — Kurikulum 2013 (K13)`;
       fileName = `Analisis_SKL_KI_KD_${cleanSubject}_${cleanGrade}.pdf`;
 
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            '....................',
-            '....................',
-            '....................',
-            '..........................................................................................',
-            '....................',
-          ])
-        : (context.k13Analysis?.items || []).map((it, idx) => [
+      const rows = ((context.k13Analysis?.items || []).map((it, idx) => [
             idx + 1,
             it.skl || 'Sikap / Pengetahuan',
             it.ki || `KI-${idx + 1}`,
             it.kd || `KD 3.${idx + 1}`,
             it.indikator || '-',
             it.materi || '-',
-          ]);
+          ]));
 
       sections.push({
         type: 'table',
@@ -1368,17 +1246,7 @@ export async function generatePdfDocument(
       subTitle = `${subject} — ${grade} — Kurikulum 2013 (K13)`;
       fileName = `Penetapan_KKM_${cleanSubject}_${cleanGrade}.pdf`;
 
-      const rows = isBlankMode
-        ? Array.from({ length: 15 }, (_, idx) => [
-            idx + 1,
-            `KD 3.${idx + 1}`,
-            '..........................................................................................',
-            '.......... %',
-            '.......... %',
-            '.......... %',
-            '.......... %',
-          ])
-        : (context.k13KKM?.items || []).map((it, idx) => [
+      const rows = ((context.k13KKM?.items || []).map((it, idx) => [
             idx + 1,
             it.kd || `KD 3.${idx + 1}`,
             it.indikator || '-',
@@ -1386,7 +1254,7 @@ export async function generatePdfDocument(
             it.dayaDukung != null ? `${it.dayaDukung}%` : '-',
             it.intake != null ? `${it.intake}%` : '-',
             it.kkmIndikator != null ? `${it.kkmIndikator}%` : '-',
-          ]);
+          ]));
 
       sections.push({
         type: 'table',
@@ -1418,13 +1286,8 @@ export async function generatePdfDocument(
     }
   }
 
-  if (isBlankMode) {
-    title += ' (FORMAT KOSONG)';
-    subTitle += ' — Format Kosong Siap Cetak / Tulis Manual';
-    fileName = `[Format_Kosong]_${fileName}`;
-  }
-
   const styleProfile: PdfStyleProfile = 'FORMAL_NEUTRAL';
+  if (context.documentMode === 'blank') fileName = `[Format_Kosong]_${fileName}`;
   const dateString = formatOfficialDate(school, context.documentDate);
 
   const isAnnualScopeDoc =

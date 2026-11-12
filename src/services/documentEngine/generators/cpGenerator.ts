@@ -1,3 +1,4 @@
+import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
   Packer,
@@ -23,6 +24,7 @@ import {
 export async function generateCP(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
+  context = resolveEffectiveContext(context);
   const { school, profile, academicSetting, cp } = context;
   const isBlankMode = context.documentMode === 'blank';
 
@@ -41,7 +43,7 @@ export async function generateCP(
   docChildren.push(new Paragraph({ spacing: { after: 180 } }));
 
   // 3. Sumber Rujukan Resmi (bila ada)
-  if (cp?.source && !isBlankMode) {
+  if ((cp?.source)) {
     const sourceText = `${cp.source.title || 'Salinan Keputusan BSKAP'} (${cp.source.institution || 'Kemendikdasmen RI'}, ${cp.source.documentYear || '2024'})${cp.source.url ? ` — ${cp.source.url}` : ''}`;
     docChildren.push(
       createSectionHeading('Sumber Rujukan Regulasi:', 2),
@@ -51,13 +53,11 @@ export async function generateCP(
   }
 
   // 4. Deskripsi Capaian Pembelajaran Fase
-  const generalCpText = isBlankMode
-    ? '........................................................................................................................................................................................................................................................................................'
-    : cp?.generalDescription?.trim()
+  const generalCpText = (cp?.generalDescription?.trim()
     ? cp.generalDescription.trim()
     : (cp?.elements && cp.elements.length > 0)
     ? 'Capaian Pembelajaran pada fase ini dirinci melalui elemen-elemen berikut.'
-    : '-';
+    : '-');
 
   docChildren.push(
     createSectionHeading('A. Deskripsi Capaian Pembelajaran Fase', 1),
@@ -81,19 +81,7 @@ export async function generateCP(
 
   const tableDataRows: TableRow[] = [];
 
-  if (isBlankMode) {
-    for (let i = 1; i <= 10; i++) {
-      tableDataRows.push(
-        new TableRow({
-          children: [
-            createTableDataCell(String(i), 6, AlignmentType.CENTER),
-            createTableDataCell('..............................', 26),
-            createTableDataCell('..........................................................................................', 68),
-          ],
-        })
-      );
-    }
-  } else {
+  {
     const elements = cp?.elements || [];
     if (elements.length > 0) {
       elements.forEach((elem, idx) => {

@@ -1,4 +1,5 @@
 import { createPrintSignoff } from './signoffLayout';
+import { maskExportIdentity } from './exportIdentity';
 import { formatClassLabel } from '../academicScope';
 import {
   Paragraph,
@@ -391,5 +392,7 @@ export function createTableDataCell(
  * Creates standard official sign-off block with Principal on left and Teacher on right (Times New Roman 12pt black)
  */
 export function createSignoffBlock(school: SchoolData, profile: TeacherProfile, isBlankMode = false, customDateString?: string, documentTitle = 'Administrasi pembelajaran'): (Paragraph | Table)[] {
+ const masked = maskExportIdentity({ documentMode: isBlankMode ? 'blank' : 'data', school, profile });
+ school = masked.school; profile = masked.profile;
  return createPrintSignoff({ contextLabel: documentTitle + ' — ' + (school.name || ''), locationAndDate: formatOfficialDate(school, customDateString), principalTitle:'Kepala Sekolah', principalName:school.principalName || '', principalNip:school.principalNip, teacherTitle:'Guru Mata Pelajaran', teacherName:profile.name || '', teacherNip:profile.nip, isBlankMode});
 }
