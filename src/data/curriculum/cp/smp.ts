@@ -1,3 +1,4 @@
+import { PAI_2026_CP_ENTRIES } from './pai2026';
 import review from './sources/cp-smp-bskap-046-2025-v5-review.json';
 import { adaptCP046Review } from './review046Adapter';
 import { MasterCPEntry } from './types';
@@ -48,47 +49,7 @@ export const SMP_HISTORICAL_CP_ENTRIES: MasterCPEntry[] = [
       },
     ],
   },
-  {
-    id: 'cp26-smp-fase-d-pai',
-    subjectCode: 'PAI',
-    phase: 'D',
-    level: 'SMP',
-    regulationSourceId: 'DEC-BKPDM-020-2026',
-    implementationFromAcademicYear: '2026/2027',
-    verificationStatus: 'UNVERIFIED',
-    notes:
-      'Capaian Pembelajaran PAI dan Budi Pekerti SMP Fase D berdasarkan Keputusan Kepala BKPDM Nomor 020 Tahun 2026.',
-    generalDescription:
-      'Pada akhir Fase D, peserta didik mampu membaca Al-Qur’an dengan tartil, memahami pesan ayat dan hadis tentang toleransi dan etika digital, mendalami akidah dan akhlak mulia, memahami fikih ibadah dan muamalah dasar, serta meneladani sejarah peradaban Islam.',
-    elements: [
-      {
-        name: 'Al-Qur’an dan Hadis',
-        content:
-          'Peserta didik membaca dengan tartil dan memahami kandungan ayat Al-Qur’an serta hadis tentang ilmu pengetahuan, kelestarian alam, dan persaudaraan insaniyah.',
-      },
-      {
-        name: 'Akidah',
-        content:
-          'Peserta didik menghayati rukun iman dan merefleksikan nilai ketauhidan dalam pembentukan karakter dan etika kehidupan.',
-      },
-      {
-        name: 'Akhlak',
-        content:
-          'Peserta didik membiasakan akhlak mulia kepada diri sendiri, sesama manusia (termasuk etika bermedia digital), dan alam semesta.',
-      },
-      {
-        name: 'Fikih',
-        content:
-          'Peserta didik mempraktikkan ibadah fardhu dan sunnah serta memahami prinsip dasar muamalah yang berkeadilan.',
-      },
-      {
-        name: 'Sejarah Peradaban Islam',
-        content:
-          'Peserta didik meneladani kepemimpinan Rasulullah SAW, para sahabat, dan perkembangan peradaban Islam yang rahmatan lil ‘alamin.',
-      },
-    ],
-  },
-  {
+  ...PAI_2026_CP_ENTRIES.filter((entry) => entry.level === 'SMP'),  {
     id: 'cp25-smp-fase-d-pak',
     subjectCode: 'PAK',
     phase: 'D',

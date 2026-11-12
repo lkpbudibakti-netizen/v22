@@ -1,3 +1,4 @@
+import { PAI_2026_CP_ENTRIES } from './pai2026';
 import review from './sources/cp-sma-bskap-046-2025-v6-review.json';
 import { adaptCP046Review } from './review046Adapter';
 import { MasterCPEntry } from './types';
@@ -49,47 +50,7 @@ export const SMA_HISTORICAL_CP_ENTRIES: MasterCPEntry[] = [
       },
     ],
   },
-  {
-    id: 'cp26-sma-fase-e-pai',
-    subjectCode: 'PAI',
-    phase: 'E',
-    level: 'SMA',
-    regulationSourceId: 'DEC-BKPDM-020-2026',
-    implementationFromAcademicYear: '2026/2027',
-    verificationStatus: 'UNVERIFIED',
-    notes:
-      'Capaian Pembelajaran PAI dan Budi Pekerti SMA Fase E berdasarkan Keputusan Kepala BKPDM Nomor 020 Tahun 2026.',
-    generalDescription:
-      'Pada akhir Fase E, peserta didik mampu menganalisis pesan Al-Qur’an dan hadis tentang integritas, berpikir kritis, moderasi beragama, cabang-cabang iman, fikih kontemporer, serta keteladanan tokoh peradaban Islam di Indonesia.',
-    elements: [
-      {
-        name: 'Al-Qur’an dan Hadis',
-        content:
-          'Peserta didik menganalisis ayat Al-Qur’an dan hadis tentang etika berpikir ilmiah, integritas, dan penguatan kerukunan umat beragama.',
-      },
-      {
-        name: 'Akidah',
-        content:
-          'Peserta didik mendalami implementasi syu’abul iman dalam menjaga kehormatan diri dan harmoni sosial.',
-      },
-      {
-        name: 'Akhlak',
-        content:
-          'Peserta didik mengaktualisasikan akhlak mulia dalam pencegahan kekerasan, penyalahgunaan teknologi, dan menjaga kelestarian lingkungan.',
-      },
-      {
-        name: 'Fikih',
-        content:
-          'Peserta didik memahami dan menganalisis prinsip-prinsip transaksi ekonomi syariah dan muamalah modern yang etis.',
-      },
-      {
-        name: 'Sejarah Peradaban Islam',
-        content:
-          'Peserta didik meneladani perjuangan para ulama dan tokoh Islam dalam membangun peradaban dan kebangsaan Indonesia.',
-      },
-    ],
-  },
-  {
+  ...PAI_2026_CP_ENTRIES.filter((entry) => entry.level === 'SMA'),  {
     id: 'cp25-sma-fase-e-pak',
     subjectCode: 'PAK',
     phase: 'E',

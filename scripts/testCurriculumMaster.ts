@@ -555,8 +555,10 @@ async function runCurriculumMasterTests() {
   );
   assert(
     verifiedCPs.length > 0 &&
-      verifiedCPs.every((cp) => cp.regulationSourceId === 'DEC-BSKAP-046-2025'),
-    'Hanya CP yang diverifikasi langsung terhadap BSKAP No. 046/H/KR/2025 yang berstatus VERIFIED'
+      verifiedCPs.every((cp) => cp.regulationSourceId === 'DEC-BSKAP-046-2025' ||
+        (cp.subjectCode === 'PAI' && cp.regulationSourceId === 'DEC-BKPDM-020-2026' &&
+          ['A','B','C','D','E','F'].includes(cp.phase) && !!cp.evidence?.length)),
+    'CP VERIFIED berasal dari audit 046/2025 atau enam fase PAI 020/2026 dengan evidence sumber resmi'
   );
   const unverifiedCPs = allCPs.filter(
     (cp) => cp.verificationStatus === 'UNVERIFIED'

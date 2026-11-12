@@ -33,6 +33,7 @@
     "test:cp046-safety": "tsx scripts/testCP046SafetyRegression.ts",
     "test:cp046-review": "tsx scripts/testCP046ReviewIntegration.ts",
     "test:curriculum": "tsx scripts/testCurriculumMaster.ts",
+    "test:pai-2026": "tsx scripts/testPAICP2026Integration.ts",
     "test:school": "tsx scripts/testSchoolArchitecture.ts",
     "test:workflow": "tsx scripts/testWorkflowDependencyRegression.ts",
     "test:kktp": "tsx scripts/testKKTPRegression.ts",

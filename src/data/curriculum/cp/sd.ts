@@ -1,3 +1,4 @@
+import { PAI_2026_CP_ENTRIES } from './pai2026';
 import { MasterCPEntry } from './types';
 
 /**
@@ -131,47 +132,7 @@ export const SD_CP_ENTRIES: MasterCPEntry[] = [
       },
     ],
   },
-  {
-    id: 'cp26-sd-fase-a-pai',
-    subjectCode: 'PAI',
-    phase: 'A',
-    level: 'SD',
-    regulationSourceId: 'DEC-BKPDM-020-2026',
-    implementationFromAcademicYear: '2026/2027',
-    verificationStatus: 'UNVERIFIED',
-    notes:
-      'Capaian Pembelajaran Pendidikan Agama Islam dan Budi Pekerti Fase A berdasarkan Keputusan Kepala BKPDM Nomor 020 Tahun 2026 (status UNVERIFIED hingga audit dokumen naskah utuh selesai).',
-    generalDescription:
-      'Pada akhir Fase A, peserta didik mengenal huruf hijaiyah dan harakatnya, rukun Islam dan rukun iman, membiasakan akhlak mulia dalam keluarga dan sekolah, serta mengenal tata cara bersuci dan salat secara sederhana.',
-    elements: [
-      {
-        name: 'Al-Qur’an dan Hadis',
-        content:
-          'Peserta didik mengenal huruf hijaiyah berharakat, surah-surah pendek pilihan, dan pesan pokok Al-Qur’an.',
-      },
-      {
-        name: 'Akidah',
-        content:
-          'Peserta didik memahami rukun iman dasar dan asmaulhusna dalam kehidupan sehari-hari.',
-      },
-      {
-        name: 'Akhlak',
-        content:
-          'Peserta didik mempraktikkan adab kepada orang tua, guru, teman, dan lingkungan sekitar.',
-      },
-      {
-        name: 'Fikih',
-        content:
-          'Peserta didik mempraktikkan tata cara bersuci dan gerakan salat fardhu dengan benar.',
-      },
-      {
-        name: 'Sejarah Peradaban Islam',
-        content:
-          'Peserta didik meneladani kisah masa kecil Nabi Muhammad SAW.',
-      },
-    ],
-  },
-  {
+  ...PAI_2026_CP_ENTRIES.filter((entry) => entry.level === 'SD'),  {
     id: 'cp25-sd-fase-a-pak',
     subjectCode: 'PAK',
     phase: 'A',

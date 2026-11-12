@@ -46,7 +46,11 @@ for(const code of RELIGION_SUBJECT_CODES)for(const phase of ['A','B','C'] as con
   const current=resolveCPContext({subjectCode:code,phase,level:'SD',academicYear:'2026/2027'});
   const review=resolveCPContext({subjectCode:code,phase,level:'SD',academicYear:'2026/2027',sourceSet:'review046'});
   assert.equal(review.status,'UNRESOLVED','046 cannot replace religion 020');
-  if(phase==='A'){assert.equal(current.status,'RESOLVED');assert.equal(current.cp!.regulationSourceId,'DEC-BKPDM-020-2026');assert.equal(current.cp!.verificationStatus,'UNVERIFIED');}
+  if(code==='PAI') {
+    assert.equal(current.status,'RESOLVED');assert.equal(current.cp!.regulationSourceId,'DEC-BKPDM-020-2026');assert.equal(current.cp!.verificationStatus,'VERIFIED');
+    assert.equal(current.cp!.elements.length,5);
+  }
+  else if(phase==='A'){assert.equal(current.status,'RESOLVED');assert.equal(current.cp!.regulationSourceId,'DEC-BKPDM-020-2026');assert.equal(current.cp!.verificationStatus,'UNVERIFIED');}
   else assert.equal(current.status,'UNRESOLVED');
 }
 const reg=getRegulationSource('DEC-BKPDM-020-2026')!;

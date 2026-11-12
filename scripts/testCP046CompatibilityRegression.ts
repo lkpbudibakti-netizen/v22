@@ -49,7 +49,8 @@ function initializer(source:string, name:string):string {
 const old = baseline('src/data/curriculum/cp/index.ts');
 const oldSubjects = baseline('src/data/curriculum/subjects.ts');
 const oldRepository = baseline('src/services/cpSourceRepository.ts').cpSourceRepository;
-assert.deepEqual(current.ALL_MASTER_CP_ENTRIES, old.ALL_MASTER_CP_ENTRIES);
+const outsidePAI2026 = (e:any) => !(e.subjectCode==='PAI' && e.regulationSourceId==='DEC-BKPDM-020-2026');
+assert.deepEqual(current.ALL_MASTER_CP_ENTRIES.filter(outsidePAI2026), old.ALL_MASTER_CP_ENTRIES.filter(outsidePAI2026));
 assert.deepEqual(subjects.CURRICULUM_SUBJECTS, oldSubjects.CURRICULUM_SUBJECTS);
 const oldOptions = execute(`exports.options = ${initializer(gitSource('src/data/curriculumDefaults.ts'),'SUBJECT_OPTIONS')}`,()=>{throw Error('Unexpected import')}).options;
 for(const level of Object.keys(oldOptions)) assert.deepEqual(SUBJECT_OPTIONS[level].slice(0,oldOptions[level].length),oldOptions[level]);
@@ -75,6 +76,11 @@ try {
         if(entry.id==='cp-sd-fase-b-coding-ai') {
           assert.equal(actual.status,'UNRESOLVED');
           assert.equal(cpSourceRepository.searchWithDiagnostics(context).status,'UNRESOLVED');
+        } else if ([actual.cp,previous.cp].some(cp=>cp && !outsidePAI2026(cp))) {
+          // PAI 020/2026 wording/provenance is independently covered by
+          // testPAICP2026Integration; preserve resolver status and stable IDs here.
+          assert.equal(actual.status,previous.status);
+          assert.equal(actual.cp?.id,previous.cp?.id);
         } else {
           assert.deepEqual(actual,previous);
           const expected=oldRepository.searchWithDiagnostics(context);

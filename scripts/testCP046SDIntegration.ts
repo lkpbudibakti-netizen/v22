@@ -13,16 +13,18 @@ import source from '../src/data/curriculum/cp/sources/cp-sd-bskap-046-2025-sourc
 import supplement from '../src/data/curriculum/cp/sources/cp-sd-bskap-046-2025-visual-supplement.json';
 import quarantine from '../docs/cp046-sd-v21-quarantine.json';
 import baseline from '../docs/cp046-sd-v21-baseline.json';
+import paiBaseline from '../docs/pai-cp-2026-baseline.json';
 
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-assert.equal(hash(ALL_MASTER_CP_ENTRIES),baseline.historicalHash,'Historical registry unchanged');
+const outsidePAI2026 = (e: {subjectCode:string;regulationSourceId:string}) => !(e.subjectCode==='PAI' && e.regulationSourceId==='DEC-BKPDM-020-2026');
+assert.equal(hash(ALL_MASTER_CP_ENTRIES.filter(outsidePAI2026)),paiBaseline.unchangedRegistryHash,'Registry outside the separately audited PAI 2026 integration unchanged');
 assert.equal(hash(REVIEW_CP046_ENTRIES.filter(e=>e.level!=='SD')),baseline.secondaryReviewHash,'SMP/SMA untouched');
-const originalEntries=[...ALL_MASTER_CP_ENTRIES,...REVIEW_CP046_ENTRIES.filter(e=>e.level!=='SD')];
+const originalEntries=[...ALL_MASTER_CP_ENTRIES.filter(outsidePAI2026),...REVIEW_CP046_ENTRIES.filter(e=>e.level!=='SD')];
 const resolutions=originalEntries.filter(e=>e.id!=='cp-sd-fase-b-coding-ai').flatMap(e=>['2024/2025','2025/2026','2026/2027'].map(academicYear=>{
   const q={subjectCode:e.subjectCode,phase:e.phase,level:e.level,academicYear,sourceSet:e.sourceReview?'review046':undefined};
   const r=resolveCPContext(q as any);return {q,status:r.status,id:r.cp?.id};
 }));
-assert.equal(hash(resolutions),baseline.resolutionsExcludingAuditedCodingBHash,'Every original resolver outcome except the audited invalid Coding B remains identical');
+assert.equal(hash(resolutions),paiBaseline.unchangedResolutionsHash,'Every original resolver outcome outside audited Coding B and PAI 2026 remains identical');
 assert.equal(SD_REVIEW_CP_ENTRIES.length,37);
 assert.equal(quarantine.records.length,2);
 const candidates=[...source.records,...supplement.records,...quarantine.records.filter(r=>!supplement.records.some(s=>s.id===r.id))];
@@ -101,6 +103,6 @@ saveStorageV5(state);const loaded=loadStorageV5();
 assert.equal(JSON.stringify(loaded.annualData.cp),teacherSnapshot);
 for(const record of source.records)cpSourceRepository.searchSourceChoices({level:'SD',subject:record.mata_pelajaran,phase:record.fase,academicYear:'2025/2026'});
 assert.equal(JSON.stringify(loadStorageV5().annualData.cp),teacherSnapshot);
-assert.equal(hash(ALL_MASTER_CP_ENTRIES),baseline.historicalHash);
+assert.equal(hash(ALL_MASTER_CP_ENTRIES.filter(outsidePAI2026)),paiBaseline.unchangedRegistryHash);
 console.log('PASS 38 individual candidates; 37 integrated / BING C quarantined; SD catalog × A-C × three years; original resolver snapshots except audited Coding B; 37 CP V5 persistence and teacher-edit preservation.');
 

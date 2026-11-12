@@ -16,6 +16,7 @@
     "scripts/testMerdekaCPAnalysisIntegrity.ts",
     "scripts/testMerdekaV5CPAnalysisRuntime.ts",
     "scripts/testCP046SDIntegration.ts",
+    "scripts/testPAICP2026Integration.ts",
     "scripts/testCPGapFollowup.tsx",
     "scripts/testMerdekaV5TPRuntime.ts",
     "scripts/testMerdekaV5ATPRuntime.ts",
