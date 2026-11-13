@@ -401,6 +401,8 @@ export interface TPItem {
 }
 
 export interface TPData {
+  /** Teacher's substantive review, bound to the exact TP and analysis content. */
+  substanceReviews?: { analysisId: string; fingerprint: string; rationale: string }[];
   id: string;
   academicSettingId: string;
   workspaceId?: string;

@@ -63,10 +63,14 @@ const cp: CPData = {
 
 const cpAnalysis: CPAnalysisData = {
   id: 'cpa-t1',
+  cpId: cp.id,
+  basedOnCpUpdatedAt: cp.updatedAt,
   academicSettingId: 'acad-t1',
   items: [{
     id: 'ana-1',
+    elementId: 'el-1',
     elementName: 'Membaca',
+    cpText: 'Memahami teks sederhana.',
     cpCompetence: 'Memahami',
     materialScope: 'Teks sederhana',
     order: 1,
@@ -90,7 +94,7 @@ function validTP(overrides: Partial<TPData> = {}): TPData {
         id: 'tp-item-1',
         code: 'E1-TKS-01',
         statement: 'Peserta didik mampu mengidentifikasi informasi utama dalam teks sederhana.',
-        competence: 'Mengidentifikasi',
+        competence: 'Memahami',
         contentScope: 'Informasi utama teks sederhana',
         cpAnalysisItemIds: ['ana-1'],
         order: 1,
@@ -132,7 +136,7 @@ assert(normalizePhaseCode('') === '', 'Phase normalization: empty -> empty');
     cpAnalysis,
     { ...context, level, phase }
   );
-  assert(result.isSiap && result.status === 'SIAP', `Valid combination: ${level} + ${phase}`);
+  assert(result.isSiap && result.status === 'SIAP', `Valid combination: ${level} + ${phase}: ${result.issues.join('; ')}`);
 });
 
 [

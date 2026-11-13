@@ -74,7 +74,7 @@ assert(checkTPSemanticFidelity([], analysis.items).issues.length === 13, 'Absent
 assert.throws(() => generateSemanticTPCode(analysis.items[0], cp.elements, Array.from({ length: 99 }, (_, i) => ({ id: String(i), code: `E1-INFLI-${String(i+1).padStart(2, '0')}` })) as any), /EXHAUSTED/);
 const ui = readFileSync('src/components/TPManager.tsx', 'utf8');
 assert(ui.includes('tp-regeneration-preview') && ui.includes('Setujui perubahan TP pada preview'));
-assert(ui.indexOf('if (items.length > 0) {\n        setPendingGeneration') >= 0 || /if \(items.length > 0\) \{\s+setPendingGeneration/.test(ui));
+assert(ui.includes('setPendingGeneration({ tp: updatedTP, source: expectedSource })'), 'All AI generation stays a preview, including initially empty TP');
 assert(ui.includes('generationSourceRef.current !== expectedSource'));
 assert.equal(JSON.stringify({ cp, analysis, initial }), sourceSnapshot, 'CP official, CP analysis and existing TP remain untouched until approval');
 console.log('PASS: B. Indonesia kelas 6 Fase C reproduces 13 invalid codes; shared strict code grammar, unique/stable regeneration, ID/lineage preservation, genuine speaking/presentation coverage, cross-subject normalization, approval preview and ATP gate stay deterministic. AI provider semantics use fixture input, not a live request.');

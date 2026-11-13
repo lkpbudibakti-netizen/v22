@@ -1,5 +1,6 @@
 {
   "storage": [
+    "scripts/testImportedTPConfirmation.tsx",
     "scripts/testStorageV5MasterDataCrud.ts",
     "scripts/testStorageV5HierarchyCrud.ts",
     "scripts/testStorageV5HierarchyDelete.ts",

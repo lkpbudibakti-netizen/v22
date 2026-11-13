@@ -15,7 +15,7 @@ import { evaluateExpression, initializer } from './helpers/uiContractHarness';
 import { getCurriculumDocumentTypes } from '../src/services/curriculumRouter';
 import { getCurriculumType } from '../src/services/curriculumRules';
 
-const out='tmp/blank-export-audit';mkdirSync(out,{recursive:true});
+const out=process.env.V22_PRINT_AUDIT_DIR || 'tmp/blank-export-audit';mkdirSync(out,{recursive:true});
 const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');
 const types:DocumentType[]=['CP','TP','ANALISIS_CP_TP','ATP','PEMETAAN_ATP_UNIT','PROTA','PROMES','MODUL_AJAR','KKTP','ASESMEN','DAFTAR_HADIR','DAFTAR_NILAI','JURNAL','REMEDIAL_PENGAYAAN','KALENDER_AKADEMIK','HARI_EFEKTIF','ALOKASI_WAKTU'];
 const results:any[]=[];

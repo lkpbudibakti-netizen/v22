@@ -75,12 +75,16 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
       <details className="text-xs"><summary>Hasil validasi impor</summary><ul>{completed.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>
       <label className="text-sm">Format ZIP <select value={zipFormat} disabled={busy} onChange={event => setZipFormat(event.target.value as ZipExportFormat)} className="border p-1"><option value="both">PDF dan DOCX</option><option value="pdf">PDF</option><option value="docx">DOCX</option></select></label>
       <button type="button" disabled={busy || !exportReadiness?.readyCount} className="block rounded bg-blue-800 text-white p-3 disabled:opacity-40" onClick={async () => {
+        if (submitting.current) return;
+        submitting.current = true;
         setBusy(true); setError(''); setZipResult(undefined);
         try {
           const fresh = importedProjectExportReadiness(loadStorageV5(), completed.yearPlanId);
-          setZipResult(await generateZipBundle({ types: fresh.types, format: zipFormat, documentMode: 'data' }, fresh.context));
+          const result = await generateZipBundle({ types: fresh.types, format: zipFormat, documentMode: 'data' }, { ...fresh.context, skipDownload: false });
+          if (!result.zipBlob) throw new Error('Berkas ZIP tidak dihasilkan. Silakan coba unduh kembali.');
+          setZipResult(result);
         } catch (error) { setError(error instanceof Error ? error.message : 'ZIP belum dapat dibuat.'); }
-        finally { setBusy(false); }
+        finally { submitting.current = false; setBusy(false); }
       }}>{busy ? 'Membuat ZIP...' : 'Unduh ZIP Administrasi'}</button>
       {zipResult && <div role="status" className="text-sm">
         <p>SUCCESS: {zipResult.successCount || 0} · PARTIAL: {zipResult.partialCount || 0} · SKIPPED: {zipResult.skippedCount || 0} · FAILED: {zipResult.failedCount || 0}</p>

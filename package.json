@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:import-tp": "tsx scripts/testImportedTPConfirmation.tsx",
     "test:step07-pedagogical": "tsx scripts/testStep07PedagogicalAlignment.tsx",
     "test:step07-execution": "tsx scripts/testStep07SemanticExecution.ts",
     "test:step07-inline": "tsx scripts/testStep07InlineAlignment.tsx",

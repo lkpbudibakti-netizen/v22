@@ -647,6 +647,8 @@ PRINSIP PEDAGOGIS & KONTRAK ATOMIK TP (WAJIB DIPATUHI - ATOMIC TP CONTRACT):
    - Gunakan kompetensi yang benar-benar dituntut oleh substansi materi TP.
    - JANGAN mengulang kompetensi yang sama dalam satu TP (misalnya: "menerapkan menerapkan").
    - Jika satu Analisis CP memiliki beberapa kompetensi/materi yang berbeda secara pedagogis, DEKOMPOSISI menjadi beberapa TP atomik terfokus.
+   - Gunakan jumlah TP minimum yang memadai; jangan membuat TP tambahan hanya untuk mengejar kecocokan token validator. Daftar contoh atau koma bukan otomatis tujuan yang berbeda.
+   - Rumuskan kalimat alami. Jangan menyambung seluruh frasa kompetensi dengan lingkup materi secara mekanis. Pertahankan pasangan kompetensi–materi; jangan sekadar mengumpulkan semua kata sumber.
    - Gabungan TP untuk SETIAP ID Analisis CP wajib mencakup seluruh kompetensi dan lingkupnya. Untuk Berbicara dan Mempresentasikan jangan berhenti pada berbicara: turunkan juga tuntutan presentasi, alasan, pilihan kata, gestur/intonasi atau tuntutan lain yang secara eksplisit terdapat dalam analisis sumber. Jangan menambah kompetensi di luar sumber.
 3. FORMAT KODE TP:
    - Kontrak kanonikal: ${TP_CODE_FORMAT_DESCRIPTION}. Server membentuk kode secara deterministik; jangan menyalin scopeCode bersegmen seperti INF-LIS secara literal.

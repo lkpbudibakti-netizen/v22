@@ -742,7 +742,7 @@ export function validateTPDataWorkflow(
       }
     }
 
-    const semanticFidelity = checkTPSemanticFidelity(tp.items, cpAnalysis.items);
+    const semanticFidelity = checkTPSemanticFidelity(tp.items, cpAnalysis.items, tp.substanceReviews);
     if (!semanticFidelity.isValid) {
       semanticFidelity.issues.forEach((iss) => {
         if (!issues.includes(iss)) {

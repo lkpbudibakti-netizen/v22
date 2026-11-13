@@ -452,7 +452,10 @@ export async function importCompleteAdministrationProjectAndExport(value: unknow
   const imported = importCompleteAdministrationProject(value, options);
   try {
     const ready = importedProjectExportReadiness(imported.state, imported.yearPlanId);
-    const zipResult = await exporter({ types: ready.types, format: 'both', documentMode: 'data' }, ready.context);
+    // Only this user-triggered export downloads the ZIP. Keep silent contexts
+    // for previews/individual files; do not change the engine's global policy.
+    const zipResult = await exporter({ types: ready.types, format: 'both', documentMode: 'data' }, { ...ready.context, skipDownload: false });
+    if (!zipResult.zipBlob) throw new Error('Impor tersimpan, tetapi berkas ZIP tidak dihasilkan. Silakan coba unduh kembali.');
     return { imported, zipResult, exportError: '' };
   } catch (error) {
     return { imported, zipResult: undefined, exportError: error instanceof Error ? error.message : 'Impor tersimpan, tetapi ZIP dokumen belum berhasil dibuat.' };

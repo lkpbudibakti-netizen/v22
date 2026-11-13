@@ -373,7 +373,8 @@ function resolveAtomicTPStatementAndCompetence(
     if (compFirstWord.length > 3 && cleanScope.toLowerCase().startsWith(compFirstWord)) {
       cleanScope = cleanScope.slice(compFirstWord.length).trim();
     }
-    statement = `Peserta didik mampu ${rawComp.toLowerCase()} ${cleanScope} secara mandiri dan bernalar kritis.`;
+    // Draft only: do not invent attitude demands absent from the source.
+    statement = `Peserta didik mampu ${rawComp.toLowerCase().replace(/\s*&\s*/g, ' dan ')} ${cleanScope}.`;
   }
 
   // Remove duplicate adjacent words (e.g. "menerapkan menerapkan")
@@ -459,7 +460,10 @@ export function fallbackGenerateTP(params: FallbackGenerateTPParams) {
       const analysisId = String(cpa.id);
 
       // Check for decomposition using robust, subject-agnostic helper
-      const compoundParts = decomposeCompoundScope(scope);
+      // A natural, source-authored recommendation takes precedence over a
+      // mechanical split of its examples. It still goes through coverage checks.
+      const usableSuggestion = cpa.suggestedTp && checkAggregateTPCoverage([{ statement: cpa.suggestedTp }], cpa);
+      const compoundParts = usableSuggestion ? [scope] : decomposeCompoundScope(scope);
 
       if (compoundParts.length > 1) {
         // Decompose into focused atomic TPs, each referencing this single CPAnalysisItem

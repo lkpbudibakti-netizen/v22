@@ -1,3 +1,5 @@
+import { detectCompetenceGroups, hasCompatibleCompetence } from './atpSemanticFidelity';
+
 export const tpStopWords = new Set([
   'peserta', 'didik', 'mampu', 'fase', 'elemen', 'cp', 'tp',
   'dan', 'atau', 'serta', 'yang', 'di', 'ke', 'dari', 'pada', 'dalam',
@@ -70,12 +72,12 @@ export function getUncoveredTPChunks(tpItemsForAnalysis: any[], analysisItem: an
     const matched = chunkTokens.filter(t => unionTokens.has(t));
     if (chunkTokens.length <= 5) {
       if (matched.length < chunkTokens.length) {
-        missing.push(chunk);
+        missing.push(`${chunk} [sinyal terwakili: ${matched.join(', ') || 'belum ditemukan'}; perlu ditinjau: ${chunkTokens.filter(t => !unionTokens.has(t)).join(', ')}]`);
       }
     } else {
       const minOverlap = Math.max(2, Math.ceil(0.7 * chunkTokens.length));
       if (matched.length < minOverlap) {
-        missing.push(chunk);
+        missing.push(`${chunk} [sinyal terwakili: ${matched.join(', ') || 'belum ditemukan'}; perlu ditinjau: ${chunkTokens.filter(t => !unionTokens.has(t)).join(', ')}]`);
       }
     }
   }
@@ -83,8 +85,31 @@ export function getUncoveredTPChunks(tpItemsForAnalysis: any[], analysisItem: an
   return missing;
 }
 
-export function checkTPSemanticFidelity(tpItems: any[], analysisItems: any[]): { isValid: boolean; issues: string[] } {
-  const issues: string[] = [];
+export function tpSubstanceFingerprint(tpItems: any[], analysisItem: any): string {
+  return JSON.stringify({ analysis: [analysisItem.id, analysisItem.elementId, analysisItem.elementName, analysisItem.cpText, analysisItem.cpCompetence, analysisItem.materialScope],
+    items: tpItems.map(i => [i.id, i.code, i.statement || i.description, i.competence || i.competency, i.contentScope,
+      i.cpAnalysisItemIds || [i.cpAnalysisId]]) });
+}
+
+export function tpWordingIssues(tpItems: any[]): string[] {
+  const seen = new Set<string>();
+  return tpItems.flatMap((item, index) => {
+    const text = String(item.statement || item.description || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const issues: string[] = [];
+    if (/\b(\w{4,})\s+\1\b/i.test(text) || /(?:&\s*){2,}|\bdan\s+dan\b/i.test(text))
+      issues.push(`TP ${item.code || index + 1}: rumusan mengulang kata/konjungsi; revisi kalimat agar koheren.`);
+    if (seen.has(text) && text) issues.push(`TP ${item.code || index + 1}: rumusan duplikat; tinjau tujuan spesifiknya.`);
+    const demanded = detectCompetenceGroups(item.competence || item.competency);
+    const expressed = detectCompetenceGroups(text);
+    if (demanded.length && expressed.length && !hasCompatibleCompetence(new Set(expressed), demanded))
+      issues.push(`TP ${item.code || index + 1}: kompetensi pada metadata tidak sesuai rumusan TP; revisi manual, bukan menambah kata untuk validator.`);
+    seen.add(text);
+    return issues;
+  });
+}
+
+export function checkTPSemanticFidelity(tpItems: any[], analysisItems: any[], reviews: { analysisId: string; fingerprint: string; rationale: string }[] = []): { isValid: boolean; issues: string[] } {
+  const issues: string[] = tpWordingIssues(tpItems);
   const analysisMap = new Map(analysisItems.map(a => [String(a.id), a]));
   const tpMapByAnalysisId = new Map<string, any[]>();
 
@@ -103,10 +128,12 @@ export function checkTPSemanticFidelity(tpItems: any[], analysisItems: any[]): {
         }
         tpMapByAnalysisId.get(anaId)!.push(tpItem);
 
-        // Check individual relevance
+        // Token overlap is a screening signal, never a semantic certificate.
         const isRelevant = checkIndividualTPRelevance(tpItem, analysisItem);
-        if (!isRelevant) {
-          issues.push(`Butir TP ke-${i + 1} (${tpItem.code || 'Tanpa Kode'}) tidak memiliki relevansi semantis terhadap butir Analisis CP rujukan (${anaId}).`);
+        const associated = tpItems.filter(item => (item.cpAnalysisItemIds || [item.cpAnalysisId]).includes(anaId));
+        const reviewed = reviews.some(r => r.analysisId === anaId && r.fingerprint === tpSubstanceFingerprint(associated, analysisItem) && r.rationale.trim().length >= 30);
+        if (!isRelevant && !reviewed) {
+          issues.push(`TP ${tpItem.code || i + 1}: relevansi terhadap Analisis CP ${anaId} belum dapat dipastikan otomatis. Revisi manual atau berikan alasan substansi pada tinjauan guru.`);
         }
       }
     }
@@ -119,9 +146,20 @@ export function checkTPSemanticFidelity(tpItems: any[], analysisItems: any[]): {
       issues.push(`Butir Analisis CP "${analysisItem.elementName || 'Elemen'}" (${anaId}) belum memiliki TP rujukan.`);
       continue;
     }
+    const demanded = detectCompetenceGroups(analysisItem.cpCompetence);
+    const expressed = new Set(associatedTPs.flatMap(item => detectCompetenceGroups(item.statement || item.description || '')));
+    const missingCompetences = demanded.filter(group => !hasCompatibleCompetence(expressed, [group]));
+    // A teacher explanation can resolve a paraphrase, not override an explicit
+    // competence conflict (e.g. knowing a movement instead of practising it).
+    if (expressed.size && missingCompetences.length) {
+      const labels: Record<string, string> = { understand: 'pemahaman', apply: 'penerapan', analyze: 'analisis', practice: 'praktik', create: 'kreasi', evaluate: 'evaluasi', explore: 'eksplorasi', participate: 'partisipasi', observe: 'pengamatan' };
+      issues.push(`Analisis CP ${anaId}: rumusan TP belum menunjukkan tuntutan kompetensi ${missingCompetences.map(group => labels[group] || group).join(', ')} (${analysisItem.cpCompetence}). Revisi TP secara manual; konfirmasi alasan tidak menggantikan tuntutan yang hilang.`);
+      continue;
+    }
     const isCovered = checkAggregateTPCoverage(associatedTPs, analysisItem);
-    if (!isCovered) {
-      issues.push(`Butir Analisis CP "${analysisItem.elementName || 'Elemen'}" (${analysisItem.cpCompetence || anaId}) belum terwakili penuh secara semantis oleh TP rujukan. Bagian belum tercakup: ${getUncoveredTPChunks(associatedTPs, analysisItem).join('; ')}.`);
+    const reviewed = reviews.some(r => r.analysisId === anaId && r.fingerprint === tpSubstanceFingerprint(associatedTPs, analysisItem) && r.rationale.trim().length >= 30);
+    if (!isCovered && !reviewed) {
+      issues.push(`Analisis CP ${anaId} (${analysisItem.elementName || 'Elemen'}): pemeriksaan tekstual belum memastikan cakupan. Tinjau bagian: ${getUncoveredTPChunks(associatedTPs, analysisItem).join('; ')}. Ini memerlukan revisi atau alasan relevansi guru, bukan kewajiban regenerasi AI.`);
     }
   }
 

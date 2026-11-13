@@ -132,7 +132,7 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
   if(id==='./index')return{validateDocumentRequirements,generateDocument:render};if(id==='./renderers/pdf/pdfDocGenerators')return{generatePdfDocument:renderPdf};
   if(id==='../curriculumRouter')return{MERDEKA_EXPORT_DOC_TYPES:['MODUL_AJAR','ASESMEN']};throw new Error(id);
 }});
-const zip=await exports.generateZipBundle({types:['MODUL_AJAR','ASESMEN'],format:'both'},context);
+const zip=await exports.generateZipBundle({types:['MODUL_AJAR','ASESMEN'],format:'both'},{...context,skipDownload:false});
 assert.equal(zip.successCount,2); assert(zip.skippedCount>=1,'Missing second-semester assessments must be reported');assert.equal(downloads.length,1);
 const zipFiles=await JSZip.loadAsync(await downloads[0].blob.arrayBuffer());
 assert.equal(Object.values(zipFiles.files).filter(file=>!file.dir).length,4);
@@ -145,10 +145,11 @@ assert(mixed.itemResults.some((item:any)=>item.reason?.includes('Fixture PDF fai
 failing = false; storage.set(STORAGE_KEY_V5, initial);
 const beforeDownloads = downloads.length;
 let flowCalls = 0, successCalls = 0;
+let exportFails = false;
 const harness = completeImportModalHarness({ state:{...source,activeProfileId:'p2'},onClose:()=>{},onSuccess:()=>{successCalls++;} }, {
   readCompleteProjectZip, prepareCompleteAdministrationProjectImport: () => { throw new Error('No preparation confirmation step for Mode 1'); },
   importCompleteAdministrationProject, importedProjectExportReadiness, loadStorageV5,
-  generateZipBundle:exports.generateZipBundle,
+  generateZipBundle:async (...args:any[]) => { if(exportFails) throw Error('Fixture ZIP gagal; coba kembali.'); return exports.generateZipBundle(...args); },
   importCompleteAdministrationProjectAndExport: async (value:any,opts:any) => { flowCalls++; return importCompleteAdministrationProjectAndExport(value,opts,exports.generateZipBundle); },
 });
 await harness.nodes().find(node=>node.type==='input' && node.props.type==='file').props.onChange({target:{files:[{arrayBuffer:async()=>bytes}]}});
@@ -159,4 +160,19 @@ assert(primary && !primary.props.disabled);
 await Promise.all([primary.props.onClick(),primary.props.onClick()]);
 assert.equal(flowCalls,1); assert.equal(successCalls,1); assert.equal(downloads.length,beforeDownloads+1);
 assert(harness.nodes().some(node=>node.props.role==='status'));
+const download = () => harness.nodes().find(node=>node.type==='button' && harness.text(node).includes('Unduh ZIP Administrasi'));
+const manualDownload = download();
+const previousDownloads = downloads.length;
+await Promise.all([manualDownload.props.onClick(), manualDownload.props.onClick()]);
+assert.equal(downloads.length,previousDownloads+1,'Repeated click must download exactly one ZIP');
+exportFails = true;
+await download().props.onClick();
+assert(harness.nodes().some(node=>node.props.role==='alert' && harness.text(node).includes('Fixture ZIP gagal')));
+assert.equal(download().props.disabled,false,'Export failure must reactivate the button');
+assert.equal(downloads.length,previousDownloads+1);
+storage.set(STORAGE_KEY_V5,initial);
+const failedFlow = await importCompleteAdministrationProjectAndExport(archive,options,async()=>{throw Error('Fixture exportError');});
+assert.equal(failedFlow.exportError,'Fixture exportError');
+assert.equal(failedFlow.zipResult,undefined);
+assert(loadStorageV5().yearPlans.some(year=>year.id===failedFlow.imported.yearPlanId),'Failed ZIP must retain successful import');
 console.log('PASS: complete-project ZIP identity-only round-trip, destination DOCX/PDF and ZIP, valid SIAP module/assessment and Step7, exact slot/ID remapping, source provenance/factual separation, stale/draft blocking, conflict/atomic persistence and no source metadata leakage. No live browser claim.');

@@ -42,7 +42,7 @@ import {
   deriveScopeCode,
   generateSemanticTPCode,
 } from '../services/cpWorkflowService';
-import { checkTPSemanticFidelity } from '../services/tpSemanticFidelity';
+import { checkTPSemanticFidelity, tpSubstanceFingerprint } from '../services/tpSemanticFidelity';
 import {
   buildTPDiagnosticReport,
   recordDiagnosticEvent,
@@ -79,6 +79,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
   generationSourceRef.current = JSON.stringify({ items, cp, cpAnalysis, academicSetting });
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [reviewReasons, setReviewReasons] = useState<Record<string, { rationale: string; fingerprint: string }>>({});
 
   // Edit/Add modal state
   const [isEditing, setIsEditing] = useState(false);
@@ -169,7 +170,8 @@ export const TPManager: React.FC<TPManagerProps> = ({
       phase: context.phase,
       items: updatedItems,
       generatedBy: nextGeneratedBy,
-      updatedAt: new Date().toISOString(),
+      updatedAt: JSON.stringify(updatedItems) === JSON.stringify(tp.items) && tp.cpId === cp.id && tp.cpAnalysisId === cpAnalysis?.id
+        ? tp.updatedAt : new Date().toISOString(),
     };
     const val = validateTPDataWorkflow(candidateTP, cp, cpAnalysis, academicSetting);
     const updatedTP: TPData = {
@@ -206,12 +208,21 @@ export const TPManager: React.FC<TPManagerProps> = ({
       return;
     }
 
-    const updatedItems = items.map((item, idx) => ({ ...item, order: idx + 1 }));
-    const semanticCheck = checkTPSemanticFidelity(updatedItems, cpAnalysis.items);
+    const updatedItems = items;
+    const substanceReviews = cpAnalysis.items.flatMap(analysis => {
+      const linked = items.filter(item => (item.cpAnalysisItemIds?.length ? item.cpAnalysisItemIds : [item.cpAnalysisId]).includes(analysis.id));
+      const fingerprint = tpSubstanceFingerprint(linked, analysis);
+      const draftReview = reviewReasons[analysis.id];
+      const rationale = draftReview?.fingerprint === fingerprint ? draftReview.rationale.trim() : undefined;
+      if (linked.length && rationale && rationale.length >= 30) return [{ analysisId: analysis.id, fingerprint, rationale }];
+      return tp.substanceReviews?.filter(review => review.analysisId === analysis.id && review.fingerprint === fingerprint) || [];
+    });
+    const semanticCheck = checkTPSemanticFidelity(updatedItems, cpAnalysis.items, substanceReviews);
 
     if (!semanticCheck.isValid) {
       const issuesList = semanticCheck.issues.join('\n');
-      alert(`Konfirmasi alignment gagal: TP memiliki deviasi semantis terhadap Analisis CP aktif.\n\n${issuesList}`);
+      setGenerationError(`TP belum dapat dikonfirmasi. ${issuesList}`);
+      alert(`TP belum dapat dikonfirmasi.\n\n${issuesList}`);
       return;
     }
 
@@ -226,12 +237,15 @@ export const TPManager: React.FC<TPManagerProps> = ({
       subjectCode: context.subject,
       phase: context.phase,
       items: updatedItems,
+      substanceReviews,
       generatedBy: tp.generatedBy === 'AI' ? 'AI_EDITED_BY_TEACHER' : tp.generatedBy || 'TEACHER',
       needsReview: false,
       reviewReason: undefined,
       basedOnCpUpdatedAt: cp.updatedAt || new Date().toISOString(),
       basedOnAnalysisUpdatedAt: cpAnalysis?.updatedAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      // Confirmation-only changes do not invalidate ATP/Step 07 substance.
+      updatedAt: JSON.stringify(updatedItems) === JSON.stringify(tp.items) && tp.cpId === cp.id && tp.cpAnalysisId === cpAnalysis.id
+        ? tp.updatedAt : new Date().toISOString(),
     };
 
     const val = validateTPDataWorkflow(confirmedCandidate, cp, cpAnalysis, academicSetting);
@@ -247,6 +261,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
     };
 
     onSaveTP(confirmedTP);
+    setGenerationError(null);
     setIsDirty(false);
     showSaveNotice('Alignment TP berhasil dikonfirmasi dan diselaraskan.');
     recordDiagnosticEvent({
@@ -331,8 +346,9 @@ export const TPManager: React.FC<TPManagerProps> = ({
           engine: generatedResult.engine,
         },
         generatedAt: new Date().toISOString(),
-        needsReview: false,
-        reviewReason: undefined,
+        needsReview: true,
+        reviewReason: 'Preview regenerasi belum dikonfirmasi guru. Tinjau koherensi rumusan dan cakupan sebelum Validasi & Konfirmasi TP.',
+        substanceReviews: undefined,
         basedOnCpUpdatedAt: cp.updatedAt || new Date().toISOString(),
         basedOnAnalysisUpdatedAt: cpAnalysis?.updatedAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -342,13 +358,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
         ...candidateTP,
         workflowStatus: val.status,
       };
-      if (items.length > 0) {
-        setPendingGeneration({ tp: updatedTP, source: expectedSource });
-        return; // Existing/manual TP is changed only after the teacher reviews the diff below.
-      }
-      setItems(generated);
-      onSaveTP(updatedTP);
-      setIsDirty(false);
+      setPendingGeneration({ tp: updatedTP, source: expectedSource });
       recordDiagnosticEvent({
         scope: 'TP',
         action: 'TP_GENERATE_SUCCESS',
@@ -359,20 +369,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
           validationIssueCount: val.issues.length,
         },
       });
-      recordDiagnosticEvent({
-        scope: 'TP',
-        action: 'TP_SAVE',
-        status: val.status,
-        metadata: {
-          source: 'AI_AUTO',
-          itemsCount: generated.length,
-          validationStatus: val.status,
-          needsReview: false,
-        },
-      });
-      showSaveNotice(
-        'AI berhasil merumuskan dan menyelaraskan TP berdasarkan CP dan Analisis CP terbaru.'
-      );
+      showSaveNotice('Preview tersedia. TP belum berubah; tinjau sebelum menerapkan, lalu Validasi & Konfirmasi TP.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal menghasilkan TP dengan AI';
       setGenerationError(msg);
@@ -718,14 +715,6 @@ export const TPManager: React.FC<TPManagerProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleConfirmAlignment}
-            className="inline-flex items-center gap-1.5 bg-amber-700 hover:bg-amber-800 text-white px-3.5 py-2 rounded-xl font-semibold shadow-xs transition shrink-0 self-start sm:self-auto cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Konfirmasi & Tandai Sesuai</span>
-          </button>
         </div>
       )}
 
@@ -746,7 +735,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
                     : 'bg-amber-50 text-amber-700 border-amber-300'
                 }`}
               >
-                {validation.isSiap ? 'SIAP (VALID)' : 'PERLU DILENGKAPI'}
+                {validation.isSiap ? (saveState === 'SAVED_READY' ? 'SIAP — tersimpan' : 'VALID — belum dikonfirmasi/disimpan') : 'PERLU DILENGKAPI'}
               </span>
               {/* Provenance source badge */}
               {tp.generatedBy && (
@@ -806,6 +795,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
             })}
             {items.filter(old => !pendingGeneration.tp.items.some(item => item.id === old.id)).map(old => <div key={old.id}>Akan dihapus dari daftar: {old.code}: {old.statement}</div>)}
             <div>Validasi: {pendingGeneration.tp.workflowStatus}. Cakupan yang belum lengkap tetap memblokir ATP.</div>
+            <ul className="list-disc pl-4">{validateTPDataWorkflow(pendingGeneration.tp, cp, cpAnalysis, academicSetting).issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
             <button type="button" className="font-bold text-indigo-700" onClick={() => {
               if (pendingGeneration.source !== JSON.stringify({ items, cp, cpAnalysis, academicSetting })) {
                 setGenerationError('Sumber TP/CP/Analisis CP berubah sejak preview. Jalankan regenerasi ulang.'); return;
@@ -826,6 +816,22 @@ export const TPManager: React.FC<TPManagerProps> = ({
         )}
 
         {/* Validation Issues Alert */}
+        <div className="border rounded-xl p-3 space-y-2 text-xs">
+          <p>Kode sah, cakupan substansi, dan konfirmasi adalah pemeriksaan berbeda. AI opsional. Tinjau rumusan TP serta rujukan Analisis CP sebelum konfirmasi.</p>
+          <details><summary>Tinjauan substansi per Analisis CP — untuk parafrasa yang belum dapat dipastikan otomatis</summary>
+            {cpAnalysis?.items.map(analysis => {
+              const linked = items.filter(item => (item.cpAnalysisItemIds?.length ? item.cpAnalysisItemIds : [item.cpAnalysisId]).includes(analysis.id));
+              return <div key={analysis.id} className="border-t py-2 space-y-1">
+                <p>{analysis.id}: {analysis.cpCompetence} — {analysis.materialScope}</p>
+                <p>TP rujukan: {linked.map(item => `${item.code}: ${item.statement}`).join(' | ') || 'Belum ada. Tautkan TP melalui edit manual.'}</p>
+                <label>Jelaskan bagian rumusan TP yang mewakili setiap tuntutan kompetensi dan materi. Jika belum tercakup, revisi TP; jangan menyatakan tercakup.
+                  <textarea disabled={!linked.length || isGenerating} value={reviewReasons[analysis.id]?.rationale || ''} onChange={event => setReviewReasons(previous => ({ ...previous, [analysis.id]: { rationale: event.target.value, fingerprint: tpSubstanceFingerprint(linked, analysis) } }))} className="block w-full border rounded p-2" placeholder="Alasan spesifik, minimal 30 karakter; tersimpan bersama isi yang ditinjau." />
+                </label>
+              </div>;
+            })}
+          </details>
+          <button type="button" disabled={isGenerating || !items.length || isCpUnusable} onClick={handleConfirmAlignment} className="inline-flex items-center gap-2 rounded bg-blue-800 text-white px-3 py-2 disabled:opacity-50"><ShieldCheck className="w-4 h-4" />Validasi &amp; Konfirmasi TP</button>
+        </div>
         {!validation.isSiap && validation.issues.length > 0 && (
           <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
             <div className="font-bold flex items-center gap-1.5 text-amber-950">
