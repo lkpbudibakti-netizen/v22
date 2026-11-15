@@ -97,6 +97,7 @@ import {
 } from 'lucide-react';
 
 export interface TimePlanningManagerProps {
+  allocationBlockers?: string[];
   school: SchoolData;
   profile: TeacherProfile;
   academicSetting: AcademicSetting;
@@ -141,6 +142,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
   persistedSchedule,
   afterTimeSetup,
   viewMode = 'ALL',
+  allocationBlockers = [],
   explicitSemesterPlanId,
   onSaveCalendar,
   onSaveSemesterJPSetting,
@@ -1209,6 +1211,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
   };
 
   const handleSaveAllocations = () => {
+    if (allocationBlockers.length) { setSaveNotification(allocationBlockers.join('; ')); return; }
     if (!isK13Curriculum && !canonicalCapacity?.isReady) {
       setSaveNotification('Kalender semester dan JP Aktual harus disimpan terlebih dahulu sebelum pemetaan waktu disimpan.');
       setTimeout(() => setSaveNotification(null), 4000);
@@ -1373,6 +1376,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
   ]);
 
   const handleAutoAllocate = () => {
+    if (allocationBlockers.length) { setSaveNotification(allocationBlockers.join('; ')); return; }
     if (
       !autoAllocationReadiness.isReady ||
       !autoAllocationReadiness.s1Capacity ||
@@ -2570,6 +2574,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
           )}
 
       {viewMode !== 'TIME_SETUP' && (
+        allocationBlockers.length ? <div role="alert" className="text-xs text-red-800"><p>Alokasi/jadwal belum dapat dihitung:</p><ul>{allocationBlockers.map(issue => <li key={issue}>{issue}</li>)}</ul></div> :
         <div className="space-y-6">
           {!isK13Curriculum && viewMode === 'ALLOCATION' && (
             <LearningMeetingSchedulePreview

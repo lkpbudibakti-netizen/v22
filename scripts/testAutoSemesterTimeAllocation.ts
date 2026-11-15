@@ -749,6 +749,7 @@ runTest('13, 14 & 15. Draft lifecycle, Annual ATP byte immutability, and semeste
 function executeAutoAllocate(id:string,ready=true) {
   const calls:{build:any[],validate:any[],save:any[],notice:any[]}={build:[],validate:[],save:[],notice:[]};
   const callback=evaluateExpression(initializer('src/components/administration/TimePlanningManager.tsx','handleAutoAllocate'),{
+    allocationBlockers: [],
     effectiveSemesterPlanId:id,academicSetting:{id:'annual-id'},activeSemester:'2',totalAvailableJP:999,
     autoAllocationReadiness:{isReady:ready,sem1PlanId:'sem-1',sem2PlanId:'sem-2',s1Capacity:{availableJP:72},s2Capacity:{availableJP:80}},
     allocations:[],atp:{items:sampleAnnualATP.items},setTimeout:()=>0,

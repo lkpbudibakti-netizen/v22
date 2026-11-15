@@ -12,9 +12,10 @@ import * as schedule from '../../src/services/learningMeetingScheduleService';
 import * as mappingValidation from '../../src/services/atpUnitMappingValidationService';
 import * as readiness from '../../src/services/atpMappingReadinessService';
 import * as allocation from '../../src/services/unitMeetingAllocationService';
+import { productionReferenceIssues } from '../../src/services/productionValidation';
 
 /** Actual component and handlers with deterministic hooks; all resolvers/storage remain real. */
-export function annualPlanningManagerHarness(props: any) {
+export function annualPlanningManagerHarness(props: any, runEffects = false) {
   const values: any[] = []; let cursor = 0;
   const source = readFileSync('src/components/AnnualPlanningManager.tsx', 'utf8');
   const compiled = ts.transpileModule(source.slice(source.indexOf('export const AnnualPlanningManager:')), {
@@ -22,9 +23,9 @@ export function annualPlanningManagerHarness(props: any) {
   }).outputText;
   const exports: any = {};
   runInNewContext(compiled, { exports, React, console,
-    ...assessment, ...storage, ...jp, ...execution, ...placement, ...slots, ...schedule, ...mappingValidation, ...readiness,...allocation,
+    ...assessment, ...storage, ...jp, ...execution, ...placement, ...slots, ...schedule, ...mappingValidation, ...readiness,...allocation, productionReferenceIssues,
     useState: (initial: any) => { const i=cursor++; if (!(i in values)) values[i]=typeof initial==='function'?initial():initial; return [values[i],(next:any)=>{values[i]=typeof next==='function'?next(values[i]):next;}]; },
-    useMemo: (factory:()=>any)=>factory(), useEffect: ()=>{},
+    useMemo: (factory:()=>any)=>factory(), useEffect: (effect:()=>void)=>{ if (runEffects) effect(); },
     window: {setTimeout:(fn:()=>void)=>fn()}, document:{getElementById:()=>null},
     CalendarRange:'icon',ArrowRight:'icon',ArrowLeft:'icon',Calendar:'icon',CheckCircle2:'icon',AlertCircle:'icon',Layers:'icon',Info:'icon',
     AnnualPlanningTaskRail:'task-rail',TimePlanningManager:'time-manager',UnitExecutionPlanManager:'execution-manager',UnitSemesterPlanningManager:'placement-manager',

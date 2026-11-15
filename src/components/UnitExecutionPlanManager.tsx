@@ -52,6 +52,7 @@ import {
 } from '../services/diagnosticService';
 
 export interface UnitExecutionPlanManagerProps {
+  productionMode?: boolean;
   mapping: ATPUnitMappingData;
   unitExecutionPlan?: UnitExecutionPlanData;
   atp: ATPData;
@@ -111,6 +112,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   phase,
   onSave,
   meetingCapacity,
+  productionMode = false,
 }) => {
   // 1. Initialize local draft
   const initialDraft = useMemo<UnitExecutionPlanData>(() => {
@@ -637,7 +639,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       return;
     }
 
-    if (validation.isStale) {
+    if (!productionMode && validation.isStale) {
       setSaveNotice({
         type: 'error',
         message: 'Struktur Pertemuan stale relatif terhadap Pemetaan Bab & Lingkup Materi. Buat ulang draf sebelum menyimpan.',
@@ -740,9 +742,9 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
           <button
             type="button"
             onClick={handleSave}
-            disabled={!isDirty || !validation.isValid || validation.isStale}
+            disabled={(!isDirty && !(productionMode && validation.isStale)) || !validation.isValid || (!productionMode && validation.isStale)}
             className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
-              !isDirty || !validation.isValid || validation.isStale
+              (!isDirty && !(productionMode && validation.isStale)) || !validation.isValid || (!productionMode && validation.isStale)
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-600/20'
             }`}
@@ -987,7 +989,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
                 Pemetaan Unit/Bab Telah Berubah
               </p>
               <p className="text-amber-800 text-[11px] mt-0.5">
-                Struktur Pertemuan tersimpan dibuat dari versi Pemetaan terdahulu. Susun ulang struktur berdasarkan pemetaan Bab & Lingkup Materi terbaru.
+                {productionMode ? 'WARNING: versi pemetaan berubah. Referensi diperiksa kembali saat Anda menyimpan; tidak wajib membuat ulang untuk membuka bagian ini.' : 'Struktur Pertemuan tersimpan dibuat dari versi Pemetaan terdahulu. Susun ulang struktur berdasarkan pemetaan Bab & Lingkup Materi terbaru.'}
               </p>
             </div>
           </div>

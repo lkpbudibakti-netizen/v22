@@ -26,6 +26,7 @@
     "scripts/testMerdekaCanonicalWorkflowRegression.ts"
   ],
   "planning": [
+    "scripts/testStep08ProductionAccess.tsx",
     "scripts/testStep07PedagogicalAlignment.tsx",
     "scripts/testStep07SemanticExecution.ts",
     "scripts/testStep07InlineAlignment.tsx",

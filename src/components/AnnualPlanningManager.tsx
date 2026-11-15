@@ -51,6 +51,7 @@ import {
 import { isLearningMeetingScheduleReady } from '../services/learningMeetingScheduleService';
 import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValidationService';
 import { resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
+import { productionReferenceIssues } from '../services/productionValidation';
 
 export interface AnnualPlanningManagerProps {
   productionMode?: boolean;
@@ -112,6 +113,27 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     if (!isKurikulumMerdeka) return null;
     return resolveATPUnitMappingReadiness(mapping, atp, tp, academicSetting);
   }, [isKurikulumMerdeka, mapping, atp, tp, academicSetting]);
+
+  // Access is unrestricted in Production; dependent actions still use canonical
+  // substance/identity/reference checks, never workflow status as a certificate.
+  const productionActionIssues = useMemo(() => {
+    if (!productionMode || !isKurikulumMerdeka) return [];
+    const issues: string[] = [];
+    if (!school.id || !profile.id || profile.schoolId !== school.id) issues.push('Identitas profil/sekolah tujuan tidak valid.');
+    if (!mapping?.id || !mapping.units?.length || !tp?.items?.length || !atp?.items?.length) issues.push('Pemetaan Bab, TP, dan ATP diperlukan untuk tindakan pertemuan/alokasi.');
+    for (const item of tp?.items || []) if (!item.statement?.trim()) issues.push(`TP '${item.id}': rumusan belum tersedia.`);
+    for (const [label, source] of [['Pemetaan', mapping], ['TP', tp], ['ATP', atp]] as const) {
+      if (source && source.academicSettingId !== academicSetting.id) issues.push(`${label}: academicSettingId berbeda dari konteks tahun aktif.`);
+    }
+    if (mapping && atp && mapping.atpId !== atp.id) issues.push(`Pemetaan merujuk ATP '${mapping.atpId}' yang berbeda dari ATP aktif '${atp.id}'.`);
+    if (mapping?.tpDataId && mapping.tpDataId !== tp?.id) issues.push('Pemetaan merujuk TP berbeda dari TP aktif.');
+    if (atp && tp && (atp.tpDataId || atp.tpId) !== tp.id) issues.push('Relasi ATP–TP berbeda dari sumber kanonikal aktif.');
+    const canonical = validateATPUnitMappingCanonical(mapping, atp, tp);
+    if (!canonical.isValid) issues.push(...canonical.issues);
+    issues.push(...productionReferenceIssues('ATP', { atp, tp }));
+    if (unitExecutionPlan && mapping) issues.push(...validateUnitExecutionPlan(unitExecutionPlan, mapping, atp, tp).errors);
+    return [...new Set(issues)];
+  }, [productionMode, isKurikulumMerdeka, school, profile, academicSetting.id, mapping, atp, tp, unitExecutionPlan]);
 
   // Selected semester tab in the annual planning workspace (defaults to Semester 1)
   const [activeTabSemester, setActiveTabSemester] = useState<1 | 2>(1);
@@ -381,10 +403,10 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
     const t2Locked = false;
 
-    const t3Locked =
+    const t3Locked = !productionMode &&
       !(t1Complete && t2Complete);
 
-    const t4Locked =
+    const t4Locked = !productionMode &&
       !(t1Complete && t2Complete && t3Complete);
 
     const t5Locked = false;
@@ -441,6 +463,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
       },
     ];
   }, [
+    productionMode,
     s1TimeReady,
     s2TimeReady,
     placementReady,
@@ -497,6 +520,15 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
         block: 'start',
       });
     }, 50);
+  };
+
+  const handleSaveProductionPlan = (plan: UnitExecutionPlanData, approval?: MeetingAlignmentApproval) => {
+    if (!onSaveUnitExecutionPlan) return false;
+    if (!productionMode) return onSaveUnitExecutionPlan(plan, approval);
+    if (productionActionIssues.length || !mapping || !validateUnitExecutionPlan(plan, mapping, atp, tp).isValid) return false;
+    // Revalidate against current references only on an explicit save. Opening a
+    // task never rebases or writes the stored snapshot. V5 retains its guards.
+    return onSaveUnitExecutionPlan({ ...plan, basedOnMappingUpdatedAt: mapping.updatedAt }, approval);
   };
 
   const activeHeaderDetails = useMemo(() => {
@@ -583,7 +615,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     return 'Semester 2 siap. Lanjut ke Pembagian Bab.';
   }, [s2CalendarReady, s2JpReady, s2ScheduleSaved, s2PlannedCapacity.isReady]);
 
-  if (isKurikulumMerdeka && (!mappingReadiness || !mappingReadiness.canProceed)) {
+  if (!productionMode && isKurikulumMerdeka && (!mappingReadiness || !mappingReadiness.canProceed)) {
     const blockers = mappingReadiness?.blockers || ['Pemetaan Bab & Lingkup Materi belum selesai diselaraskan.'];
 
     return (
@@ -668,8 +700,10 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
         </div>
       </div>
 
+      {productionMode && <p role="status" className="text-xs text-amber-800">WARNING: status SIAP, needsReview dan stale tidak mengunci navigasi Produksi. Tindakan tetap memerlukan data, konteks dan referensi yang valid.</p>}
+      {productionMode && ['placement', 'meetings'].includes(activeTaskId) && productionActionIssues.length > 0 && <div role="alert" className="text-xs text-red-800"><p>Tindakan belum dapat dijalankan:</p><ul>{productionActionIssues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
       <div className="flex flex-col lg:flex-row gap-5 items-start">
-        <AnnualPlanningTaskRail tasks={annualTasks} onSelectTask={handleSelectTask} activeTaskId={activeTaskId} />
+        <AnnualPlanningTaskRail tasks={annualTasks} onSelectTask={handleSelectTask} activeTaskId={activeTaskId} productionMode={productionMode} />
 
         <div className="min-w-0 flex-1 space-y-6">
           {/* Annual Summary & Both Semesters Overview Bar */}
@@ -987,6 +1021,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
               {activeSelectedPlan && (
                 <div id="time-planning-container" className="pt-1 scroll-mt-4">
                   <TimePlanningManager
+                    allocationBlockers={productionMode ? productionActionIssues : undefined}
                     school={school}
                     profile={profile}
                     academicSetting={{
@@ -1017,7 +1052,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                     onSaveSubjectWeeklySchedule={onSaveSubjectWeeklySchedule}
                     persistedSchedule={activeSelectedData?.learningMeetingSchedule}
                     onSaveLearningMeetingSchedule={onSaveLearningMeetingSchedule}
-                    onSaveUnitExecutionPlan={onSaveUnitExecutionPlan}
+                    onSaveUnitExecutionPlan={onSaveUnitExecutionPlan ? handleSaveProductionPlan : undefined}
                     afterTimeSetup={activeTaskId === 'time-allocation' ? (
                       /* Dalam Task 5 boleh tampil sub-selector kecil */
                       <div className="flex items-center gap-2 mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
@@ -1055,25 +1090,28 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                   />
                 </div>
               )}
+              {productionMode && !activeSelectedPlan && <p role="alert">Rencana semester tujuan belum tersedia. Buat/pilih konteks semester terlebih dahulu; tidak ada tanggal atau jadwal yang dibuat otomatis.</p>}
             </div>
 
             {/* B. UnitSemesterPlanningManager Container */}
             <div id="annual-task-placement" className={activeTaskId === 'placement' ? 'block animate-in fade-in duration-150' : 'hidden'}>
-              {mapping && effectiveUnitExecutionPlan && onSaveUnitExecutionPlan && (
+              {mapping && effectiveUnitExecutionPlan && onSaveUnitExecutionPlan && !productionActionIssues.length && (
                 <UnitSemesterPlanningManager
+                  productionMode={productionMode}
                   mapping={mapping}
                   unitExecutionPlan={effectiveUnitExecutionPlan}
                   s1AvailableJP={s1Capacity?.availableJP ?? null}
                   s2AvailableJP={s2Capacity?.availableJP ?? null}
-                  onSave={onSaveUnitExecutionPlan}
+                  onSave={handleSaveProductionPlan}
                 />
               )}
             </div>
 
             {/* C. UnitExecutionPlanManager Container */}
             <div id="annual-task-meetings" className={activeTaskId === 'meetings' ? 'block animate-in fade-in duration-150 font-sans' : 'hidden'}>
-              {mapping && atp && tp && onSaveUnitExecutionPlan && (
+              {mapping && atp && tp && onSaveUnitExecutionPlan && !productionActionIssues.length && (
                 <UnitExecutionPlanManager
+                  productionMode={productionMode}
                   mapping={mapping}
                   unitExecutionPlan={unitExecutionPlan}
                   atp={atp}
@@ -1081,7 +1119,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                   subject={academicSetting.subject}
                   grade={academicSetting.grade}
                   phase={academicSetting.phase}
-                  onSave={onSaveUnitExecutionPlan}
+                  onSave={handleSaveProductionPlan}
                   meetingCapacity={{
                     semester1: {
                       isReady: s1PlannedCapacity.isReady,
@@ -1106,7 +1144,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
             {nextStepCTA && (
               <div className="pt-4 border-t border-blue-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                 <span className="text-slate-600 font-medium font-sans">
-                  {nextStepCTA.isReady ? (
+                  {productionMode && !nextStepCTA.isReady ? <span>Bagian ini belum lengkap; Anda tetap dapat membuka bagian berikutnya. Tidak ada data yang diubah saat berpindah.</span> : nextStepCTA.isReady ? (
                     <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       Langkah ini selesai! Silakan lanjut ke langkah berikutnya.
@@ -1126,10 +1164,10 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                 </span>
                 <button
                   type="button"
-                  disabled={!nextStepCTA.isReady}
+                  disabled={!productionMode && !nextStepCTA.isReady}
                   onClick={() => handleSelectTask(nextStepCTA.targetId)}
                   className={`px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 cursor-pointer ${
-                    nextStepCTA.isReady
+                    productionMode || nextStepCTA.isReady
                       ? 'bg-blue-900 hover:bg-blue-950 text-white shadow-xs'
                       : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
                   }`}
@@ -1152,7 +1190,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                   ) : (!isK13Curriculum && (s1ScheduleReadiness.isStale || s2ScheduleReadiness.isStale)) ? (
                     <span className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-bold flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                      Jadwal Aktual berubah/stale dan perlu disusun ulang.
+                      {productionMode ? 'WARNING: jadwal aktual stale. Navigasi tetap terbuka; data aktual diperiksa saat tindakan dijalankan.' : 'Jadwal Aktual berubah/stale dan perlu disusun ulang.'}
                     </span>
                   ) : (
                     <span className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-bold flex items-center gap-1.5">

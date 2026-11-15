@@ -16,6 +16,7 @@ export interface AnnualPlanningTaskRailItem {
 }
 
 interface AnnualPlanningTaskRailProps {
+  productionMode?: boolean;
   tasks: AnnualPlanningTaskRailItem[];
   onSelectTask: (taskId: string) => void;
   activeTaskId: string;
@@ -54,9 +55,10 @@ export const AnnualPlanningTaskRail: React.FC<AnnualPlanningTaskRailProps> = ({
   tasks,
   onSelectTask,
   activeTaskId,
+  productionMode = false,
 }) => {
   const completedCount = tasks.filter((task) => task.status === 'COMPLETE').length;
-  const nextTask = tasks.find((task) => task.status !== 'COMPLETE');
+  const nextTask = productionMode ? tasks[(tasks.findIndex(task => task.id === activeTaskId) + 1) % tasks.length] : tasks.find((task) => task.status !== 'COMPLETE');
 
   return (
     <>
@@ -153,7 +155,7 @@ export const AnnualPlanningTaskRail: React.FC<AnnualPlanningTaskRailProps> = ({
               onClick={() => onSelectTask(nextTask.id)}
               className="shrink-0 px-3 py-2 rounded-lg bg-blue-900 text-white text-xs font-bold shadow-xs cursor-pointer"
             >
-              Lanjut
+              {productionMode ? `Buka ${nextTask.title}` : 'Lanjut'}
             </button>
           )}
         </div>

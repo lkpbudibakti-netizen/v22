@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export interface UnitSemesterPlanningManagerProps {
+  productionMode?: boolean;
   mapping: ATPUnitMappingData;
   unitExecutionPlan: UnitExecutionPlanData;
   s1AvailableJP: number | null;
@@ -36,6 +37,7 @@ export const UnitSemesterPlanningManager: React.FC<UnitSemesterPlanningManagerPr
   s1AvailableJP,
   s2AvailableJP,
   onSave,
+  productionMode = false,
 }) => {
   // Local draft state for semesterPlacement (can be undefined if not yet set)
   const [placementDraft, setPlacementDraft] = useState<UnitSemesterPlacement | undefined>(() => {
@@ -174,7 +176,7 @@ export const UnitSemesterPlanningManager: React.FC<UnitSemesterPlanningManagerPr
       return;
     }
 
-    if (validation.isStale) {
+    if (!productionMode && validation.isStale) {
       setSaveNotice({
         type: 'error',
         message: 'Data stale relatif terhadap pemetaan terbaru.',
@@ -306,9 +308,9 @@ export const UnitSemesterPlanningManager: React.FC<UnitSemesterPlanningManagerPr
           <button
             type="button"
             onClick={handleSave}
-            disabled={!placementDraft || !isDirty || !validation.isValid || validation.isStale}
+            disabled={!placementDraft || (!isDirty && !(productionMode && validation.isStale)) || !validation.isValid || (!productionMode && validation.isStale)}
             className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
-              !placementDraft || !isDirty || !validation.isValid || validation.isStale
+              !placementDraft || (!isDirty && !(productionMode && validation.isStale)) || !validation.isValid || (!productionMode && validation.isStale)
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-600/20'
             }`}
@@ -376,7 +378,7 @@ export const UnitSemesterPlanningManager: React.FC<UnitSemesterPlanningManagerPr
         <div className="mx-5 mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between gap-4 text-xs">
           <p>
             <strong>Pemetaan Unit/Bab telah berubah.</strong><br/>
-            Struktur Pertemuan masih menggunakan versi lama. Sinkronkan terlebih dahulu sebelum menyimpan pembagian semester.
+            {productionMode ? 'WARNING: versi sumber berubah. Referensi diperiksa kembali saat Anda menyimpan; navigasi tetap terbuka.' : 'Struktur Pertemuan masih menggunakan versi lama. Sinkronkan terlebih dahulu sebelum menyimpan pembagian semester.'}
           </p>
           <button
             type="button"
