@@ -38,7 +38,7 @@ export function importedTimingIssues(context: DocumentGenerationContext, annual 
     const weeklyJP = resolveSemesterJPFromValues(target.semesterJPSetting,target.annualJPReference).weeklyJP;
     const bundles = (target.learningMeetingSchedules || []).filter(bundle=>bundle.semesterPlanId===target.academicSetting.id);
     if (!target.atpUnitMapping || !target.unitExecutionPlan || !target.subjectWeeklySchedule || !weeklyJP || bundles.length!==1) { issues.push(prefix+'jadwal mapel/pertemuan tujuan belum lengkap.'); continue; }
-    const checked = validateLearningMeetingScheduleData({ data: bundles[0].schedule, semester, mapping: target.atpUnitMapping, unitExecutionPlan: target.unitExecutionPlan,
+    const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: context.workMode === 'production', data: bundles[0].schedule, semester, mapping: target.atpUnitMapping, unitExecutionPlan: target.unitExecutionPlan,
       subjectWeeklySchedule: target.subjectWeeklySchedule, expectedWeeklyJP: weeklyJP, calendar: target.calendar!, calendarDays: target.calendarDays || [] });
     if (!checked.isValid || checked.isStale || bundles[0].schedule.status !== 'COMPLETE') issues.push(prefix+'perbarui jadwal pertemuan setelah perubahan kalender/JP. '+checked.errors.join('; '));
   }

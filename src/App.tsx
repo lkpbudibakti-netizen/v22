@@ -1169,7 +1169,8 @@ export function App() {
       return false;
     }
     try {
-      saveLearningMeetingScheduleV5(targetSemesterPlanId, schedule);
+      if (productionMode) saveLearningMeetingScheduleV5(targetSemesterPlanId, schedule, { allowUnusedSlots: true });
+      else saveLearningMeetingScheduleV5(targetSemesterPlanId, schedule);
       refreshV5();
       return true;
     } catch (err: any) {
@@ -1179,7 +1180,7 @@ export function App() {
       });
       return false;
     }
-  }, [activeSemesterPlan?.id, refreshV5]);
+  }, [activeSemesterPlan?.id, refreshV5, productionMode]);
 
   const handleSaveStudents = (stdList: Student[]) => {
     if (!activeSemesterPlan) {

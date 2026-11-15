@@ -44,3 +44,16 @@ export function assessAnnualJP(reference: Pick<SubjectJPResult, 'isOfficial' | '
     semesterBalances: balances, semesterImbalance: balances.some(s => s.remainingJP !== null && s.remainingJP < 0),
   };
 }
+
+/** Production completion is sufficiency against verified regulation, not full calendar consumption. */
+export function assessProductionJPSufficiency(reference: Pick<SubjectJPResult, 'isOfficial' | 'referenceAnnualJP'>, semesters: AnnualJPSemester[], structureValid: boolean, schedulesSaved: boolean) {
+  const assessment = assessAnnualJP({ ...reference, isOfficial: reference.isOfficial && finite(reference.referenceAnnualJP) && reference.referenceAnnualJP > 0 }, semesters);
+  const reasons: string[] = [];
+  if (!structureValid) reasons.push('Relasi atau pertemuan/jadwal yang digunakan tidak valid.');
+  if (assessment.semesterImbalance) reasons.push('Alokasi melebihi kapasitas aktual salah satu semester.');
+  const error = reasons.length > 0;
+  if (assessment.officialJP === null) reasons.push('JP acuan resmi belum terverifikasi.');
+  if (assessment.allocatedJP === null || assessment.capacityJP === null || !schedulesSaved) reasons.push('Alokasi/jadwal kedua semester belum lengkap dan tersimpan.');
+  if (assessment.referenceCheck === 'BELOW_REFERENCE') reasons.push(`JP teralokasi kurang ${assessment.referenceDifferenceJP} JP dari acuan resmi.`);
+  return { ...assessment, status: error ? 'ERROR' as const : reasons.length ? 'REVIEW' as const : 'SELESAI' as const, reasons };
+}

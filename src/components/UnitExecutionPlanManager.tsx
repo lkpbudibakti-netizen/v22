@@ -166,10 +166,11 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   const alignmentSource = useMemo(() => {
     try {
       const source=getMeetingAlignmentSourceV5(mapping.academicSettingId);
+      if (productionMode) source.context.allowUnusedSlots = true;
       if(JSON.stringify(source.persistedPlan)!==JSON.stringify(unitExecutionPlan)) source.context.errors.push('Struktur tersimpan berubah di luar draf ini. Muat ulang sebelum meninjau.');
       return {source,error:null};
     } catch(error) {return {source:null,error:error instanceof Error ? error.message : String(error)};}
-  }, [draft, mapping, unitExecutionPlan, meetingCapacity]);
+  }, [productionMode, draft, mapping, unitExecutionPlan, meetingCapacity]);
   const alignment = useMemo(() => alignmentSource.source ? proposeMeetingAlignment(draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,addAlignmentSlots,optimizationDraft) : null, [draft,mapping,alignmentSource,addAlignmentSlots,optimizationDraft]);
   const applyAlignment = () => {
     if(clearedDraftBackup){setGenerationError('Pulihkan draf atau gunakan Regenerate sebelum menyimpan penyesuaian.');return;}
@@ -348,7 +349,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     return "Lengkapi Pertemuan sesuai Kalender dengan AI";
   }, [totalMeetingsCount]);
 
-  const isAINoWork = useMemo(() => !!alignmentSource.source && !validateCalendarMeetingCandidate(draft,draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context).length,[draft,mapping,alignmentSource]);
+  const isAINoWork = useMemo(() => !!alignmentSource.source && !validateCalendarMeetingCandidate(draft,draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,{allowUnusedSlots:productionMode}).length,[productionMode,draft,mapping,alignmentSource]);
 
   const capacityOverflow = useMemo(() => {
     if (!meetingCapacity) return null;
@@ -801,7 +802,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       {isAINoWork && (
         <div className="px-5 py-3 text-xs font-medium bg-emerald-50 text-emerald-950 border-b border-emerald-200 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Struktur Pertemuan sudah sesuai kapasitas perencanaan semester dan seluruh coverage telah tercakup.</span>
+          <span>{productionMode ? 'Relasi dan slot pertemuan tersimpan valid. Kecukupan JP diperiksa pada ringkasan Step 8; sisa slot kalender tidak wajib diisi.' : 'Struktur Pertemuan sudah sesuai kapasitas perencanaan semester dan seluruh coverage telah tercakup.'}</span>
         </div>
       )}
 

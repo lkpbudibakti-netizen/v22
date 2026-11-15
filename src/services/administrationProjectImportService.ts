@@ -393,7 +393,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
     }
     if (weekly) warnings.push(...validateSubjectWeeklySchedule(weekly, jp).errors);
     if (schedule && mapping && execution && calendar && weekly && jp) {
-      const checked = validateLearningMeetingScheduleData({ data: schedule, semester: semester.semester, mapping,
+      const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: options.workMode === 'production', data: schedule, semester: semester.semester, mapping,
         unitExecutionPlan: execution, subjectWeeklySchedule: weekly, expectedWeeklyJP: jp, calendar: calendar.calendar, calendarDays: calendar.days });
       warnings.push(...checked.errors);
       if (!checked.isValid || checked.isStale) schedule.status = 'DRAFT';

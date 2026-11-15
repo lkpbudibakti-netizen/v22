@@ -1,4 +1,19 @@
 import { LearningMeeting } from '../types';
+
+/** Resolve a saved meeting → actual-slot relation without compacting calendar gaps. */
+export function selectMeetingSlots<T extends { id: string; jp: number }>(meetings: { id: string }[], slots: T[], assignments: { meetingId: string; sourceSlotId: string }[]) {
+  const errors: string[] = [], used = new Set<string>();
+  const selected: T[] = []; let lastIndex = -1;
+  for (const meeting of meetings) {
+    const matches = assignments.filter(entry => entry.meetingId === meeting.id);
+    const index = matches.length === 1 ? slots.findIndex(slot => slot.id === matches[0].sourceSlotId) : -1;
+    if (index < 0 || slots.filter(slot => slot.id === matches[0]?.sourceSlotId).length !== 1) { errors.push(`Pertemuan ${meeting.id}: relasi slot aktual hilang atau ambigu.`); continue; }
+    if (used.has(slots[index].id) || index <= lastIndex) errors.push(`Pertemuan ${meeting.id}: slot duplikat atau urutan slot tidak valid.`);
+    used.add(slots[index].id); lastIndex = index; selected.push(slots[index]);
+  }
+  for (const entry of assignments) if (!meetings.some(meeting => meeting.id === entry.meetingId)) errors.push(`Jadwal merujuk pertemuan ${entry.meetingId} yang tidak direncanakan.`);
+  return { slots: selected, errors };
+}
 // Unknown fields are protected too, so future/manual content cannot be silently discarded.
 export function isEmptyAlignmentMeeting(meeting: LearningMeeting): boolean {
   return Object.entries(meeting).every(([key, value]) => {

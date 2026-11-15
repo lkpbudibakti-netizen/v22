@@ -90,7 +90,7 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
     atpUnitMapping,
     k13Analysis,
     k13KKM,
-  });
+  }, { productionMode });
 
   const { stepStates, hasStaleModules } = validationReport;
 

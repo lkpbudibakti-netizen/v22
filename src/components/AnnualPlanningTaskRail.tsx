@@ -4,7 +4,8 @@ import { AlertTriangle, CheckCircle2, Circle, Lock } from 'lucide-react';
 export type AnnualPlanningTaskStatus =
   | 'COMPLETE'
   | 'PENDING'
-  | 'NEEDS_REVIEW';
+  | 'NEEDS_REVIEW'
+  | 'ERROR';
 
 export interface AnnualPlanningTaskRailItem {
   id: string;
@@ -23,6 +24,7 @@ interface AnnualPlanningTaskRailProps {
 }
 
 const getStatusIcon = (status: AnnualPlanningTaskStatus, isLocked?: boolean) => {
+  if (status === 'ERROR' && !isLocked) return <AlertTriangle className="w-4 h-4 text-red-600" />;
   if (isLocked) {
     return <Lock className="w-3.5 h-3.5 text-slate-400" />;
   }
@@ -36,6 +38,7 @@ const getStatusIcon = (status: AnnualPlanningTaskStatus, isLocked?: boolean) => 
 };
 
 const getTaskClassName = (task: AnnualPlanningTaskRailItem, isActive: boolean) => {
+  if (task.status === 'ERROR' && !task.isLocked) return 'border-red-300 bg-red-50 text-red-900';
   if (task.isLocked) {
     return 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-75';
   }
@@ -103,9 +106,9 @@ export const AnnualPlanningTaskRail: React.FC<AnnualPlanningTaskRailProps> = ({
                             Selesai
                           </span>
                         )}
-                        {!isActive && task.status === 'NEEDS_REVIEW' && (
+                        {!isActive && (task.status === 'NEEDS_REVIEW' || task.status === 'ERROR') && (
                           <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[9px] uppercase tracking-wide">
-                            Review
+                            {task.status === 'ERROR' ? 'ERROR' : 'Review'}
                           </span>
                         )}
                         {!isActive && task.isLocked && (

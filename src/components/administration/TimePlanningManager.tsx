@@ -97,6 +97,7 @@ import {
 } from 'lucide-react';
 
 export interface TimePlanningManagerProps {
+  productionMode?: boolean;
   allocationBlockers?: string[];
   school: SchoolData;
   profile: TeacherProfile;
@@ -143,6 +144,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
   afterTimeSetup,
   viewMode = 'ALL',
   allocationBlockers = [],
+  productionMode = false,
   explicitSemesterPlanId,
   onSaveCalendar,
   onSaveSemesterJPSetting,
@@ -2578,6 +2580,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
         <div className="space-y-6">
           {!isK13Curriculum && viewMode === 'ALLOCATION' && (
             <LearningMeetingSchedulePreview
+              productionMode={productionMode}
               semesterPlanId={effectiveSemesterPlanId}
               semester={propSemester || (activeSemester === '2' ? 2 : 1)}
               mapping={mapping}

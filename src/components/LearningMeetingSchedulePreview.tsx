@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 
 interface LearningMeetingSchedulePreviewProps {
+  productionMode?: boolean;
   semesterPlanId: string;
   semester: 1 | 2;
   mapping?: ATPUnitMappingData;
@@ -121,6 +122,7 @@ interface ReplacementCandidate {
 }
 
 export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePreviewProps> = ({
+  productionMode = false,
   semesterPlanId,
   semester,
   mapping,
@@ -185,6 +187,7 @@ export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePre
   const scheduleResult = useMemo(() => {
     if (!mapping || !unitExecutionPlan) return null;
     return resolveLearningMeetingSchedule({
+      slotAssignments: productionMode && persistedSchedule?.status === 'COMPLETE' ? persistedSchedule.entries : undefined,
       semesterPlanId,
       semester,
       mapping,
@@ -197,6 +200,7 @@ export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePre
     mapping,
     unitExecutionPlan,
     subjectSlotResult,
+    productionMode, persistedSchedule,
   ]);
 
   // 3. Resolve semester placement to get canonical units for target semester
@@ -955,6 +959,7 @@ export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePre
       });
 
       const validation = validateLearningMeetingScheduleData({
+        allowUnusedSlots: productionMode,
         data: dataToSave,
         semester,
         mapping,

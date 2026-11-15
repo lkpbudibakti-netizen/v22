@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:step08-jp-sufficiency": "tsx scripts/testStep08JPSufficiency.tsx",
     "test:step08-production": "tsx scripts/testStep08ProductionAccess.tsx",
     "test:production-validation": "tsx scripts/testProductionValidation.tsx",
     "test:work-modes": "tsx scripts/testWorkModes.tsx",

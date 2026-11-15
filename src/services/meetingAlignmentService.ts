@@ -1,5 +1,5 @@
 import { mergeReconciliationContent } from './meetingReconciliationService';
-import { isEmptyAlignmentMeeting, meetingSlotIssue, simulateMeetingSlotJP } from './meetingContentService';
+import { isEmptyAlignmentMeeting, meetingSlotIssue, simulateMeetingSlotJP, selectMeetingSlots } from './meetingContentService';
 export { isEmptyAlignmentMeeting } from './meetingContentService';
 import type { ATPData, ATPUnitMappingData, LearningActivity, LearningMeeting, TPData, UnitExecutionPlanData, UnitExecutionPlan } from '../types';
 import { resolveUnitSemesterPlacement } from './unitSemesterPlanningService';
@@ -10,6 +10,8 @@ export interface AlignmentCapacity {
   semester2: { isReady: boolean; targetMeetingCount: number; totalJP?: number; capacitySource?: string };
 }
 export interface MeetingAlignmentContext {
+  allowUnusedSlots?: boolean;
+  usedSlotIds?: Record<string, string>;
   calendarErrors?: string[];
   atp?: ATPData;
   tp?: TPData;
@@ -46,6 +48,7 @@ export interface MeetingOptimizationDraft {
   edits: Array<Pick<LearningMeeting, 'id'> & Partial<Pick<LearningMeeting, 'title' | 'plannedJP' | 'activities' | 'materialIds' | 'linkedAtpItemIds' | 'linkedTpIds'>>>;
 }
 export interface MeetingAlignmentProposal {
+  allowUnusedSlots?: boolean;
   fingerprint: string;
   addSlots: boolean;
   optimizationDraft?: MeetingOptimizationDraft;
@@ -192,7 +195,7 @@ export function validateMeetingOptimizationDraft(raw:unknown, plan:UnitExecution
 }
 
 export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,context:MeetingAlignmentContext,addSlots=false,optimizationDraft?:MeetingOptimizationDraft):MeetingAlignmentProposal {
-  const result:MeetingAlignmentProposal={fingerprint:JSON.stringify([plan,mapping,capacity,context,addSlots,optimizationDraft]),addSlots,...(optimizationDraft?{optimizationDraft}:{}),proposedUnits:structuredClone(plan.units),rows:[],operations:[],errors:[...context.errors],conflicts:[],impacts:[],totals:[],simulation:[],meetingStatus:'WITHIN_CAPACITY',slotStatus:'VALID',curriculumJPStatus:'SEPARATE_REVIEW'};
+  const result:MeetingAlignmentProposal={fingerprint:JSON.stringify([plan,mapping,capacity,context,addSlots,optimizationDraft]),addSlots,...(context.allowUnusedSlots?{allowUnusedSlots:true}:{}),...(optimizationDraft?{optimizationDraft}:{}),proposedUnits:structuredClone(plan.units),rows:[],operations:[],errors:[...context.errors],conflicts:[],impacts:[],totals:[],simulation:[],meetingStatus:'WITHIN_CAPACITY',slotStatus:'VALID',curriculumJPStatus:'SEPARATE_REVIEW'};
   const placement=resolveUnitSemesterPlacement(plan,mapping), validation=validateUnitExecutionPlan(plan,mapping,context.atp,context.tp);
   if(plan.units.length!==mapping.units.length || mapping.units.some(u=>!plan.units.some(p=>p.unitId===u.id)))result.errors.push('Struktur unit tidak sesuai pemetaan; pulihkan Bab yang hilang sebelum optimalisasi.');
   if(!plan.semesterPlacement || !placement.isValid || placement.isStale)result.errors.push('Pembagian semester belum valid/mutakhir; tidak ada unit yang dipindahkan.');
@@ -223,10 +226,17 @@ export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUn
     }
   }
   for(const semester of [1,2] as const) {
-    const key=semester===1?'semester1':'semester2', cap=capacity[key], slots=context.slotJP[key], details=context.slotDetails?.[key];
+    const key=semester===1?'semester1':'semester2', cap=capacity[key];
+    let slots=context.slotJP[key], details=context.slotDetails?.[key];
+    const availableSlotCount=slots.length;
     const ids=new Set(semester===1?placement.semester1UnitIds:placement.semester2UnitIds);
     const units=[...mapping.units].sort((a,b)=>a.order-b.order).filter(u=>ids.has(u.id));
     const input=units.flatMap(u=>[...(working.units.find(p=>p.unitId===u.id)?.meetings || [])].sort((a,b)=>a.order-b.order));
+    if(context.allowUnusedSlots && input.length<=cap.targetMeetingCount && details) {
+      const ids=new Set(input.map(meeting=>meeting.id));
+      const selected=selectMeetingSlots(input,details,Object.entries(context.usedSlotIds || {}).filter(([id])=>ids.has(id)).map(([meetingId,sourceSlotId])=>({meetingId,sourceSlotId})));
+      result.errors.push(...selected.errors); details=selected.slots; slots=details.map(slot=>slot.jp);
+    }
     const target=cap.targetMeetingCount;
     result.totals.push({semester,target,allocated:input.length});
     if(input.length>target)result.meetingStatus='OVER_CAPACITY';
@@ -330,7 +340,7 @@ export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUn
     const simulated=simulateMeetingSlotJP(output,slots.map(jp=>({jp})));
     result.simulation.push(...simulated.rows.map(row=>({...row,semester})));
     if(simulated.errors.length)result.slotStatus='CONFLICT';else if(simulated.unknownIds.length && result.slotStatus==='VALID')result.slotStatus='UNKNOWN';
-    if(result.operations.length && (slots.length!==target || cap.capacitySource!=='ACTUAL_SLOTS'))result.errors.push(`Semester ${semester}: persetujuan perubahan memerlukan slot aktual.`);
+    if(result.operations.length && (availableSlotCount!==target || cap.capacitySource!=='ACTUAL_SLOTS'))result.errors.push(`Semester ${semester}: persetujuan perubahan memerlukan slot aktual.`);
     if(result.operations.length)result.errors.push(...simulated.errors,...simulated.unknownIds.map(id=>`${id}: kebutuhan JP belum diketahui; tidak dapat menyetujui optimalisasi sebagai layak JP.`));
     if(result.operations.length)for(const row of simulated.rows) {
       if(!context.protectedMeetings[row.meetingId]?.length)continue;
@@ -353,7 +363,7 @@ export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUn
   return result;
 }
 export function applyMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,approved:MeetingAlignmentProposal,createId:()=>string,context:MeetingAlignmentContext):UnitExecutionPlanData {
-  const current=proposeMeetingAlignment(plan,mapping,capacity,context,approved.addSlots,approved.optimizationDraft);
+  const current=proposeMeetingAlignment(plan,mapping,capacity,approved.allowUnusedSlots ? {...context,allowUnusedSlots:true} : context,approved.addSlots,approved.optimizationDraft);
   if(JSON.stringify(current)!==JSON.stringify(approved))throw new Error('Kapasitas, pemetaan, konten, atau dependensi berubah. Tinjau usulan terbaru.');
   if(current.errors.length)throw new Error(current.errors.join(' '));
   if(!current.operations.length)return structuredClone(plan);

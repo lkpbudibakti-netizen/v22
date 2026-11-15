@@ -9,7 +9,7 @@ import {
   CalendarDay,
 } from '../types';
 import { resolveUnitSemesterPlacement } from './unitSemesterPlanningService';
-import { simulateMeetingSlotJP, meetingSlotIssue } from './meetingContentService';
+import { simulateMeetingSlotJP, meetingSlotIssue, selectMeetingSlots } from './meetingContentService';
 import {
   EffectiveSubjectSlotResult,
   resolveEffectiveSubjectSlots,
@@ -25,6 +25,7 @@ export function resolveLearningMeetingSchedule(params: {
   mapping: ATPUnitMappingData;
   unitExecutionPlan: UnitExecutionPlanData;
   subjectSlotResult: EffectiveSubjectSlotResult;
+  slotAssignments?: { meetingId: string; sourceSlotId: string }[];
 }): LearningMeetingScheduleResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -164,7 +165,7 @@ export function resolveLearningMeetingSchedule(params: {
   }
 
   // 10. Sort exact slots deterministically
-  const sortedSlots = [...(subjectSlotResult.slots || [])].sort((a, b) => {
+  let sortedSlots = [...(subjectSlotResult.slots || [])].sort((a, b) => {
     if (a.date !== b.date) {
       return a.date.localeCompare(b.date);
     }
@@ -174,6 +175,11 @@ export function resolveLearningMeetingSchedule(params: {
   });
 
   const totalAvailableSlots = sortedSlots.length;
+  if (params.slotAssignments) {
+    const selected = selectMeetingSlots(flatMeetings, sortedSlots, params.slotAssignments);
+    if (selected.errors.length) return createFailedResult(selected.errors, subjectSlotResult);
+    sortedSlots = selected.slots;
+  }
   const jpSimulation = simulateMeetingSlotJP(flatMeetings.slice(0, sortedSlots.length), sortedSlots);
   if (jpSimulation.errors.length) return createFailedResult(jpSimulation.errors, subjectSlotResult);
 
@@ -290,6 +296,7 @@ export function isLearningMeetingScheduleStale(params: {
 }
 
 export interface ValidateLearningMeetingScheduleParams {
+  allowUnusedSlots?: boolean;
   data: LearningMeetingScheduleData;
   semester: 1 | 2;
   mapping: ATPUnitMappingData;
@@ -510,10 +517,11 @@ export function validateLearningMeetingScheduleData(
   }
 
   const autoResult = resolveLearningMeetingSchedule({
+    slotAssignments: params.allowUnusedSlots ? data.entries : undefined,
     semesterPlanId: data.semesterPlanId,
     semester,
     mapping,
-    unitExecutionPlan,
+    unitExecutionPlan: params.allowUnusedSlots ? { ...unitExecutionPlan, units: unitExecutionPlan.units.map(unit => ({ ...unit, meetings: unit.meetings.filter(meeting => data.entries.some(entry => entry.meetingId === meeting.id)) })) } : unitExecutionPlan,
     subjectSlotResult,
   });
 
@@ -753,6 +761,7 @@ export interface ExactScheduleReadinessResult {
  * - passes validateLearningMeetingScheduleData()
  */
 export function isLearningMeetingScheduleReady(params: {
+  allowUnusedSlots?: boolean;
   schedule: LearningMeetingScheduleData | null | undefined;
   semester: 1 | 2;
   mapping: ATPUnitMappingData | null | undefined;
@@ -813,6 +822,7 @@ export function isLearningMeetingScheduleReady(params: {
   }
 
   const validation = validateLearningMeetingScheduleData({
+    allowUnusedSlots: params.allowUnusedSlots,
     data: schedule,
     semester,
     mapping,

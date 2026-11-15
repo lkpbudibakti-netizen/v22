@@ -281,7 +281,7 @@ export function allocateUnitMeetings(params: AllocateUnitMeetingsParams): UnitMe
 import { validateMeetingATPOrder, type AlignmentCapacity, type MeetingAlignmentContext } from './meetingAlignmentService';
 import { resolveUnitSemesterPlacement } from './unitSemesterPlanningService';
 import { validateUnitExecutionPlan } from './unitExecutionPlanService';
-import { simulateMeetingSlotJP, isEmptyAlignmentMeeting } from './meetingContentService';
+import { simulateMeetingSlotJP, isEmptyAlignmentMeeting, selectMeetingSlots } from './meetingContentService';
 import type { LearningMeeting } from '../types';
 
 export interface CalendarMeetingSlot { id: string; date: string; sessionId: string; sessionOrder?: number; jp: number }
@@ -326,7 +326,7 @@ export function prepareCalendarMeetingGeneration(plan:UnitExecutionPlanData,mapp
   }
   return {basis,slots,allocation,refillMeetings,fingerprint:calendarGenerationFingerprint(plan,mapping,capacity,context)};
 }
-export function validateCalendarMeetingCandidate(candidate:UnitExecutionPlanData,original:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,context:MeetingAlignmentContext):string[] {
+export function validateCalendarMeetingCandidate(candidate:UnitExecutionPlanData,original:UnitExecutionPlanData,mapping:ATPUnitMappingData,capacity:AlignmentCapacity,context:MeetingAlignmentContext,options?:{allowUnusedSlots?:boolean}):string[] {
   const placement=resolveUnitSemesterPlacement(candidate,mapping), errors:string[]=[];
   const valid=validateUnitExecutionPlan(candidate,mapping,context.atp,context.tp);
   for(const unit of candidate.units){const issue=validateMeetingATPOrder(unit.meetings,context.atp);if(issue)errors.push(issue);if([...unit.meetings].sort((a,b)=>a.order-b.order).some((m,i)=>m.order!==i+1))errors.push('Urutan pertemuan harus 1..n sesuai slot pada setiap Bab.');}
@@ -344,11 +344,18 @@ export function validateCalendarMeetingCandidate(candidate:UnitExecutionPlanData
   for(const semester of [1,2] as const) {
     const key=semester===1?'semester1':'semester2', unitIds=new Set(semester===1?placement.semester1UnitIds:placement.semester2UnitIds);
     const meetings=[...mapping.units].sort((a,b)=>a.order-b.order).filter(u=>unitIds.has(u.id)).flatMap(u=>[...(candidate.units.find(p=>p.unitId===u.id)?.meetings || [])].sort((a,b)=>a.order-b.order));
-    const slots=context.slotDetails?.[key] || [];
-    if(!capacity[key].isReady || capacity[key].capacitySource!=='ACTUAL_SLOTS' || slots.length!==capacity[key].targetMeetingCount || meetings.length!==slots.length)errors.push('Semester '+semester+': jumlah pertemuan harus persis sama dengan jumlah slot aktual.');
+    const available=context.slotDetails?.[key] || [];
+    let slots=available;
+    if(options?.allowUnusedSlots) {
+      const ids=new Set(meetings.map(meeting=>meeting.id));
+      const selected=selectMeetingSlots(meetings,available,Object.entries(context.usedSlotIds || {}).filter(([id])=>ids.has(id)).map(([meetingId,sourceSlotId])=>({meetingId,sourceSlotId})));
+      errors.push(...selected.errors,...validateCalendarMeetingSlots({confirmed:true,semester1:key==='semester1'?available:[],semester2:key==='semester2'?available:[]}));
+      slots=selected.slots;
+    }
+    if(!capacity[key].isReady || capacity[key].capacitySource!=='ACTUAL_SLOTS' || available.length!==capacity[key].targetMeetingCount || (options?.allowUnusedSlots ? meetings.length>available.length : meetings.length!==slots.length))errors.push('Semester '+semester+(options?.allowUnusedSlots ? ': jumlah pertemuan melebihi atau tidak sesuai kapasitas slot aktual.' : ': jumlah pertemuan harus persis sama dengan jumlah slot aktual.'));
     errors.push(...simulateMeetingSlotJP(meetings,slots).errors);
-    if(meetings.some((m,i)=>m.plannedJP!==slots[i]?.jp))errors.push('Semester '+semester+': plannedJP harus persis mengikuti JP setiap slot aktual.');
-    if(meetings.reduce((s,m)=>s+(m.plannedJP || 0),0)!==slots.reduce((s,slot)=>s+slot.jp,0) || slots.reduce((s,slot)=>s+slot.jp,0)!==capacity[key].totalJP)errors.push('Semester '+semester+': total JP pertemuan tidak sesuai kalender.');
+    if(!options?.allowUnusedSlots && meetings.some((m,i)=>m.plannedJP!==slots[i]?.jp))errors.push('Semester '+semester+': plannedJP harus persis mengikuti JP setiap slot aktual.');
+    if((!options?.allowUnusedSlots && meetings.reduce((s,m)=>s+(m.plannedJP || 0),0)!==slots.reduce((s,slot)=>s+slot.jp,0)) || available.reduce((s,slot)=>s+slot.jp,0)!==capacity[key].totalJP || slots.reduce((s,slot)=>s+slot.jp,0)>available.reduce((s,slot)=>s+slot.jp,0))errors.push('Semester '+semester+': total JP pertemuan tidak sesuai kalender.');
     for(const [i,m] of meetings.entries()) {
       if(context.protectedContent[m.id] && JSON.stringify(context.protectedContent[m.id])!==JSON.stringify(m))errors.push('Pertemuan terlindungi '+m.id+' tidak boleh diubah.');
       const anchor=context.protectedSlots?.[m.id];if(anchor && (slots[i]?.date!==anchor.date || slots[i]?.sessionId!==anchor.sessionId || slots[i]?.jp!==anchor.jp))errors.push('Slot pertemuan terlindungi '+m.id+' akan bergeser.');

@@ -1406,7 +1406,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
   const workspaceIds=new Set(state.workspaces.filter(w => w.yearPlanId===yearPlanId).map(w => w.id));
   const scopedDocuments=state.documents.filter(d => d.academicSettingId===yearPlanId || semesterIds.has(d.academicSettingId || '') || (!d.academicSettingId && workspaceIds.has(d.workspaceId || '')));
   const scopedData=Object.fromEntries(Object.entries(state.semesterData).map(([key,entries]) => [key, entries.filter(e => semesterIds.has(e.semesterPlanId))]));
-  const context: MeetingAlignmentContext={atp,tp,protectedMeetings:Object.create(null),protectedContent:Object.create(null),slotJP:{semester1:[],semester2:[]},slotDetails:{semester1:[],semester2:[]},protectedSlots:Object.create(null),impacts:[],errors:[],sourceFingerprint:JSON.stringify([
+  const context: MeetingAlignmentContext={atp,tp,usedSlotIds:Object.create(null),protectedMeetings:Object.create(null),protectedContent:Object.create(null),slotJP:{semester1:[],semester2:[]},slotDetails:{semester1:[],semester2:[]},protectedSlots:Object.create(null),impacts:[],errors:[],sourceFingerprint:JSON.stringify([
     state.yearPlans.find(y => y.id===yearPlanId),semesters,
     Object.fromEntries(Object.entries(state.annualData).map(([key,entries]) => [key,entries.filter(e => e.yearPlanId===yearPlanId)])),
     state.annualJPReferences.filter(e => e.yearPlanId===yearPlanId),state.semesterJPSettings.filter(e => semesterIds.has(e.semesterPlanId)),scopedData,scopedDocuments,
@@ -1441,6 +1441,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
     const unitIds=new Set(semester===1 ? placement?.semester1UnitIds : placement?.semester2UnitIds);
     const meetings=[...(plan?.units || [])].filter(u => unitIds.has(u.unitId)).sort((a,b) => mapping.units.find(u => u.id===a.unitId)!.order-mapping.units.find(u => u.id===b.unitId)!.order).flatMap(u => [...u.meetings].sort((a,b) => a.order-b.order));
     const schedule=state.semesterData.learningMeetingSchedules?.find(e => e.semesterPlanId===sp.id)?.value;
+    for (const entry of schedule?.entries || []) context.usedSlotIds![entry.meetingId] = entry.sourceSlotId;
     for(const entry of state.semesterData.journalRealizations?.filter(e => e.semesterPlanId===sp.id) || []) for(const note of entry.value) protect(note.meetingId,'jurnal/realisasi');
     for(const entry of state.semesterData.attendance.filter(e => e.semesterPlanId===sp.id)) {
       if (entry.value.records.some(record => !entry.value.sessions.some(session => session.id === record.sessionId))) {
@@ -1897,7 +1898,8 @@ export function deleteSubjectWeeklyScheduleV5(semesterPlanId: string): void {
 
 export function saveLearningMeetingScheduleV5(
   semesterPlanId: string,
-  value: LearningMeetingScheduleData
+  value: LearningMeetingScheduleData,
+  options?: { allowUnusedSlots?: boolean }
 ): LearningMeetingScheduleData {
   if (!value || typeof value !== 'object') {
     throw new Error('LearningMeetingScheduleData harus berupa objek valid');
@@ -2025,6 +2027,7 @@ export function saveLearningMeetingScheduleV5(
   }
 
   const validation = validateLearningMeetingScheduleData({
+    allowUnusedSlots: options?.allowUnusedSlots,
     data: value,
     semester: semesterPlan.semester,
     mapping,
@@ -2037,6 +2040,16 @@ export function saveLearningMeetingScheduleV5(
 
   if (!validation.isValid) {
     throw new Error(`Validasi jadwal pertemuan gagal: ${validation.errors.join('; ')}`);
+  }
+
+  if (options?.allowUnusedSlots) {
+    const source = getMeetingAlignmentSourceV5(yearPlan.id, state);
+    for (const [id, anchor] of Object.entries(source.context.protectedSlots || {})) {
+      const previous = state.semesterData.learningMeetingSchedules?.find(entry => entry.semesterPlanId === semesterPlanId)?.value.entries.find(entry => entry.meetingId === id);
+      if (!previous) continue;
+      const next = value.entries.find(entry => entry.meetingId === id);
+      if (!next || next.date !== anchor.date || next.sessionId !== anchor.sessionId || next.jp !== anchor.jp) throw new Error(`Slot pertemuan terlindungi ${id} tidak boleh berubah atau hilang.`);
+    }
   }
 
   if (!state.semesterData.learningMeetingSchedules) {
