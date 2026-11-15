@@ -49,6 +49,7 @@ import {
 } from '../services/diagnosticService';
 
 interface TPManagerProps {
+  productionMode?: boolean;
   tp: TPData;
   cp: CPData;
   cpAnalysis?: CPAnalysisData;
@@ -70,6 +71,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
   onSaveTP,
   onNextStep,
   onBackToCP,
+  productionMode = false,
 }) => {
   const [items, setItems] = useState<TPItem[]>(tp.items || []);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -389,6 +391,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
   };
 
   const handleContinue = () => {
+    if (productionMode) { onNextStep(); return; }
     if (items.length === 0) {
       alert('Tambahkan minimal 1 Tujuan Pembelajaran (TP) sebelum menyusun ATP.');
       recordDiagnosticEvent({
@@ -671,7 +674,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
     }
   };
 
-  if (!hasCP) {
+  if (!hasCP && !productionMode) {
     return (
       <div className="bg-white rounded-2xl p-8 border border-slate-200/80 shadow-xs text-center space-y-4">
         <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
@@ -1043,7 +1046,7 @@ export const TPManager: React.FC<TPManagerProps> = ({
           )}
         </div>
 
-        {saveState === 'SAVED_READY' && (
+        {(productionMode || saveState === 'SAVED_READY') && (
           <button
             id="btn-next-to-atp"
             type="button"

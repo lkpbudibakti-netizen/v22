@@ -285,7 +285,7 @@ for(const [component,attribute,destination] of [
 runTest('Pemetaan → Tahunan uses real readiness; invalid/dangling mapping cannot proceed',()=>{
   for(const mapping of [ctx.atpUnitMapping,{...ctx.atpUnitMapping,units:[]}]) {
     let step='';const notices:any[]=[];
-    const enter=appCallback('handleEnterAnnualPlanning',{isK13,resolveATPUnitMappingReadiness,transitionalAcademicSetting:ctx.academicSetting,
+    const enter=appCallback('handleEnterAnnualPlanning',{productionMode:false,isK13,resolveATPUnitMappingReadiness,transitionalAcademicSetting:ctx.academicSetting,
       activeATPUnitMapping:mapping,activeATP:ctx.atp,activeTP:ctx.tp,setCurrentStep:(s:string)=>step=s,setAppNotice:(n:any)=>notices.push(n)});
     jsxCallback('ATPUnitMappingManager','onNextStep',{handleEnterAnnualPlanning:enter})();
     assert.equal(step,mapping.units.length?'annual-planning':'atp-mapping');
@@ -332,7 +332,7 @@ runTest('App selects semester using V5 authority, refreshes only after success, 
 runTest('App admin navigation rejects missing semester for Merdeka but preserves K13 route',()=>{
   for(const curriculumType of ['KURIKULUM_MERDEKA','K13']) {
     let step='';const notices:any[]=[];let annual=0;
-    const select=appCallback('handleSelectStep',{isK13,transitionalAcademicSetting:{...ctx.academicSetting,curriculumType,curriculum:curriculumType==='K13'?'Kurikulum 2013':'Kurikulum Merdeka'},isActiveSemesterValid:false,
+    const select=appCallback('handleSelectStep',{productionMode:false,isK13,transitionalAcademicSetting:{...ctx.academicSetting,curriculumType,curriculum:curriculumType==='K13'?'Kurikulum 2013':'Kurikulum Merdeka'},isActiveSemesterValid:false,
       handleEnterAnnualPlanning:()=>annual++,setCurrentStep:(s:string)=>step=s,setAppNotice:(n:any)=>notices.push(n)});
     select('admin');assert.equal(step,curriculumType==='K13'?'admin':'semester');assert.equal(notices.length,curriculumType==='K13'?0:1);
     select('annual-planning');assert.equal(annual,1);

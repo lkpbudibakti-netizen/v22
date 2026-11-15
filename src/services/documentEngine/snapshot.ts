@@ -88,9 +88,20 @@ export function resolveEffectiveContext(
   context: DocumentGenerationContext,
   snapshotOverride?: DocumentSnapshot
 ): DocumentGenerationContext {
-  const effective = resolveSnapshotContext(context, snapshotOverride);
-  const frozenNotice = (snapshotOverride || context.snapshot)?.planningReferenceNotice;
-  const targetTimingApproved = context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_SCHEDULE' && importedTimingIssues(context, !context.zipAnnualSource.semesterPlans.some(plan=>plan.id===context.academicSetting.id)).length===0;
+  const production = context.workMode === 'production';
+  const effective = resolveSnapshotContext(production ? { ...context, snapshot: undefined } : context, production ? undefined : snapshotOverride);
+  const previous = snapshotOverride || context.snapshot;
+  if (production && previous) {
+    effective.snapshot = createDocumentSnapshot(effective, previous.format || 'docx');
+    const plan = effective.learningPlans?.find(plan => plan.id === effective.activeLearningPlanId || (!effective.activeLearningPlanId && plan.id === previous.learningPlanId));
+    if (plan) {
+      effective.snapshot.learningPlanId = plan.id;
+      effective.snapshot.sourceVersions = { ...effective.snapshot.sourceVersions, learningPlanUpdatedAt: plan.updatedAt };
+    }
+    if (previous.jurnalProjection) effective.snapshot.jurnalProjection = buildJurnalProjection({ ...effective, snapshot: undefined });
+  }
+  const frozenNotice = production ? undefined : (snapshotOverride || context.snapshot)?.planningReferenceNotice;
+  const targetTimingApproved = !production && context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_SCHEDULE' && importedTimingIssues(context, !context.zipAnnualSource.semesterPlans.some(plan=>plan.id===context.academicSetting.id)).length===0;
   const notice = frozenNotice || (targetTimingApproved ? undefined : context.zipAnnualSource?.yearPlan.identityOnlyImport?.timingIsSourceReference
     ? 'Kalender, JP, dan jadwal adalah data sumber; belum diverifikasi untuk sekolah tujuan.' : effective.academicSetting?.planningReferenceNotice);
   return maskExportIdentity(notice || targetTimingApproved ? { ...effective, academicSetting: { ...effective.academicSetting, planningReferenceNotice: notice } } : effective);

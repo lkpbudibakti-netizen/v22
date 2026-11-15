@@ -68,6 +68,7 @@ export type AdministrationTab =
   | 'export_docs';
 
 interface AdministrationHubProps {
+  workMode?: import('../../services/workMode').WorkMode;
   profile: TeacherProfile;
   school: SchoolData;
   workspace?: AdministrationWorkspace;
@@ -165,6 +166,7 @@ export const AdministrationHub: React.FC<AdministrationHubProps> = ({
   annualJPReference,
   protaSemesterAllocations = [],
   zipAnnualSource,
+  workMode = 'authoring',
   initialTab = 'time_planning',
   onSaveCalendar,
   onSaveSemesterJPSetting,
@@ -688,6 +690,7 @@ export const AdministrationHub: React.FC<AdministrationHubProps> = ({
 
         {activeTab === 'export_docs' && (
           <AdminDocsExport
+              workMode={workMode}
             subjectWeeklySchedule={subjectWeeklySchedule}
             profile={profile}
             school={school}

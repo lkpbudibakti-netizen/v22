@@ -53,6 +53,7 @@ import { validateATPUnitMappingCanonical } from '../services/atpUnitMappingValid
 import { resolveATPUnitMappingReadiness } from '../services/atpMappingReadinessService';
 
 export interface AnnualPlanningManagerProps {
+  productionMode?: boolean;
   school: SchoolData;
   profile: TeacherProfile;
   academicSetting: AcademicSetting;
@@ -94,6 +95,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
   onNextStep,
   onReviewAnnualJPReference,
   onBackToMapping,
+  productionMode = false,
 }) => {
   // Identify Semester 1 and Semester 2 plans from the year hierarchy
   const sem1Plan = useMemo(() => {
@@ -1164,8 +1166,8 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                 <button
                   type="button"
                   id="finalize-step08"
-                  disabled={!isAnnualReady}
-                  onClick={() => { if (isAnnualReady) onNextStep(); }}
+                  disabled={!productionMode && !isAnnualReady}
+                  onClick={() => { if (productionMode || isAnnualReady) onNextStep(); }}
                   className={`px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 cursor-pointer ${
                     isAnnualReady
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'

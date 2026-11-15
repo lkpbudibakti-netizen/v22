@@ -48,6 +48,7 @@ import {
 } from '../services/cpAnalysisSemanticReviewService';
 
 interface CPAnalysisManagerProps {
+  productionMode?: boolean;
   cp: CPData;
   cpAnalysis?: CPAnalysisData;
   context: ActiveContext;
@@ -99,6 +100,7 @@ export const CPAnalysisManager: React.FC<CPAnalysisManagerProps> = ({
   onSaveCPAnalysis,
   onNextStep,
   onBackToCP,
+  productionMode = false,
 }) => {
   const [reviewedSnapshot,setReviewedSnapshot]=useState('');
   const [items, setItems] = useState<CPAnalysisItem[]>(() => getInitialCPAnalysisItems(cpAnalysis));
@@ -1111,6 +1113,7 @@ export const CPAnalysisManager: React.FC<CPAnalysisManagerProps> = ({
         <button
           type="button"
           onClick={() => {
+            if (productionMode) { onNextStep(); return; }
             const ready = handleSave();
             if (ready) {
               onNextStep();

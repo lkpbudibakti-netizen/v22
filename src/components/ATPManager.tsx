@@ -31,6 +31,7 @@ import {
 } from '../services/diagnosticService';
 
 interface ATPManagerProps {
+  productionMode?: boolean;
   atp: ATPData;
   tp: TPData;
   cp: CPData;
@@ -54,6 +55,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
   onSaveATP,
   onNextStep,
   onBackToTP,
+  productionMode = false,
 }) => {
   const [rationale, setRationale] = useState(atp.rationale || '');
   const [items, setItems] = useState<ATPItem[]>(atp.items || []);
@@ -338,6 +340,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
   };
 
   const handleSaveAndNext = () => {
+    if (productionMode) { onNextStep(); return; }
     if (items.length === 0) {
       alert('Susun minimal 1 butir Alur Tujuan Pembelajaran (ATP) sebelum melanjutkan.');
       return;
@@ -495,7 +498,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
     }
   };
 
-  if (!hasTP) {
+  if (!hasTP && !productionMode) {
     return (
       <div className="bg-white rounded-2xl p-8 border border-slate-200/80 shadow-xs text-center space-y-4">
         <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
@@ -576,7 +579,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
                 <span>Salin Diagnostik</span>
               </button>
 
-              <button
+              {!productionMode && <button
                 id="btn-ai-generate-atp"
                 onClick={handleGenerateAI}
                 disabled={isGenerating || !isTPReady}
@@ -594,14 +597,14 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
                     <span>Susun ATP dari TP (AI)</span>
                   </>
                 )}
-              </button>
+              </button>}
             </div>
             {copyNotice && (
               <span className="text-[11px] text-emerald-700 font-semibold text-right">
                 ✓ {copyNotice}
               </span>
             )}
-            {!isTPReady && (
+            {!isTPReady && !productionMode && (
               <span className="text-[11px] text-amber-700 font-medium text-right max-w-xs">
                 Penyusunan diblokir: {tpReadinessReason}
               </span>
@@ -623,7 +626,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
             <BookOpen className="w-4 h-4 text-blue-600" />
             <span>Rasionalisasi Alur Pembelajaran</span>
           </label>
-          <button
+          {!productionMode && <button
             type="button"
             onClick={handleRefineRationale}
             disabled={isRefiningRationale}
@@ -631,7 +634,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
           >
             <Wand2 className="w-3.5 h-3.5 text-blue-600" />
             <span>{isRefiningRationale ? 'Memoles...' : 'Poles Rasionalisasi (AI)'}</span>
-          </button>
+          </button>}
         </div>
         <textarea
           id="textarea-atp-rationale"
@@ -811,7 +814,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
           >
             Simpan Matriks ATP
           </button>
-          <button
+          {!productionMode && <button
             id="btn-confirm-atp-siap"
             type="button"
             onClick={handleConfirmAndFinalize}
@@ -819,7 +822,7 @@ export const ATPManager: React.FC<ATPManagerProps> = ({
           >
             <Check className="w-4 h-4" />
             <span>Konfirmasi & Finalisasi ATP (SIAP)</span>
-          </button>
+          </button>}
           {saveNotice && (
             <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
               <Check className="w-4 h-4 text-emerald-600" /> Data ATP tersimpan

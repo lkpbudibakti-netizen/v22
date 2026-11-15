@@ -6,6 +6,8 @@ import { PWAInstallButton } from './PWAInstallButton';
 import { useOnlineStatus } from '../hooks/usePWAInstall';
 
 interface HeaderProps {
+  workMode?: import('../services/workMode').WorkMode;
+  onChangeWorkMode?: (mode: import('../services/workMode').WorkMode) => void;
   activeProfile?: TeacherProfile;
   school: SchoolData;
   profiles: TeacherProfile[];
@@ -19,6 +21,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  workMode = 'authoring',
+  onChangeWorkMode,
   activeProfile,
   school,
   profiles = [],
@@ -60,6 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Actions & Workspace/Profile Selector */}
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto py-1">
+            {onChangeWorkMode && <label className="shrink-0 text-xs font-semibold text-slate-700">Mode
+              <select id="select-work-mode" aria-label="Mode kerja" value={workMode} onChange={event => onChangeWorkMode(event.target.value as import('../services/workMode').WorkMode)} className="ml-2 rounded-lg border border-slate-300 bg-white p-2">
+                <option value="authoring">Penyusunan</option><option value="production">Produksi Paket</option>
+              </select>
+            </label>}
             {/* Online/Offline status */}
             <div
               className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${

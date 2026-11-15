@@ -72,7 +72,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
         jpResolutionSource: 'UNRESOLVED',
       };
     }
-    if (plan.status !== 'SIAP') {
+    if (context.workMode !== 'production' && plan.status !== 'SIAP') {
       return {
         isReady: false,
         error: `Rencana pembelajaran "${plan.topic || plan.id}" terpilih belum diubah statusnya menjadi SIAP.`,
@@ -83,7 +83,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     }
     selectedPlan = plan;
   } else {
-    const siapPlans = learningPlans.filter((p) => p.status === 'SIAP');
+    const siapPlans = context.workMode === 'production' ? learningPlans : learningPlans.filter((p) => p.status === 'SIAP');
     if (siapPlans.length === 0) {
       return {
         isReady: false,
@@ -120,7 +120,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     semesterJPSetting: context.semesterJPSetting, annualJPReference: context.annualJPReference,
   });
 
-  if (!validation.valid) {
+  if (!validation.valid && context.workMode !== 'production') {
     return {
       isReady: false,
       error: validation.errors.join('; '),
@@ -131,9 +131,25 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     };
   }
 
-  const invalid = (error: string): ModulAjarProjection => ({
-    isReady: false, error, resolvedTPs: [], jpResolutionSource: 'UNRESOLVED', validation,
-  });
+  const production = context.workMode === 'production';
+  const objectives = validation.resolvedTPs.filter(tp => tp.statement?.trim());
+  const masterActivities = [
+    ...Object.entries(selectedPlan.learningSteps || {}).flatMap(([phase, steps]) => (steps || []).map(step => ({ ...step, phase }))),
+    ...(selectedPlan.learningExperiences || []),
+  ].filter(activity => activity.description?.trim());
+  const minimumPresent = selectedPlan.academicSettingId === context.academicSetting.id && objectives.length > 0 && masterActivities.length > 0;
+  if (production && !minimumPresent) return { isReady: false, error: 'Substansi minimum modul pada semester tujuan: TP terhubung dan kegiatan pembelajaran harus tersedia.', resolvedTPs: [], jpResolutionSource: 'UNRESOLVED', validation };
+  const invalid = (error: string): ModulAjarProjection => {
+    if (!production) return { isReady: false, error, resolvedTPs: [], jpResolutionSource: 'UNRESOLVED', validation };
+    const assessments = Object.values(selectedPlan.assessmentPlan || {}).flatMap(items => items || []);
+    const criteria = (context.assessmentCriteria || []).filter(criterion => selectedPlan.tpIds.includes(criterion.tpId));
+    const sections = buildSections(selectedPlan, [], objectives, assessments, criteria);
+    sections[2].lines = ['Jadwal/relasi pertemuan belum lengkap; kegiatan master ditampilkan tanpa menetapkan ulang tanggal.',
+      ...masterActivities.map(activity => activity.phase + ': ' + ('title' in activity ? activity.title || '' : '') + ' ' + activity.description)];
+    return { isReady: true, plan: selectedPlan, resolvedTPs: objectives, meetings: [], sections,
+      unitTitle: context.atpUnitMapping?.units?.find(unit => unit.id === selectedPlan.unitId)?.title,
+      resolvedAllocatedJP: validation.resolvedAllocatedJP, jpResolutionSource: 'UNRESOLVED', validation };
+  };
   if (!selectedPlan.unitId || !selectedPlan.learningMeetingIds?.length ||
       !context.atpUnitMapping || !context.unitExecutionPlan || !context.learningMeetingSchedules?.length) {
     return invalid('Lineage Unit → Meeting → LearningPlan belum lengkap.');
@@ -144,10 +160,11 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     return invalid('Lineage LearningPlan berbeda dari snapshot.');
   }
   const scheduled = resolveScheduledLearningMeetings({
+    allowDraftWorkflow: production,
     mapping: context.atpUnitMapping, unitExecutionPlan: context.unitExecutionPlan,
     schedules: context.learningMeetingSchedules, tp: context.tp, atp: context.atp,
   });
-  if (!scheduled.isValid) return invalid(scheduled.errors.join('; '));
+  if (!scheduled.isValid && !production) return invalid(scheduled.errors.join('; '));
   const ids = selectedPlan.learningMeetingIds;
   const rows = scheduled.rows.filter(r => r.semesterPlanId === context.academicSetting.id && ids.includes(r.meetingId));
   const budgets = resolveLearningPlanMeetingBudgets(rows, context.academicSetting);

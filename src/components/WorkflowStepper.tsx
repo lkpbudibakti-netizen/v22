@@ -38,6 +38,7 @@ import { isK13, getCurriculumTypeFromSetting } from '../services/curriculumRoute
 import { validateWorkflowDependencies, WorkflowStatus } from '../services/workflowEngine';
 
 interface WorkflowStepperProps {
+  productionMode?: boolean;
   currentStep: WorkflowStepId;
   onSelectStep: (step: WorkflowStepId) => void;
   profile?: TeacherProfile;
@@ -55,6 +56,7 @@ interface WorkflowStepperProps {
 }
 
 export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
+  productionMode = false,
   currentStep,
   onSelectStep,
   profile,
@@ -440,7 +442,8 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
       {/* Workflow Navigation Bar */}
       <nav aria-label="Alur Kerja Administrasi" className="bg-white rounded-2xl p-2 sm:p-3 border border-slate-200/80 shadow-xs">
         <div className={`grid grid-cols-2 md:grid-cols-4 ${isK13Active ? 'lg:grid-cols-6' : isMerdekaActive ? 'lg:grid-cols-8' : 'lg:grid-cols-2'} gap-2`}>
-          {steps.map((step) => {
+          {steps.map((original) => {
+            const step = productionMode ? { ...original, isLocked: false, lockReason: undefined } : original;
             const isActive = currentStep === step.id;
 
             return (

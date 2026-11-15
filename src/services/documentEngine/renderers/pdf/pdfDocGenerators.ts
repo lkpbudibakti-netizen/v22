@@ -672,7 +672,7 @@ export async function generatePdfDocument(
           'Guru Mata Pelajaran: ' + (profile.name || '-'), 'NIP: ' + (profile.nip || '-'),
           'Tahun Ajaran: ' + academicYear, 'Topik / Materi: ' + (matchedPlan?.topic || matchedPlan?.title || '-'),
           'Bab / Unit: ' + (projection.unitTitle || '-'),
-          'Alokasi Waktu: ' + projection.resolvedAllocatedJP + ' JP',
+          'Alokasi Waktu: ' + (context.workMode === 'production' && projection.resolvedAllocatedJP === undefined ? 'Belum Ditetapkan' : projection.resolvedAllocatedJP + ' JP'),
         ].join('\n') });
         for (const section of projection.sections || []) {
           sections.push({ type: 'heading', text: section.title, level: 1 });

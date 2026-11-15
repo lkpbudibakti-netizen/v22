@@ -89,10 +89,12 @@ import {
 } from '../services/documentEngine';
 import { getCurriculumType } from '../services/curriculumRules';
 import { isK13 as isK13Check, getCurriculumDocumentTypes } from '../services/curriculumRouter';
+import { buildProductionEvaluationReport } from '../services/productionEvaluationService';
 import { SnapshotValidationModal } from './SnapshotValidationModal';
 import { ZipExportModal } from './ZipExportModal';
 
 interface AdminDocsExportProps {
+  workMode?: import('../services/workMode').WorkMode;
   profile: TeacherProfile;
   school: SchoolData;
   workspace?: AdministrationWorkspace;
@@ -170,6 +172,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   learningPlans = [],
   assessmentPlans = [],
   assessmentPackages = [],
+  workMode = 'authoring',
   onBackToStep,
   onUpdateDocuments,
 }) => {
@@ -191,7 +194,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     documents.find(d => d.type === 'MODUL_AJAR' && (!d.workspaceId || d.workspaceId === workspace?.id))?.snapshot);
 
 
-  const readyAssessmentPackages = (assessmentPackages || []).filter((p) => p.workflowStatus === 'SIAP' && p.needsReview !== true);
+  const readyAssessmentPackages = workMode === 'production' ? (assessmentPackages || []) : (assessmentPackages || []).filter((p) => p.workflowStatus === 'SIAP' && p.needsReview !== true);
   const [selectedAssessmentPackageId, setSelectedAssessmentPackageId] = useState<string>(() => {
     if (readyAssessmentPackages.length === 1) return readyAssessmentPackages[0].id;
     return '';
@@ -213,11 +216,13 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     )
   );
   const isK13KKMValid = !!(k13KKM?.items && k13KKM.items.length > 0);
-  const isBulkExportEligible = isK13Curriculum ? isK13KDValid : isCPValid;
+  const productionMode = workMode === 'production';
+  const isBulkExportEligible = productionMode || (isK13Curriculum ? isK13KDValid : isCPValid);
 
   const totalJP = (atp?.items || []).reduce((acc, curr) => acc + (Number(curr.jp) || 0), 0);
 
   const context: DocumentGenerationContext = {
+    workMode: workMode as import('../services/workMode').WorkMode,
     school,
     profile,
     academicSetting,
@@ -305,8 +310,9 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     forceNew: boolean = false,
     source: 'live' | 'snapshot' = 'live'
   ) => {
+    const productionMode = context.workMode === 'production';
     const existingRec = getDocRecord(type);
-    const historicalModul = type === 'MODUL_AJAR' && source === 'snapshot';
+    const historicalModul = !productionMode && type === 'MODUL_AJAR' && source === 'snapshot';
     const historicalSnapshot = historicalModulSnapshot || existingRec?.snapshot;
     if (historicalModul && !historicalSnapshot) {
       setExportErrorMessage('Snapshot lama belum tersedia.');
@@ -315,8 +321,8 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     let effectiveContext: DocumentGenerationContext;
     try {
       effectiveContext = type === 'MODUL_AJAR'
-        ? prepareModulAjarExportContext(context, format, source, historicalSnapshot)
-        : resolveEffectiveContext(context, !forceNew && existingRec?.snapshot
+        ? prepareModulAjarExportContext(context, format, productionMode ? 'live' : source, historicalSnapshot)
+        : resolveEffectiveContext(context, !forceNew && !productionMode && existingRec?.snapshot
         ? existingRec.snapshot : createDocumentSnapshot(context, format, documentMode, type));
     } catch (error) {
       setExportErrorMessage(error instanceof Error ? error.message : 'Konteks ekspor tidak valid.');
@@ -388,9 +394,9 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         ...localDocs.filter((d) => d.id !== record.id && !(d.type === type && (!d.workspaceId || d.workspaceId === workspace?.id) && (type !== 'JURNAL' || d.academicSettingId === academicSetting.id))),
         record,
       ];
-      setLocalDocs(updatedList);
-      if (onUpdateDocuments) {
-        onUpdateDocuments(updatedList);
+      if (!productionMode) {
+        setLocalDocs(updatedList);
+        if (onUpdateDocuments) onUpdateDocuments(updatedList);
       }
       const finalGeneratedAt = record.snapshot?.generatedAt || effectiveSnapshot.generatedAt;
       setExportSuccessMessage(
@@ -467,6 +473,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
     try {
       for (const type of docTypes) {
+        try {
         const val = validateDocumentRequirements(type, context);
         if (!val.isValid) { skipped.push(`${type}: ${val.message || val.missingFields.join('; ')}`); continue; }
         if (val.isValid) {
@@ -518,8 +525,12 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
           // Delay between downloads to prevent browser throttling
           await new Promise((r) => setTimeout(r, 600));
         }
+        } catch (error) {
+          if (!productionMode) throw error;
+          skipped.push(type + ': gagal - ' + (error instanceof Error ? error.message : String(error)));
+        }
       }
-      if (documentMode !== 'blank') {
+      if (documentMode !== 'blank' && !productionMode) {
         setLocalDocs(newRecords);
         if (onUpdateDocuments) onUpdateDocuments(newRecords);
       }
@@ -565,6 +576,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
   return (
     <div className="space-y-6" data-export-busy={Boolean(generatingDocType || isExportingAll || isExportingZip)}>
+      {productionMode && <button type="button" id="btn-copy-production-evaluation" className="rounded-lg border p-2 text-sm" onClick={async () => {
+        try { await navigator.clipboard.writeText(buildProductionEvaluationReport(context)); setExportSuccessMessage('Laporan evaluasi berhasil disalin.'); }
+        catch (error) { setExportErrorMessage(error instanceof Error ? error.message : 'Laporan tidak dapat disalin.'); }
+      }}>Salin Laporan Evaluasi</button>}
       <details className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3">
         <summary>Diagnostic ekspor Modul Ajar</summary>
         <pre className="whitespace-pre-wrap select-text">{JSON.stringify(exportDiagnostic || {
@@ -1082,7 +1097,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
             const activeRecord = getDocRecord(activePreviewType);
             const storedSnapshot = activePreviewType === 'MODUL_AJAR'
               ? historicalModulSnapshot || activeRecord?.snapshot : activeRecord?.snapshot;
-            const activeSnapshot = activePreviewType === 'MODUL_AJAR' ? undefined : storedSnapshot;
+            const activeSnapshot = productionMode || activePreviewType === 'MODUL_AJAR' ? undefined : storedSnapshot;
 
             const previewContext = resolveEffectiveContext(context, activeSnapshot);
             const previewSchoolName = previewContext.school.name || '-';
@@ -1143,7 +1158,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       <span>{activePreviewType === 'MODUL_AJAR' ? 'Unduh PDF Terbaru' : activeSnapshot ? 'Unduh PDF (Snapshot)' : 'Unduh PDF'}</span>
                     </button>
 
-                    {activePreviewType === 'MODUL_AJAR' && storedSnapshot && (
+                    {!productionMode && activePreviewType === 'MODUL_AJAR' && storedSnapshot && (
                       <>
                         <button onClick={() => handleGenerateSingleDoc('MODUL_AJAR', 'docx', false, 'snapshot')}
                           disabled={Boolean(generatingDocType)} className="text-xs underline px-2 py-1.5">
@@ -2283,7 +2298,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         isOpen={isZipModalOpen}
         onClose={() => setIsZipModalOpen(false)}
         context={context}
-        existingRecords={localDocs}
+        existingRecords={productionMode ? [] : localDocs}
         onSuccess={(result) => {
           setExportSuccessMessage(
             `Sukses! ${result.exportedCount} dokumen (${result.pdfCount} PDF, ${result.docxCount} Word) telah dikompresi ke dalam arsip ZIP "${result.zipFileName}".`

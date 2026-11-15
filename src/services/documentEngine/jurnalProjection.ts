@@ -28,7 +28,7 @@ export function buildJurnalProjection(context: DocumentGenerationContext): Jurna
   const result: JurnalProjection = { version: 1, semesterPlanId, rows: [], isReady: false, reasons: [], warnings: [] };
   if (context.snapshot) return { ...result, reasons: ['Snapshot lama belum menyimpan isi jurnal per pertemuan. Gunakan format kosong atau buat dokumen baru dari data saat ini.'] };
   const canonical = resolveMerdekaCanonicalTimeProjection({ ...context, learningMeetingSchedules: context.learningMeetingSchedules?.filter(bundle => bundle.semesterPlanId === semesterPlanId) });
-  result.reasons.push(...canonical.errors);
+  if (context.workMode === 'production' && canonical.isReady) result.warnings.push(...canonical.errors); else result.reasons.push(...canonical.errors);
   const bundles = (context.learningMeetingSchedules || []).filter(bundle => bundle.semesterPlanId === semesterPlanId);
   if (bundles.length !== 1) result.reasons.push('Jadwal pertemuan semester aktif belum tersedia atau ganda.');
   const bundle = bundles.length === 1 ? bundles[0] : undefined;
@@ -72,7 +72,7 @@ export function buildJurnalProjection(context: DocumentGenerationContext): Jurna
         if (records.length < roster.size) attendance += `\nBelum dicatat: ${roster.size-records.length}`;
       }
     }
-    const plans = (context.learningPlans || []).filter(plan => plan.academicSettingId === semesterPlanId && plan.unitId === row.unitId && plan.status === 'SIAP' && plan.learningMeetingIds?.includes(row.meetingId));
+    const plans = (context.learningPlans || []).filter(plan => plan.academicSettingId === semesterPlanId && plan.unitId === row.unitId && (context.workMode === 'production' || plan.status === 'SIAP') && plan.learningMeetingIds?.includes(row.meetingId));
     const plannedActivities = plans.length === 1 ? Object.values(plans[0].learningSteps || {}).flat().filter(activity => activity.learningMeetingId === row.meetingId).map(activity => activity.description).filter(Boolean) : [];
     result.rows.push({ meetingId: row.meetingId, semesterPlanId, unitId: row.unitId, unitTitle: row.unitTitle,
       materialIds: row.materials.map(m => m.id), materialTitles: row.materials.map(m => m.title),

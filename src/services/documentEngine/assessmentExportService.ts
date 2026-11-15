@@ -187,7 +187,7 @@ export function checkAssessmentExportEligibility(
     }
   } else {
     // No explicit ID: resolve by SIAP status
-    const siapPackages = packages.filter((p) => p.workflowStatus === 'SIAP');
+    const siapPackages = context.workMode === 'production' ? packages : packages.filter((p) => p.workflowStatus === 'SIAP');
     if (siapPackages.length === 0) {
       const hasDrafts = packages.some(
         (p) => p.workflowStatus === 'DRAFT' || p.workflowStatus === 'PERLU_DILENGKAPI'
@@ -215,14 +215,14 @@ export function checkAssessmentExportEligibility(
   }
 
   // Verify status is strictly SIAP
-  if (resolvedPkg.workflowStatus !== 'SIAP') {
+  if (context.workMode !== 'production' && resolvedPkg.workflowStatus !== 'SIAP') {
     blockers.push(
       `Perangkat Asesmen "${resolvedPkg.title}" berstatus ${resolvedPkg.workflowStatus}. Hanya Perangkat Asesmen berstatus SIAP yang dapat diekspor menjadi dokumen resmi.`
     );
   }
 
   // Verify needsReview flag
-  if (resolvedPkg.needsReview) {
+  if (context.workMode !== 'production' && resolvedPkg.needsReview) {
     blockers.push(
       `Perangkat Asesmen "${resolvedPkg.title}" masih memerlukan review atau revisi guru (needsReview = true).`
     );
@@ -237,6 +237,7 @@ export function checkAssessmentExportEligibility(
 
   // Verify core structural validity using package validator
   const validationContext = {
+    allowDraftWorkflow: context.workMode === 'production',
     academicSetting: context.academicSetting,
     assessmentPlan: (context.assessmentPlans || []).find(
       (p) => p.id === resolvedPkg?.assessmentPlanId

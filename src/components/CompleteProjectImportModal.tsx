@@ -14,11 +14,12 @@ import { loadStorageV5 } from '../services/storageV5';
 import { getLocalTodayDocumentDate } from '../services/documentDateService';
 
 type ImportedView = Pick<ReturnType<typeof importCompleteAdministrationProject>, 'state' | 'yearPlanId' | 'warnings' | 'mode' | 'nextStep'>;
-export function CompleteProjectImportModal({ state, onClose, onSuccess, onContinue, importedYearPlanId }: {
+export function CompleteProjectImportModal({ state, onClose, onSuccess, onContinue, importedYearPlanId, workMode = 'authoring' }: {
   state: AppStorageStateV5; onClose: () => void;
   onSuccess: (result: ReturnType<typeof importCompleteAdministrationProject>) => void;
   onContinue?: (step: ReturnType<typeof importCompleteAdministrationProject>['nextStep']) => void;
   importedYearPlanId?: string;
+  workMode?: import('../services/workMode').WorkMode;
 }) {
   const [archive, setArchive] = useState<CompleteProjectArchive>();
   const [profileId, setProfileId] = useState(state.activeProfileId || state.profiles[0]?.id || '');
@@ -38,20 +39,20 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
   const [error, setError] = useState('');
   const profile = state.profiles.find(p => p.id === profileId);
   const legacyMode = mode === 'COPY' || mode === 'RESTORE';
-  const options: CompleteProjectImportOptions = { mode, targetProfileId: profileId, targetSchoolId: profile?.schoolId || '',
+  const options: CompleteProjectImportOptions = { workMode, mode, targetProfileId: profileId, targetSchoolId: profile?.schoolId || '',
     documentDate,
     ...(mode === 'OTHER_CLASS' ? { targetGrade, targetClassSection } : {}),
     replaceYearPlanId: replace && mode === 'RESTORE' ? archive?.project.yearPlans[0].id : undefined };
   const preview = useMemo(() => {
-    if (!archive || completed || mode === 'IDENTITY_ONLY') return undefined;
+    if (!archive || completed || (mode === 'IDENTITY_ONLY' && workMode !== 'production')) return undefined;
     try { return { result: prepareCompleteAdministrationProjectImport(state, archive, options), error: '' }; }
     catch (e) { return { result: undefined, error: e instanceof Error ? e.message : String(e) }; }
-  }, [archive, state, mode, profileId, replace, documentDate, completed, targetGrade, targetClassSection]);
+  }, [archive, state, mode, profileId, replace, documentDate, completed, targetGrade, targetClassSection, workMode]);
   const exportReadiness = useMemo(() => {
     if (!completed) return undefined;
-    try { return { ...importedProjectExportReadiness(completed.state, completed.yearPlanId), error: '' }; }
+    try { return { ...importedProjectExportReadiness(completed.state, completed.yearPlanId, workMode), error: '' }; }
     catch (error) { return { rows: [], readyCount: 0, skippedCount: 0, error: error instanceof Error ? error.message : 'Kesiapan ekspor belum dapat diperiksa.' }; }
-  }, [completed]);
+  }, [completed, workMode]);
   const source = archive?.project;
   const sourceYear = source?.yearPlans[0];
   const progress = source ? [
@@ -79,7 +80,7 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
         submitting.current = true;
         setBusy(true); setError(''); setZipResult(undefined);
         try {
-          const fresh = importedProjectExportReadiness(loadStorageV5(), completed.yearPlanId);
+          const fresh = importedProjectExportReadiness(loadStorageV5(), completed.yearPlanId, workMode);
           const result = await generateZipBundle({ types: fresh.types, format: zipFormat, documentMode: 'data' }, { ...fresh.context, skipDownload: false });
           if (!result.zipBlob) throw new Error('Berkas ZIP tidak dihasilkan. Silakan coba unduh kembali.');
           setZipResult(result);
@@ -148,17 +149,17 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
         disabled={busy || !archive || !profile?.schoolId || (legacyMode && (!confirmed || !preview?.result)) || (mode==='OTHER_CLASS' && (!targetGrade || !targetClassSection.trim()))} onClick={async () => {
           if (!archive || submitting.current) return; submitting.current = true; setBusy(true); setError('');
           try {
-            if (mode === 'IDENTITY_ONLY') {
+            if (mode === 'IDENTITY_ONLY' && workMode !== 'production') {
               const flow = await importCompleteAdministrationProjectAndExport(archive, options);
               setCompleted(flow.imported); setZipResult(flow.zipResult); setError(flow.exportError); onSuccess(flow.imported);
             } else {
               const result = importCompleteAdministrationProject(archive, options); if (!legacyMode) setCompleted(result); onSuccess(result);
-              if (!legacyMode) onContinue?.(result.nextStep);
+              if (workMode === 'production') onContinue?.('admin'); else if (!legacyMode) onContinue?.(result.nextStep);
             }
           }
           catch (err) { setError(err instanceof Error ? err.message : String(err)); }
           finally { submitting.current = false; setBusy(false); }
-        }}><Upload size={16} />{busy ? 'Memproses...' : mode === 'IDENTITY_ONLY' ? 'Impor & Unduh ZIP' : legacyMode ? 'Konfirmasi Import' : 'Impor & Lanjutkan'}</button>
+        }}><Upload size={16} />{busy ? 'Memproses...' : workMode === 'production' ? 'Impor Master & Periksa Dokumen' : mode === 'IDENTITY_ONLY' ? 'Impor & Unduh ZIP' : legacyMode ? 'Konfirmasi Import' : 'Impor & Lanjutkan'}</button>
     </div>
   </div>;
 }

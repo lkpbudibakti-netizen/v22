@@ -105,6 +105,15 @@ export function resolveAnnualZipContexts(base: DocumentGenerationContext): {
 export function resolveZipLearningPlan(plan: LearningPlan, annual: DocumentGenerationContext,
   semesters: ReturnType<typeof resolveAnnualZipContexts>['semesters']) {
   const fail = (reason: string) => ({ reason, item: undefined });
+  if (annual.workMode === 'production') {
+    const targets = semesters.filter(target => target.context.academicSetting.id === plan.academicSettingId);
+    if (targets.length !== 1) return fail('Semester tujuan Modul Ajar tidak tersedia atau ambigu.');
+    const target = targets[0];
+    const item: AnnualZipWorkItem = { type: 'MODUL_AJAR', instanceId: plan.id, instanceTitle: plan.title || plan.topic || plan.id,
+      context: { ...target.context, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
+      folderCategory: semesterZipFolder(target.semester), seqNum: 1 };
+    return { item, reason: undefined };
+  }
   const units = annual.atpUnitMapping?.units.filter(unit => unit.id === plan.unitId) || [];
   const execution = annual.unitExecutionPlan;
   if (units.length !== 1 || !execution || !plan.learningMeetingIds?.length) return fail('Lineage Bab → pertemuan → Modul Ajar tidak lengkap/ambigu.');

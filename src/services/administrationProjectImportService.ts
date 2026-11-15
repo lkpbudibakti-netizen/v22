@@ -349,6 +349,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       throw new Error('IMPORT_LINEAGE_CHANGED: kesiapan struktural Bab/Materi berubah saat remap. Import dibatalkan.');
     }
   }
+  if (options.workMode !== 'production') {
   if (cp) { const check = validateCPDataWorkflow(cp, year); cp.workflowStatus = check.status; warnings.push(...check.issues); }
   if (analysis) { const check = validateCPAnalysisDataWorkflow(analysis, cp); analysis.workflowStatus = check.status; warnings.push(...check.issues); }
   if (tp) {
@@ -358,6 +359,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
     warnings.push(...check.issues);
   }
   if (atp) { const check = validateATPDataWorkflow(atp, tp, undefined, cp, analysis); atp.workflowStatus = check.status; warnings.push(...check.issues); }
+  }
   if (modernMode) {
     for (const key of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
       const before = source.annualData[key][0]?.value;
@@ -397,7 +399,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       if (!checked.isValid || checked.isStale) schedule.status = 'DRAFT';
     }
   }
-  if (modernMode) {
+  if (modernMode && options.workMode !== 'production') {
     const base = buildImportedProjectExportContext(next, year.id);
     const upstreamMapping = resolveATPUnitMappingReadiness(mapping, atp, tp);
     for (const { context } of resolveAnnualZipContexts(base).semesters) {
@@ -419,7 +421,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       }
     }
   }
-  if (options.mode === 'IDENTITY_SCHEDULE') {
+  if (options.mode === 'IDENTITY_SCHEDULE' && options.workMode !== 'production') {
     // Keep proven-valid content/statuses. Target approval is pending only for time dependencies.
     for (const entry of imported.semesterData.academicCalendar) { entry.value.calendar.workflowStatus = 'UNRESOLVED'; entry.value.calendar.reviewStatus = 'UNREVIEWED'; entry.value.calendar.confirmedAt = undefined; entry.value.calendar.reviewedAt = undefined; }
     for (const entry of imported.semesterJPSettings) entry.value.source = 'UNRESOLVED';
@@ -434,7 +436,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       : 'Cakupan Bab/Materi tetap sama; Step 07 memerlukan peninjauan status/freshness TP/ATP.');
     warnings.push(...targetReadiness.blockers);
   }
-  const nextStep = !compatibility.cpCompatible || cp?.workflowStatus !== 'SIAP' ? 'cp' : analysis?.workflowStatus !== 'SIAP' ? 'cp-analysis' : tp?.workflowStatus !== 'SIAP' ? 'tp' : atp?.workflowStatus !== 'SIAP' ? 'atp' : !targetReadiness.canProceed ? 'atp-mapping' : options.mode === 'IDENTITY_SCHEDULE' ? 'annual-planning' : 'admin';
+  const nextStep = options.workMode === 'production' ? 'admin' : !compatibility.cpCompatible || cp?.workflowStatus !== 'SIAP' ? 'cp' : analysis?.workflowStatus !== 'SIAP' ? 'cp-analysis' : tp?.workflowStatus !== 'SIAP' ? 'tp' : atp?.workflowStatus !== 'SIAP' ? 'atp' : !targetReadiness.canProceed ? 'atp-mapping' : options.mode === 'IDENTITY_SCHEDULE' ? 'annual-planning' : 'admin';
   return { state: next, yearPlanId: year.id, mode: options.mode, nextStep, compatibility, warnings: Array.from(new Set(warnings)),
     step7: { origin, source: sourceReadiness, target: targetReadiness } };
 }

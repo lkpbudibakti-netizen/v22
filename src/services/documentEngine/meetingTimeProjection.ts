@@ -40,6 +40,7 @@ export function resolveMerdekaCanonicalTimeProjection(
   }
 
   const result = resolveScheduledLearningMeetings({
+    allowDraftWorkflow: context.workMode === 'production',
     mapping: context.atpUnitMapping!,
     unitExecutionPlan: context.unitExecutionPlan!,
     schedules: context.learningMeetingSchedules || [],
@@ -49,7 +50,10 @@ export function resolveMerdekaCanonicalTimeProjection(
 
   return {
     rows: result.rows,
-    isReady: result.isValid && result.rows.length > 0,
+    isReady: result.rows.length > 0 && (context.workMode === 'production'
+      ? new Set(result.rows.map(row => row.meetingId)).size === result.rows.length && result.rows.every(row =>
+          Number.isFinite(row.jp) && row.jp > 0 && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && Number.isFinite(Date.parse(row.date)) && row.unitTitle?.trim())
+      : result.isValid),
     errors: result.errors,
   };
 }

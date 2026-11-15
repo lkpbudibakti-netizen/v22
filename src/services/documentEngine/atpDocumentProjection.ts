@@ -20,6 +20,20 @@ export interface ATPDocumentProjection {
 export function buildATPDocumentProjection(context: DocumentGenerationContext): ATPDocumentProjection {
   const invalid = (error: string): ATPDocumentProjection => ({ isReady: false, error, rationale: '', cpReferenceLines: [], rows: [] });
   const { cp, tp, atp } = context;
+  if (context.workMode === 'production') {
+    const rows: ATPDocumentRow[] = (atp?.items || []).map(item => {
+      const ids = item.linkedTpIds?.length ? item.linkedTpIds : item.tpId ? [item.tpId] : [];
+      const resolvedTPs = ids.flatMap(id => {
+        const matches = tp?.items.filter(tp => tp.id === id) || [];
+        return matches.length === 1 && matches[0].statement?.trim() ? [{ id, code: matches[0].code || id, statement: matches[0].statement }] : [];
+      });
+      if (!resolvedTPs.length && item.tpStatement?.trim()) resolvedTPs.push({ id: item.tpId || item.id, code: item.tpCode || item.id, statement: item.tpStatement });
+      const focus = item.focus?.trim() || item.materialScope?.trim() || '';
+      return { stepNumber: Number.isInteger(item.stepNumber) ? item.stepNumber : null, focus, resolvedTPs, flowLines: [focus].filter(Boolean) };
+    });
+    if (!rows.length || rows.some(row => !row.focus || !row.resolvedTPs.length)) return invalid('Tujuan dan alur/materi minimum pada setiap tahap ATP belum tersedia.');
+    return { isReady: true, rows, rationale: atp?.rationale || '', cpReferenceLines: [cp?.generalDescription || '', ...(cp?.elements || []).map(element => [element.name, element.content].filter(Boolean).join(': '))].filter(Boolean) };
+  }
   if (!cp || !tp?.items?.length || !atp?.items?.length) return invalid('Data CP, TP, dan ATP harus lengkap untuk ekspor dokumen ATP.');
   const cpReferenceLines = [
     ...(cp.generalDescription?.trim() ? [cp.generalDescription.trim()] : []),

@@ -126,7 +126,7 @@ export function buildPromesProjection(context: DocumentGenerationContext): Prome
 
   // Calendar Capacity Analysis
   const hasCalendar = Boolean(calendar?.startDate && calendar?.endDate);
-  const isCalendarConfirmed = calendar?.workflowStatus === 'CONFIRMED';
+  const isCalendarConfirmed = calendar?.workflowStatus === 'CONFIRMED' || (context.workMode === 'production' && hasCalendar);
 
   let effectiveLearningDays: number | null = null;
   let effectiveWeeksEquivalent: number | null = null;
@@ -275,6 +275,10 @@ export function buildPromesProjection(context: DocumentGenerationContext): Prome
           isReady = false;
           unreadyReason = `Program Semester belum dapat dibuat karena Jadwal Aktual Semester ${activeSemesterNum} belum lengkap.`;
         } else {
+          if (context.workMode === 'production' && !hasMismatchedSemesterJP && hasCalendar) {
+            isReady = true;
+            unreadyReason = undefined;
+          }
           // Aggregate active semester canonical meetings by Unit/Bab
           const unitPromesMap = new Map<
             string,

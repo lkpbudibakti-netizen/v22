@@ -43,6 +43,7 @@ export interface ScheduledLearningMeetingProjectionResult {
 }
 
 export function resolveScheduledLearningMeetings(params: {
+  allowDraftWorkflow?: boolean;
   mapping: ATPUnitMappingData;
   unitExecutionPlan: UnitExecutionPlanData;
   schedules: ScheduledLearningMeetingScheduleInput[];
@@ -132,7 +133,7 @@ export function resolveScheduledLearningMeetings(params: {
     if ((schedule.basedOnMappingUpdatedAt && mapping.updatedAt && schedule.basedOnMappingUpdatedAt !== mapping.updatedAt) ||
         (schedule.basedOnUnitExecutionPlanUpdatedAt && unitExecutionPlan.updatedAt && schedule.basedOnUnitExecutionPlanUpdatedAt !== unitExecutionPlan.updatedAt)) {
       errors.push(`Jadwal semester ${semester} stale setelah perubahan pemetaan/pertemuan. Tinjau dan simpan ulang jadwal.`);
-      continue;
+      if (!params.allowDraftWorkflow) continue;
     }
     if (schedule.status !== 'COMPLETE') {
       errors.push(`Schedule semester ${semester} belum COMPLETE.`);
@@ -141,7 +142,7 @@ export function resolveScheduledLearningMeetings(params: {
       errors.push(`Schedule semester ${semester} masih memiliki unresolvedMeetingIds.`);
     }
 
-    if (schedule.semesterPlanId !== semesterPlanId || schedule.status !== 'COMPLETE' || (schedule.unresolvedMeetingIds || []).length > 0) {
+    if (schedule.semesterPlanId !== semesterPlanId || (!params.allowDraftWorkflow && (schedule.status !== 'COMPLETE' || (schedule.unresolvedMeetingIds || []).length > 0))) {
       continue;
     }
 

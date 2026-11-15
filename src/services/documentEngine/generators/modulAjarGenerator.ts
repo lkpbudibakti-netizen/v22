@@ -619,6 +619,8 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
         docChildren.push(createModulAjarMeetingTable(m));
         docChildren.push(new Paragraph({ spacing: { after: 180 } }));
       });
+    } else if (context.workMode === 'production') {
+      for (const line of sharedProjection.sections?.[2]?.lines || []) addListParagraph(line);
     } else {
       addListParagraph('-');
     }

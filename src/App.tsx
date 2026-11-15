@@ -111,6 +111,7 @@ import { validateAcademicSettingReadiness } from './services/academicSettingRead
 import { resolveATPUnitMappingReadiness } from './services/atpMappingReadinessService';
 import { Plus, Copy, Trash2, X, FolderPlus, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { GRADE_PHASE_MAP } from './data/curriculumDefaults';
+import { readWorkMode, saveWorkMode, type WorkMode } from './services/workMode';
 import { APP_BUILD_ID, APP_BUILD_SHA, APP_BUILD_DIRTY } from './config/buildInfo';
 
 const EMPTY_SCHOOL_VIEW: SchoolData = {
@@ -129,6 +130,8 @@ const EMPTY_SCHOOL_VIEW: SchoolData = {
 };
 
 export function App() {
+  const [workMode, setWorkMode] = useState<WorkMode>(() => readWorkMode());
+  const productionMode = workMode === 'production';
   const [v5State, setV5State] = useState<AppStorageStateV5>(() => loadStorageV5());
   const [currentStep, setCurrentStep] = useState<WorkflowStepId>('profile');
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
@@ -583,6 +586,7 @@ export function App() {
     : semesterAcademicSetting;
 
   const handleEnterAnnualPlanning = () => {
+    if (productionMode) { setCurrentStep('annual-planning'); return; }
     const isMerdeka = !isK13(transitionalAcademicSetting);
 
     if (isMerdeka) {
@@ -605,6 +609,13 @@ export function App() {
   };
 
   const handleSelectStep = (step: WorkflowStepId) => {
+    if (productionMode) {
+      if (step === 'admin' && !isActiveSemesterValid && semesterPlansForActiveYear.length) {
+        handleSelectSemester(semesterPlansForActiveYear[0].id);
+      }
+      setCurrentStep(step);
+      return;
+    }
     if (step === 'annual-planning') {
       handleEnterAnnualPlanning();
       return;
@@ -1544,6 +1555,11 @@ export function App() {
     <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Top Application Header */}
       <Header
+        workMode={workMode}
+        onChangeWorkMode={mode => {
+          setWorkMode(mode);
+          if (!saveWorkMode(mode)) setAppNotice({ type: 'warning', message: 'Mode berlaku untuk sesi ini; preferensi belum dapat disimpan.' });
+        }}
         activeProfile={activeProfile}
         school={activeSchoolForView}
         profiles={v5State.profiles || []}
@@ -1587,6 +1603,7 @@ export function App() {
 
         {/* Workflow Stepper & Context Banner */}
         <WorkflowStepper
+          productionMode={productionMode}
           currentStep={currentStep}
           onSelectStep={handleSelectStep}
           profile={activeProfile}
@@ -1603,6 +1620,16 @@ export function App() {
           k13KKM={undefined}
         />
 
+        {productionMode && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm flex items-center justify-between gap-3">
+          <span>Produksi Paket: semua tahap dapat dibuka tanpa konfirmasi SIAP. Impor tidak mengunduh otomatis; periksa identitas dan dokumen lalu pilih Unduh.</span>
+          {currentStep !== 'admin' && <button type="button" id="btn-production-next" className="rounded-lg bg-blue-900 px-4 py-2 text-white shrink-0" onClick={() => {
+            const steps: WorkflowStepId[] = isK13(transitionalAcademicSetting)
+              ? ['profile','academic','k13-kd','k13-indikator','k13-tujuan','admin']
+              : ['profile','academic','cp','cp-analysis','tp','atp','atp-mapping','annual-planning','semester','admin'];
+            handleSelectStep(steps[steps.indexOf(currentStep) + 1] || 'admin');
+          }}>Lanjut</button>}
+        </div>}
+        {productionMode && currentStep === 'admin' && !effectiveAdminAcademicSetting && <p role="status">Konteks semester belum tersedia. Pilih semester tujuan; tahap lain tetap dapat dibuka.</p>}
         {/* Step Views */}
         <section className="transition-all duration-150">
           {currentStep === 'profile' && (
@@ -1674,6 +1701,7 @@ export function App() {
 
           {currentStep === 'cp-analysis' && (
             <CPAnalysisManager
+              productionMode={productionMode}
               key={activeYearPlan?.id+':'+activeProfile.id}
               cpAnalysis={activeCPAnalysis}
               cp={activeCP}
@@ -1688,6 +1716,7 @@ export function App() {
 
           {currentStep === 'tp' && (
             <TPManager
+              productionMode={productionMode}
               tp={activeTP}
               cp={activeCP}
               cpAnalysis={activeCPAnalysis}
@@ -1702,6 +1731,7 @@ export function App() {
 
           {currentStep === 'atp' && (
             <ATPManager
+              productionMode={productionMode}
               atp={activeATP}
               tp={activeTP}
               cp={activeCP}
@@ -1717,6 +1747,7 @@ export function App() {
 
           {currentStep === 'atp-mapping' && (
             <ATPUnitMappingManager
+              productionMode={productionMode}
               atp={activeATP}
               tp={activeTP}
               cp={activeCP}
@@ -1731,6 +1762,7 @@ export function App() {
 
           {currentStep === 'annual-planning' && (
             <AnnualPlanningManager
+              productionMode={productionMode}
               school={activeSchoolForView}
               profile={activeProfile}
               academicSetting={transitionalAcademicSetting}
@@ -1836,6 +1868,8 @@ export function App() {
           {/* SHARED ADMINISTRATION & DOCS EXPORT */}
           {currentStep === 'admin' && effectiveAdminAcademicSetting && (
             <AdministrationHub
+              workMode={workMode}
+              initialTab={productionMode ? 'export_docs' : undefined}
               profile={activeProfile}
               school={activeSchoolForView}
               workspace={transitionalWorkspace}
@@ -2073,9 +2107,15 @@ export function App() {
 
       {/* Backup / Restore JSON Modal */}
       {isCompleteProjectImportOpen && <CompleteProjectImportModal state={v5State}
+        workMode={workMode}
         importedYearPlanId={importedYearForExport}
         onContinue={step=>{setIsCompleteProjectImportOpen(false);setCurrentStep(step as WorkflowStepId);}}
         onClose={() => setIsCompleteProjectImportOpen(false)} onSuccess={(result) => {
+          if (productionMode) {
+            refreshV5(); setIsCompleteProjectImportOpen(false); setCurrentStep('admin');
+            setAppNotice({ type: 'info', message: 'Master diimpor. Periksa identitas dan dokumen, lalu pilih Unduh. Belum ada file yang diunduh.' });
+            return;
+          }
           if (result.mode === 'IDENTITY_ONLY') { refreshV5(); return; }
           if (['IDENTITY_SCHEDULE','OTHER_CLASS','CONTINUE_EDITING'].includes(result.mode)) {
             refreshV5(); setAppNotice({ type: result.step7.target.canProceed ? 'info' : 'warning', message: result.compatibility.reasons[0] || result.step7.target.blockers[0] || (result.mode==='IDENTITY_SCHEDULE' ? 'Impor selesai. Sesuaikan kalender, JP, dan jadwal tujuan; ZIP tersedia setelah validasi.' : 'Impor selesai. Progres valid dipertahankan dan perencanaan dapat disunting.') }); return;

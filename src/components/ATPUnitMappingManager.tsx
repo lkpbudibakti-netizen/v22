@@ -72,6 +72,7 @@ import { validateATPDataWorkflow } from '../services/cpWorkflowService';
 import { buildATPUnitMappingDiagnosticReport } from '../services/diagnosticService';
 
 export interface ATPUnitMappingManagerProps {
+  productionMode?: boolean;
   atp: ATPData;
   tp: TPData;
   mapping?: ATPUnitMappingData;
@@ -292,6 +293,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   onSaveMapping,
   onNextStep,
   onBackToATP,
+  productionMode = false,
 }) => {
   const [units, setUnits] = useState<ATPUnitMapping[]>(() =>
     createInitialUnits(mapping, atp.items || [])
@@ -1194,6 +1196,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
   };
 
   const handleProceedNext = () => {
+    if (productionMode) { onNextStep(); return; }
     setLocalValidationNotice(null);
 
     const result = proceedWithATPUnitMapping(mappingReadiness, canSave ? handleSave : undefined, onNextStep);
@@ -2103,7 +2106,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
         </button>
 
         <div className="flex flex-col items-stretch gap-2 w-full sm:max-w-xl" aria-live="polite">
-          {!mappingReadiness.canProceed && <div id="mapping-proceed-blockers" role="status"
+          {!productionMode && !mappingReadiness.canProceed && <div id="mapping-proceed-blockers" role="status"
             className="border border-amber-300 bg-amber-50 text-amber-900 rounded-lg p-3 text-sm space-y-2">
             <p className="font-semibold">Belum dapat lanjut Step 08</p>
             <ul className="list-disc pl-5 space-y-1">{mappingReadiness.blockers.map((issue, index) => <li key={index}>{issue}</li>)}</ul>
@@ -2117,7 +2120,7 @@ export const ATPUnitMappingManager: React.FC<ATPUnitMappingManagerProps> = ({
           {(saveErrorNotice || localValidationNotice) && <p role="alert" className="text-sm text-red-700">{saveErrorNotice || localValidationNotice}</p>}
           <button
             id="btn-next-to-annual-planning"
-            disabled={isAnalyzing || !mappingReadiness.canProceed || (!!autoRepair && hasChanges)}
+            disabled={!productionMode && (isAnalyzing || !mappingReadiness.canProceed || (!!autoRepair && hasChanges))}
             type="button"
             onClick={handleProceedNext}
             aria-describedby={!mappingReadiness.canProceed ? 'mapping-proceed-blockers' : undefined}

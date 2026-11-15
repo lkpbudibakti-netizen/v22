@@ -56,6 +56,7 @@ export interface DocumentGenerationContext {
   profile: TeacherProfile;
   academicSetting: AcademicSetting;
   workspace?: AdministrationWorkspace;
+  workMode?: import('../workMode').WorkMode;
   documentMode?: DocumentMode; // 'data' | 'blank'
   snapshot?: DocumentSnapshot; // Preserved frozen snapshot for historical documents
   skipDownload?: boolean; // When true, generates document and returns blob without triggering browser saveAs

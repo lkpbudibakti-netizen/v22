@@ -9,6 +9,7 @@ export interface CompleteProjectArchive {
 }
 
 export interface CompleteProjectImportOptions {
+  workMode?: import('../services/workMode').WorkMode;
   mode: 'RESTORE' | 'COPY' | 'IDENTITY_ONLY' | 'IDENTITY_SCHEDULE' | 'OTHER_CLASS' | 'CONTINUE_EDITING';
   documentDate?: string;
   targetGrade?: string;

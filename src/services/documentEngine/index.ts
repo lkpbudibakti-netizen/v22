@@ -240,13 +240,13 @@ export function resolveCanonicalLearningPlan(context: DocumentGenerationContext)
     if (!exactPlan) {
       return { error: `Rancangan Pembelajaran dengan ID '${context.activeLearningPlanId}' tidak ditemukan.` };
     }
-    if (exactPlan.status !== 'SIAP') {
+    if (context.workMode !== 'production' && exactPlan.status !== 'SIAP') {
       return { error: `Rancangan Pembelajaran '${exactPlan.title || exactPlan.topic || exactPlan.id}' berstatus '${exactPlan.status}'. Harus diverifikasi dan dikonfirmasi SIAP terlebih dahulu.` };
     }
     return { plan: exactPlan };
   }
 
-  const siapPlans = plans.filter((p) => p.status === 'SIAP');
+  const siapPlans = context.workMode === 'production' ? plans : plans.filter((p) => p.status === 'SIAP');
   if (siapPlans.length === 0) {
     return { error: 'Tidak ada Rancangan Pembelajaran (Modul Ajar) yang berstatus SIAP untuk kelas/mapel ini.' };
   }
@@ -290,11 +290,11 @@ export function validateDocumentRequirements(
   // Identity masking never bypasses the document-date or substance requirements.
   const identityIssue = sourceIdentityExportIssue(type, context);
   if (identityIssue) return { isValid: false, missingFields: [identityIssue], message: identityIssue, targetStep: 'academic' };
-  const importIssue = importDocumentPolicyIssue(type, context);
+  const importIssue = context.workMode === 'production' && context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode !== 'OTHER_CLASS' ? undefined : importDocumentPolicyIssue(type, context);
   if (importIssue) return { isValid: false, missingFields: [importIssue], message: importIssue, targetStep: 'academic' };
   {
     const rawDate =
-      context.snapshot
+      context.snapshot && context.workMode !== 'production'
         ? context.snapshot.documentDate
         : (
             context.documentDate ??
@@ -352,6 +352,12 @@ export function validateDocumentRequirements(
     }
   }
 
+  if (context.workMode === 'production') {
+    if (['KALENDER_AKADEMIK', 'HARI_EFEKTIF'].includes(type) && (!context.calendar?.startDate || !context.calendar.endDate)) missingFields.push('Rentang kalender minimum belum tersedia.');
+    if (['DAFTAR_HADIR', 'DAFTAR_NILAI'].includes(type) && !context.students?.length) missingFields.push('Daftar siswa tujuan belum tersedia.');
+    if (type === 'REMEDIAL_PENGAYAAN' && !context.remedials?.length && !context.enrichments?.length) missingFields.push('Data remedial/pengayaan tujuan belum tersedia.');
+  }
+
   if (type === 'JURNAL') {
     const journal = buildJurnalProjection(context as DocumentGenerationContext);
     if (!journal.isReady) missingFields.push(...journal.reasons);
@@ -403,7 +409,7 @@ export function validateDocumentRequirements(
     // Kurikulum Merdeka
     const cpHasContent = !!(
       context.cp?.generalDescription?.trim() ||
-      (context.cp?.elements && context.cp.elements.length > 0)
+      (context.workMode === 'production' ? context.cp?.elements?.some(element => element.content?.trim()) : context.cp?.elements && context.cp.elements.length > 0)
     );
     const tpCount = context.tp?.items?.length || 0;
     const atpCount = context.atp?.items?.length || 0;
@@ -416,7 +422,7 @@ export function validateDocumentRequirements(
         break;
 
       case 'TP':
-        if (tpCount === 0) {
+        if (tpCount === 0 || (context.workMode === 'production' && !context.tp?.items.some(tp => tp.statement?.trim()))) {
           missingFields.push('Tujuan Pembelajaran (TP) belum disusun');
         }
         break;
@@ -428,7 +434,7 @@ export function validateDocumentRequirements(
         break;
 
       case 'ATP':
-        if (tpCount === 0) {
+        if (tpCount === 0 && context.workMode !== 'production') {
           missingFields.push('Tujuan Pembelajaran (TP) belum disusun');
         }
         if (atpCount === 0) {
@@ -516,6 +522,12 @@ export function validateDocumentRequirements(
 
       case 'KKTP':
         {
+          if (context.workMode === 'production') {
+            const printable = (context.assessmentCriteria || []).some(criterion => context.tp?.items.some(tp => tp.id === criterion.tpId && tp.statement?.trim()) &&
+              (criterion.description?.trim() || criterion.indicators?.some(value => value.trim()) || criterion.levels?.some(level => level.description?.trim())));
+            if (!printable) missingFields.push('TP dan kriteria KKTP yang terhubung belum tersedia.');
+            break;
+          }
           const kktpValidation = validateKKTPData(
             context.assessmentCriteria || [],
             context.tp,

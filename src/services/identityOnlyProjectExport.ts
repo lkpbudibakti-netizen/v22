@@ -29,8 +29,8 @@ export function buildImportedProjectExportContext(state: AppStorageStateV5, year
   return resolveEffectiveContext({ ...first.context, zipAnnualSource: base.zipAnnualSource, snapshot: undefined });
 }
 
-export function importedProjectExportReadiness(state: AppStorageStateV5, yearPlanId: string) {
-  const context = buildImportedProjectExportContext(state, yearPlanId);
+export function importedProjectExportReadiness(state: AppStorageStateV5, yearPlanId: string, workMode?: import('./workMode').WorkMode) {
+  const context = { ...buildImportedProjectExportContext(state, yearPlanId), workMode };
   const types = getCurriculumDocumentTypes(context.academicSetting.curriculumType || 'KURIKULUM_MERDEKA') as DocumentType[];
   const plan = buildAnnualZipWorkItems(types, context);
   const rows = plan.items.map(item => {
