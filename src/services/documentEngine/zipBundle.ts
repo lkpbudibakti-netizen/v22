@@ -1,3 +1,4 @@
+import { assertProductionDocumentFile, productionFinding, formatProductionFindings, ProductionExportError } from '../productionValidation';
 import JSZip from 'jszip';
 import { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder, type AnnualZipWorkItem } from './annualZipPlan';
 import saveAs from 'file-saver';
@@ -391,6 +392,7 @@ export async function generateZipBundle(
           onProgress(currentStep, totalSteps, `PDF: ${displayLabel}`);
         }
         const pdfResult = await generatePdfDocument(item.type, effectiveContext);
+        if (rawContext.workMode === 'production') await assertProductionDocumentFile(pdfResult.blob, 'pdf');
         if (pdfResult.blob && pdfResult.blob.size > 0) {
           const candidatePdfName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.pdf` : formatDocumentZipFileName(
             item.type,
@@ -428,6 +430,7 @@ export async function generateZipBundle(
           skipDownload: true,
         });
 
+        if (rawContext.workMode === 'production') await assertProductionDocumentFile(docxResult.blob, 'docx');
         if (docxResult.blob && docxResult.blob.size > 0) {
           const candidateDocxName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.docx` : formatDocumentZipFileName(
             item.type,
@@ -536,6 +539,10 @@ export async function generateZipBundle(
   const totalFiles = pdfCount + docxCount;
   if (totalFiles === 0) {
     const errorDetails = itemResults.map((r) => `${r.type}: ${r.status} (${r.reason})`).join('; ');
+    if (rawContext.workMode === 'production') throw new ProductionExportError([
+      ...itemResults.filter(item => item.status !== 'SUCCESS').map(item => productionFinding(item.type, item.instanceTitle || item.instanceId || item.type, 'BLOCKER_DOKUMEN', item.reason || item.status)),
+      productionFinding('ZIP', zipFileName, 'BLOCKER_PAKET', 'Tidak ada satu pun dokumen yang berhasil dihasilkan.'),
+    ]);
     throw new Error(
       (isBlank
         ? 'Tidak ada format dokumen kosong yang berhasil dibuat untuk kurikulum saat ini.'
@@ -544,16 +551,28 @@ export async function generateZipBundle(
     );
   }
 
-  const zipBlob = await zip.generateAsync({
+  if (rawContext.workMode === 'production') {
+    const incomplete = itemResults.some(item => item.status !== 'SUCCESS');
+    const findings = itemResults.filter(item => item.status !== 'SUCCESS').map(item => productionFinding(item.type, item.instanceTitle || item.instanceId || item.type, 'BLOCKER_DOKUMEN', item.reason || item.status));
+    zip.file(rootFolder + '/Laporan_Ekspor.txt', 'Status: ' + (incomplete ? 'TIDAK LENGKAP' : 'LENGKAP') + '\n' + formatProductionFindings(findings));
+  }
+  let zipBlob: Blob;
+  try {
+  zipBlob = await zip.generateAsync({
     type: 'blob',
     compression: 'DEFLATE',
     compressionOptions: { level: 6 },
   });
 
+  if (rawContext.workMode === 'production' && !zipBlob.size) throw new Error('ZIP kosong atau tidak valid.');
   if (!rawContext.skipDownload) {
     saveAs(zipBlob, zipFileName);
   }
 
+  } catch (error) {
+    if (rawContext.workMode !== 'production') throw error;
+    throw new ProductionExportError([productionFinding('ZIP', zipFileName, 'BLOCKER_PAKET', error instanceof Error ? error.message : String(error))]);
+  }
   const requestedCount = itemResults.length;
   const successCount = itemResults.filter((r) => r.status === 'SUCCESS').length;
   const partialCount = itemResults.filter((r) => r.status === 'PARTIAL').length;

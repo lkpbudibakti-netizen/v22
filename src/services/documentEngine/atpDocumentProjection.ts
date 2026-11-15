@@ -1,3 +1,4 @@
+import { productionReferenceIssues } from '../productionValidation';
 import type { DocumentGenerationContext } from './types';
 
 export const ATP_DOCUMENT_COLUMNS = [
@@ -21,6 +22,8 @@ export function buildATPDocumentProjection(context: DocumentGenerationContext): 
   const invalid = (error: string): ATPDocumentProjection => ({ isReady: false, error, rationale: '', cpReferenceLines: [], rows: [] });
   const { cp, tp, atp } = context;
   if (context.workMode === 'production') {
+    const errors = productionReferenceIssues('ATP', context);
+    if (errors.length) return invalid(errors.join('; '));
     const rows: ATPDocumentRow[] = (atp?.items || []).map(item => {
       const ids = item.linkedTpIds?.length ? item.linkedTpIds : item.tpId ? [item.tpId] : [];
       const resolvedTPs = ids.flatMap(id => {

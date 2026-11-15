@@ -61,6 +61,7 @@ export interface DocumentGenerationContext {
   snapshot?: DocumentSnapshot; // Preserved frozen snapshot for historical documents
   skipDownload?: boolean; // When true, generates document and returns blob without triggering browser saveAs
   effectiveWeeksCount?: number; // for PROMES (default 18 weeks/semester)
+  cpAnalysis?: import('../../types').CPAnalysisData;
   cp?: CPData;
   tp?: TPData;
   atp?: ATPData;
@@ -134,6 +135,7 @@ export interface ZipExportResult {
 }
 
 export interface DocumentValidationResult {
+  findings?: import('../productionValidation').ProductionFinding[];
   isValid: boolean;
   missingFields: string[];
   message?: string;

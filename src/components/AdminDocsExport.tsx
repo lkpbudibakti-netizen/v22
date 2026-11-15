@@ -1,3 +1,4 @@
+import { ProductionExportError, productionFinding, productionZipFindings, type ProductionFinding } from '../services/productionValidation';
 import { JournalPreview, JournalRealizationEditor } from './JournalRealizationEditor';
 import { buildJurnalProjection } from '../services/documentEngine/jurnalProjection';
 import { buildATPDocumentProjection, ATP_DOCUMENT_COLUMNS, getATPDocumentRowCells } from '../services/documentEngine/atpDocumentProjection';
@@ -99,6 +100,7 @@ interface AdminDocsExportProps {
   school: SchoolData;
   workspace?: AdministrationWorkspace;
   academicSetting: AcademicSetting;
+  cpAnalysis?: import('../types').CPAnalysisData;
   cp?: CPData;
   tp?: TPData;
   atp?: ATPData;
@@ -142,6 +144,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   school,
   workspace,
   academicSetting,
+  cpAnalysis,
   cp,
   tp,
   atp,
@@ -183,6 +186,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   const [exportDiagnostic, setExportDiagnostic] = useState<ModulAjarExportDiagnostic | null>(getLastModulAjarExportDiagnostic);
   const [generatingDocType, setGeneratingDocType] = useState<string | null>(null);
   const [isExportingAll, setIsExportingAll] = useState(false);
+  const [productionExportFindings, setProductionExportFindings] = useState<ProductionFinding[]>([]);
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [zipProgressText, setZipProgressText] = useState<string | null>(null);
@@ -228,6 +232,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     academicSetting,
     workspace,
     documentMode,
+    cpAnalysis,
     cp: cp || { id: '', academicSettingId: '', generalDescription: '', elements: [], updatedAt: '' },
     tp: tp || { id: '', academicSettingId: '', items: [], updatedAt: '' },
     atp: atp || { id: '', academicSettingId: '', rationale: '', items: [], totalJP: 0, updatedAt: '' },
@@ -406,6 +411,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       );
       setTimeout(() => setExportSuccessMessage(null), 6000);
     } catch (err: unknown) {
+      if (context.workMode === 'production') setProductionExportFindings([productionFinding(type, effectiveContext.activeLearningPlanId || effectiveContext.activeAssessmentPackageId || type, 'BLOCKER_DOKUMEN', err instanceof Error ? err.message : String(err))]);
       const msg = err instanceof Error ? err.message : 'Gagal menghasilkan dokumen';
       setExportErrorMessage(msg);
     } finally {
@@ -415,6 +421,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
   const handleExportZipBundle = async (format: ZipExportFormat = 'both') => {
     setIsExportingZip(true);
+    if (productionMode) setProductionExportFindings([]);
     setExportErrorMessage(null);
     setExportSuccessMessage(null);
     setZipProgressText('Menyiapkan struktur folder administrasi...');
@@ -433,6 +440,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       );
 
       const formatLabel = format === 'both' ? 'PDF & Word' : format.toUpperCase();
+      if (productionMode) setProductionExportFindings(productionZipFindings(result));
       if (!result.isComplete || (result.failedCount ?? 0) > 0 || (result.partialCount ?? 0) > 0 || (result.skippedCount ?? 0) > 0) {
         setExportErrorMessage(
           `Perhatian: Paket ZIP berhasil diunduh (${result.exportedCount} dokumen), namun berstatus TIDAK LENGKAP: ${result.failedCount ?? 0} gagal, ${result.skippedCount ?? 0} dilewati/belum siap.`
@@ -447,6 +455,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         setExportErrorMessage(null);
       }, 8000);
     } catch (err: unknown) {
+      if (productionMode && err instanceof ProductionExportError) setProductionExportFindings(err.findings);
       const msg = err instanceof Error ? err.message : 'Terjadi kendala saat membuat paket ZIP';
       setExportErrorMessage(msg);
     } finally {
@@ -527,6 +536,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         }
         } catch (error) {
           if (!productionMode) throw error;
+          setProductionExportFindings(previous => [...previous, productionFinding(type, type, 'BLOCKER_DOKUMEN', error instanceof Error ? error.message : String(error))]);
           skipped.push(type + ': gagal - ' + (error instanceof Error ? error.message : String(error)));
         }
       }
@@ -577,7 +587,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   return (
     <div className="space-y-6" data-export-busy={Boolean(generatingDocType || isExportingAll || isExportingZip)}>
       {productionMode && <button type="button" id="btn-copy-production-evaluation" className="rounded-lg border p-2 text-sm" onClick={async () => {
-        try { await navigator.clipboard.writeText(buildProductionEvaluationReport(context)); setExportSuccessMessage('Laporan evaluasi berhasil disalin.'); }
+        try { await navigator.clipboard.writeText(buildProductionEvaluationReport(context, productionExportFindings)); setExportSuccessMessage('Laporan evaluasi berhasil disalin.'); }
         catch (error) { setExportErrorMessage(error instanceof Error ? error.message : 'Laporan tidak dapat disalin.'); }
       }}>Salin Laporan Evaluasi</button>}
       <details className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -2299,7 +2309,9 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         onClose={() => setIsZipModalOpen(false)}
         context={context}
         existingRecords={productionMode ? [] : localDocs}
+        onEvaluation={productionMode ? setProductionExportFindings : undefined}
         onSuccess={(result) => {
+          if (productionMode && !result.isComplete) { setExportSuccessMessage('Paket ZIP diunduh dengan status TIDAK LENGKAP. Rincian tersedia pada laporan ekspor.'); return; }
           setExportSuccessMessage(
             `Sukses! ${result.exportedCount} dokumen (${result.pdfCount} PDF, ${result.docxCount} Word) telah dikompresi ke dalam arsip ZIP "${result.zipFileName}".`
           );

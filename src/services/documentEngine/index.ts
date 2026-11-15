@@ -1,3 +1,4 @@
+import { assertProductionDocumentFile, productionReferenceIssues, productionFinding } from '../productionValidation';
 import { buildATPDocumentProjection } from './atpDocumentProjection';
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
@@ -261,7 +262,7 @@ export function resolveCanonicalLearningPlan(context: DocumentGenerationContext)
  * Validates whether all prerequisites for generating the document are met.
  * Per-document validation logic so each document only requires its true prerequisites.
  */
-export function validateDocumentRequirements(
+function validateDocumentRequirementsCore(
   type: DocumentType,
   context: Partial<DocumentGenerationContext>
 ): DocumentValidationResult {
@@ -575,6 +576,21 @@ export function validateDocumentRequirements(
   };
 }
 
+/** Production classifications drive the same per-document decision used by all exports. */
+export function validateDocumentRequirements(type: DocumentType, context: Partial<DocumentGenerationContext>): DocumentValidationResult {
+  if (context.workMode !== 'production') return validateDocumentRequirementsCore(type, context);
+  let result: DocumentValidationResult;
+  try {
+    result = validateDocumentRequirementsCore(type, context);
+    const references = productionReferenceIssues(type, context);
+    if (references.length) result = { ...result, isValid: false, missingFields: [...result.missingFields, ...references] };
+  } catch (error) {
+    result = { isValid: false, missingFields: [error instanceof Error ? error.message : String(error)] };
+  }
+  const findings = result.missingFields.map(problem => productionFinding(type, context.activeLearningPlanId || context.activeAssessmentPackageId || type, 'BLOCKER_DOKUMEN', problem));
+  return { ...result, message: result.missingFields.join('; '), findings };
+}
+
 /**
  * Unified Document Generator dispatcher.
  */
@@ -582,12 +598,14 @@ export async function generateDocument(
   type: DocumentType,
   rawContext: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
-  const context = resolveEffectiveContext(rawContext);
+  const context = { ...resolveEffectiveContext(rawContext) };
   const validation = validateDocumentRequirements(type, context);
   if (!validation.isValid) {
     throw new Error(validation.message || 'Prasyarat dokumen belum terpenuhi.');
   }
 
+  const shouldDownload = !context.skipDownload;
+  if (context.workMode === 'production') context.skipDownload = true;
   const snapshot = context.snapshot || createDocumentSnapshot(context, 'docx', context.documentMode, type);
 
   let result: GeneratedDocumentResult;
@@ -651,6 +669,10 @@ export async function generateDocument(
       throw new Error(`Tipe dokumen ${type} belum didukung.`);
   }
 
+  if (context.workMode === 'production') {
+    await assertProductionDocumentFile(result.blob, 'docx');
+    if (shouldDownload) saveAs(result.blob!, result.fileName);
+  }
   if (result.record) {
     if (type !== 'ASESMEN' || !result.record.snapshot) {
       result.record.snapshot = snapshot;

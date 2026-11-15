@@ -1,3 +1,4 @@
+import { assertProductionDocumentFile } from '../../../productionValidation';
 import { annualJPNotes, promesAnnualJPNotes } from '../../jpPresentation';
 import { validateDocumentRequirements } from '../../index';
 import { buildJurnalProjection, JURNAL_COLUMNS, JURNAL_WIDTHS, jurnalTableRows } from '../../jurnalProjection';
@@ -126,7 +127,7 @@ export async function generatePdfDocument(
   if (!validation.isValid) throw new Error(validation.message || validation.missingFields.join('; '));
   const identityIssue = sourceIdentityExportIssue(type, context);
   if (identityIssue) throw new Error(identityIssue);
-  const importIssue = importDocumentPolicyIssue(type, context);
+  const importIssue = context.workMode === 'production' && context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode !== 'OTHER_CLASS' ? undefined : importDocumentPolicyIssue(type, context);
   if (importIssue) throw new Error(importIssue);
 
   if (type === 'ASESMEN') {
@@ -134,6 +135,7 @@ export async function generatePdfDocument(
       documentMode: context.documentMode,
       documentDate: context.documentDate,
     });
+    if (context.workMode === 'production') await assertProductionDocumentFile(result.blob, 'pdf');
     return {
       blob: result.blob,
       fileName: result.fileName,
@@ -1315,6 +1317,7 @@ export async function generatePdfDocument(
   });
 
   const blob = builder.getBlob();
+  if (context.workMode === 'production') await assertProductionDocumentFile(blob, 'pdf');
   if (type === 'MODUL_AJAR') recordModulAjarExportDiagnostic(context, buildModulAjarProjection(context), snapshot, 'pdf');
   return { blob, fileName, title, snapshot };
 }

@@ -38,7 +38,8 @@ export function buildJurnalProjection(context: DocumentGenerationContext): Jurna
       (context.calendar && bundle.schedule.basedOnCalendarUpdatedAt !== context.calendar.updatedAt) ||
       (context.subjectWeeklySchedule && bundle.schedule.basedOnSubjectWeeklyScheduleUpdatedAt !== context.subjectWeeklySchedule.updatedAt))) result.reasons.push('Jadwal belum diperbarui setelah perubahan Bab, pertemuan, kalender, atau jadwal mapel.');
   const placement = context.unitExecutionPlan && context.atpUnitMapping ? resolveUnitSemesterPlacement(context.unitExecutionPlan, context.atpUnitMapping) : undefined;
-  if (!placement?.isValid || !placement.isComplete || placement.isStale) result.reasons.push('Penempatan semester Bab belum lengkap atau perlu diperbarui.');
+  if (!placement?.isValid || !placement.isComplete || (placement.isStale && context.workMode !== 'production')) result.reasons.push('Penempatan semester Bab belum lengkap atau perlu diperbarui.');
+    if (placement?.isStale && context.workMode === 'production') result.warnings.push('Penempatan semester Bab stale; tinjau kualitas rencana.');
   const activeUnits = new Set(placement?.resolvedUnits.filter(unit => unit.semester === semester).map(unit => unit.unitId));
   const expected = context.unitExecutionPlan?.units.filter(unit => activeUnits.has(unit.unitId)).flatMap(unit => unit.meetings) || [];
   const activeRows = canonical.rows.filter(row => row.semesterPlanId === semesterPlanId);

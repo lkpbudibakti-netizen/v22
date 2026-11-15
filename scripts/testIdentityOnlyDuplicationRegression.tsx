@@ -1,3 +1,4 @@
+import * as productionValidation from '../src/services/productionValidation';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -126,6 +127,7 @@ let failing = false;
 const render = async(type:any,ctx:any)=>{if(failing && type==='MODUL_AJAR') throw new Error('Fixture DOCX failed');const res=await generateDocument(type,ctx);const data:any=new Uint8Array(await res.blob!.arrayBuffer());Object.defineProperty(data,'size',{value:data.length});return {...res,blob:data};};
 const renderPdf = async(type:any,ctx:any)=>{if(failing && ['MODUL_AJAR','ASESMEN'].includes(type)) throw new Error('Fixture PDF failed');const res=await generatePdfDocument(type,ctx);const data:any=new Uint8Array(await res.blob.arrayBuffer());Object.defineProperty(data,'size',{value:data.length});return {...res,blob:data};};
 runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zipBundle.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,console,Error,require:(id:string)=>{
+  if(id==='../productionValidation') return productionValidation;
   if(id==='jszip')return JSZip;if(id==='file-saver')return(blob:Blob,name:string)=>downloads.push({blob,name});
   if(id==='./annualZipPlan')return{buildAnnualZipWorkItems,administrationZipRoot,isAnnualZipDocument,semesterZipFolder};
   if(id==='../curriculumRules')return{getCurriculumType};if(id==='./snapshot')return{resolveEffectiveContext};

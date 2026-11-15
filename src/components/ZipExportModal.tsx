@@ -1,3 +1,4 @@
+import { productionZipFindings, ProductionExportError, type ProductionFinding } from '../services/productionValidation';
 import React, { useState } from 'react';
 import {
   Archive,
@@ -35,6 +36,7 @@ import {
 import { getCurriculumType } from '../services/curriculumRules';
 
 interface ZipExportModalProps {
+  onEvaluation?: (findings: ProductionFinding[]) => void;
   isOpen: boolean;
   onClose: () => void;
   context: DocumentGenerationContext;
@@ -48,6 +50,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
   context,
   existingRecords,
   onSuccess,
+  onEvaluation,
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<ZipExportFormat>('both');
   const [selectedMode, setSelectedMode] = useState<DocumentMode>('data');
@@ -104,10 +107,12 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
       );
 
       setExportResult(result);
+      if (context.workMode === 'production') onEvaluation?.(productionZipFindings(result));
       if (onSuccess) {
         onSuccess(result);
       }
     } catch (err: unknown) {
+      if (context.workMode === 'production' && err instanceof ProductionExportError) onEvaluation?.(err.findings);
       const msg = err instanceof Error ? err.message : 'Terjadi kendala saat membuat paket ZIP';
       setErrorMessage(msg);
     } finally {

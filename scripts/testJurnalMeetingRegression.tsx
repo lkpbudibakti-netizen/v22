@@ -1,3 +1,4 @@
+import * as productionValidation from '../src/services/productionValidation';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -126,6 +127,7 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
   if (id === './snapshot') return { resolveEffectiveContext };
   if (id === './index') return { validateDocumentRequirements, generateDocument: render };
   if (id === './renderers/pdf/pdfDocGenerators') return { generatePdfDocument: renderPdf };
+  if (id === '../productionValidation') return productionValidation;
   if (id === '../curriculumRouter') return { MERDEKA_EXPORT_DOC_TYPES: ['JURNAL'] };
   throw new Error(id);
 } });

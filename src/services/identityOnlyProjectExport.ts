@@ -18,7 +18,7 @@ export function buildImportedProjectExportContext(state: AppStorageStateV5, year
   const base: DocumentGenerationContext = {
     profile, school, workspace: { ...workspace, academicSettingId: year.id },
     academicSetting: { ...year, id: semesterPlans[0].id, curriculum: year.curriculumType === 'K13' ? 'Kurikulum 2013' : 'Kurikulum Merdeka', phase: year.phase || '', semester: semesterPlans[0].semester === 1 ? '1 (Ganjil)' : '2 (Genap)' },
-    cp: read(state.annualData.cp), tp: read(state.annualData.tp), atp: read(state.annualData.atp),
+    cpAnalysis: read(state.annualData.cpAnalysis), cp: read(state.annualData.cp), tp: read(state.annualData.tp), atp: read(state.annualData.atp),
     atpUnitMapping: read(state.annualData.atpUnitMappings), unitExecutionPlan: read(state.annualData.unitExecutionPlans),
     documentDate: workspace.documentDate, documentMode: 'data', snapshot: undefined, skipDownload: true,
     zipAnnualSource: { yearPlan: year, semesterPlans, semesterData: state.semesterData, semesterJPSettings: state.semesterJPSettings },

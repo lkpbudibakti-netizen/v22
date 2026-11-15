@@ -1874,6 +1874,7 @@ export function App() {
               school={activeSchoolForView}
               workspace={transitionalWorkspace}
               academicSetting={effectiveAdminAcademicSetting}
+              cpAnalysis={activeCPAnalysis}
               cp={activeCP}
               tp={activeTP}
               atp={activeATP}

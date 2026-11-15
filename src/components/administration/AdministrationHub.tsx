@@ -73,6 +73,7 @@ interface AdministrationHubProps {
   school: SchoolData;
   workspace?: AdministrationWorkspace;
   academicSetting: AcademicSetting;
+  cpAnalysis?: import('../../types').CPAnalysisData;
   cp?: CPData;
   tp?: TPData;
   atp?: ATPData;
@@ -136,6 +137,7 @@ export const AdministrationHub: React.FC<AdministrationHubProps> = ({
   profile,
   academicSetting,
   workspace,
+  cpAnalysis,
   cp,
   tp,
   atp,
@@ -696,7 +698,8 @@ export const AdministrationHub: React.FC<AdministrationHubProps> = ({
             school={school}
             workspace={workspace}
             academicSetting={academicSetting}
-            cp={cp}
+            cpAnalysis={cpAnalysis}
+          cp={cp}
             tp={tp}
             atp={atp}
             atpUnitMapping={atpUnitMapping}

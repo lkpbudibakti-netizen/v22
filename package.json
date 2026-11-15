@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:production-validation": "tsx scripts/testProductionValidation.tsx",
     "test:work-modes": "tsx scripts/testWorkModes.tsx",
     "test:import-tp": "tsx scripts/testImportedTPConfirmation.tsx",
     "test:step07-pedagogical": "tsx scripts/testStep07PedagogicalAlignment.tsx",

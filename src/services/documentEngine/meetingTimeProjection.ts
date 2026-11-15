@@ -1,3 +1,4 @@
+import { classifyProjectionFinding } from '../productionValidation';
 import { DocumentGenerationContext } from './types';
 import {
   resolveScheduledLearningMeetings,
@@ -51,7 +52,7 @@ export function resolveMerdekaCanonicalTimeProjection(
   return {
     rows: result.rows,
     isReady: result.rows.length > 0 && (context.workMode === 'production'
-      ? new Set(result.rows.map(row => row.meetingId)).size === result.rows.length && result.rows.every(row =>
+      ? !result.errors.some(error => classifyProjectionFinding(error) === 'BLOCKER_DOKUMEN') && new Set(result.rows.map(row => row.meetingId)).size === result.rows.length && result.rows.every(row =>
           Number.isFinite(row.jp) && row.jp > 0 && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && Number.isFinite(Date.parse(row.date)) && row.unitTitle?.trim())
       : result.isValid),
     errors: result.errors,

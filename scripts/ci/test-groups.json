@@ -56,7 +56,8 @@
     "scripts/testRecoveryM1ModulAjarPrintPrivacyRegression.ts",
     "scripts/testProfileSchoolBindingV5.ts",
     "scripts/testMerdekaATPAnnualizationIntegrity.ts",
-    "scripts/testWorkModes.tsx"
+    "scripts/testWorkModes.tsx",
+    "scripts/testProductionValidation.tsx"
   ],
   "transport": [
     "scripts/testAITransportHardening.ts",
