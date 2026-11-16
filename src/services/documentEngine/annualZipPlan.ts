@@ -140,7 +140,7 @@ export function resolveZipLearningPlan(plan: LearningPlan, annual: DocumentGener
   const item: AnnualZipWorkItem = { type: 'MODUL_AJAR', instanceId: plan.id, instanceTitle: unit.title,
     context: { ...target.context, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
     folderCategory: semesterZipFolder(target.semester), seqNum: unit.order,
-    fileStem: `Modul_Ajar_BAB_${unit.order}_${clean(unit.title)}` };
+    fileStem: `${annual.learningPlanPresentation==='RPM' ? 'RPM' : 'Modul_Ajar'}_BAB_${unit.order}_${clean(unit.title)}` };
   return { item, reason: undefined };
 }
 

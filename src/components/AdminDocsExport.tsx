@@ -191,6 +191,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [zipProgressText, setZipProgressText] = useState<string | null>(null);
   const [documentMode, setDocumentMode] = useState<DocumentMode>('data');
+  const [learningPlanPresentation,setLearningPlanPresentation]=useState<'MODUL_AJAR'|'RPM'>('MODUL_AJAR');
   const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [localDocs, setLocalDocs] = useState<AppDocumentRecord[]>(documents);
@@ -232,6 +233,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     academicSetting,
     workspace,
     documentMode,
+    learningPlanPresentation,
     cpAnalysis,
     cp: cp || { id: '', academicSettingId: '', generalDescription: '', elements: [], updatedAt: '' },
     tp: tp || { id: '', academicSettingId: '', items: [], updatedAt: '' },
@@ -621,6 +623,11 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
           {/* Mode Selector & Action Buttons */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {!isK13Curriculum && <label className="text-xs font-semibold">Penyajian perencanaan
+              <select aria-label="Penyajian perencanaan" value={learningPlanPresentation} onChange={event=>setLearningPlanPresentation(event.target.value as 'MODUL_AJAR'|'RPM')} className="ml-2 rounded-lg border border-slate-300 p-2">
+                <option value="MODUL_AJAR">Modul Ajar</option><option value="RPM">Rencana Pembelajaran Mendalam (RPM)</option>
+              </select>
+            </label>}
             {/* Mode Switcher: Data vs Blank */}
             <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
               <button
@@ -1231,7 +1238,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       {activePreviewType === 'ATP' && 'ALUR TUJUAN PEMBELAJARAN (ATP)'}
                       {activePreviewType === 'PROTA' && 'PROGRAM TAHUNAN (PROTA)'}
                       {activePreviewType === 'PROMES' && 'PROGRAM SEMESTER (PROMES)'}
-                      {activePreviewType === 'MODUL_AJAR' && 'MODUL AJAR / RPP BERDIFERENSIASI'}
+                      {activePreviewType === 'MODUL_AJAR' && (learningPlanPresentation==='RPM' ? 'RENCANA PEMBELAJARAN MENDALAM (RPM)' : 'MODUL AJAR / RPP BERDIFERENSIASI')}
                       {activePreviewType === 'KKTP' && 'KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)'}
                       {activePreviewType === 'DAFTAR_HADIR' && 'DAFTAR HADIR SISWA & REKAPITULASI PRESENSI'}
                       {activePreviewType === 'DAFTAR_NILAI' && 'BUKU DAFTAR NILAI & REKAPITULASI ASESMEN'}
@@ -1879,6 +1886,12 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               const alokasiWaktuDisplay = typeof projection.resolvedAllocatedJP === 'number' && projection.resolvedAllocatedJP > 0
                 ? `${projection.resolvedAllocatedJP} JP`
                 : 'Belum Ditetapkan';
+              if(learningPlanPresentation==='RPM')return <div className="space-y-3 text-slate-800">
+                <p className="text-xs">{plan.status==='SIAP' ? 'Terkonfirmasi' : 'Draf — perlu tinjauan guru'} • {alokasiWaktuDisplay}</p>
+                {(projection.sections || []).map(section=><section key={section.title} className="rounded-xl border border-slate-200 p-3">
+                  <h4 className="text-sm font-bold">{section.title}</h4>{section.lines.map((line,index)=><p key={index} className="mt-1 whitespace-pre-wrap text-xs">{line}</p>)}
+                </section>)}
+              </div>;
 
               return (
                 <div className="space-y-3 text-slate-800">
@@ -1886,7 +1899,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="font-bold text-blue-950 uppercase text-[11px]">I. Informasi Umum & Alokasi Waktu</div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                        SIAP (Terkonfirmasi)
+                        {plan.status==='SIAP' ? 'SIAP (Terkonfirmasi)' : 'DRAF — Perlu Tinjauan Guru'}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-600 leading-relaxed">

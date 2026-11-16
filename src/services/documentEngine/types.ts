@@ -57,6 +57,8 @@ export interface DocumentGenerationContext {
   academicSetting: AcademicSetting;
   workspace?: AdministrationWorkspace;
   workMode?: import('../workMode').WorkMode;
+  /** Export presentation only; the LearningPlan and document type remain shared. */
+  learningPlanPresentation?: 'MODUL_AJAR' | 'RPM';
   documentMode?: DocumentMode; // 'data' | 'blank'
   snapshot?: DocumentSnapshot; // Preserved frozen snapshot for historical documents
   skipDownload?: boolean; // When true, generates document and returns blob without triggering browser saveAs

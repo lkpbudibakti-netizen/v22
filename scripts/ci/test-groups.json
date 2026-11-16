@@ -50,6 +50,7 @@
     "scripts/testAutoSemesterTimeAllocation.ts"
   ],
   "documents": [
+    "scripts/testDeepLearningRPM.ts",
     "scripts/testBlankIdentityExport.ts",
     "scripts/testPrintLayoutRegression.ts",
     "scripts/testCanonicalPromesProjection.ts",

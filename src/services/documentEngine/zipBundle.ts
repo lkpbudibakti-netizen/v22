@@ -180,6 +180,7 @@ export function formatDocumentZipFileName(
   if (instanceTitle?.trim()) {
     const sanitizedTitle = sanitizeForFileName(instanceTitle.trim());
     if (type === 'MODUL_AJAR') {
+      if(context.learningPlanPresentation==='RPM')return `${seqStr}_RPM_${sanitizedTitle}${blankTag}.${ext}`;
       const cleanModTitle = sanitizedTitle.startsWith('Modul_Ajar')
         ? sanitizedTitle
         : `Modul_Ajar_${sanitizedTitle}`;
@@ -208,7 +209,7 @@ export function formatDocumentZipFileName(
     ALOKASI_WAKTU: 'Alokasi_Waktu',
     PROTA: 'Program_Tahunan_PROTA',
     PROMES: 'Program_Semester_PROMES',
-    MODUL_AJAR: 'Modul_Ajar_RPP',
+    MODUL_AJAR: context.learningPlanPresentation==='RPM' ? 'RPM' : 'Modul_Ajar_RPP',
     KKTP: 'KKTP',
     ASESMEN: 'Instrumen_Asesmen_Rubrik',
     DAFTAR_HADIR: 'Daftar_Hadir_Siswa',

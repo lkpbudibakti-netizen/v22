@@ -664,9 +664,9 @@ export async function generatePdfDocument(
 
       const matchedPlan = projection.plan;
 
-      title = ('Modul Ajar / RPP Berdiferensiasi');
+      title = context.learningPlanPresentation==='RPM' ? 'RENCANA PEMBELAJARAN MENDALAM (RPM)' : 'Modul Ajar / RPP Berdiferensiasi';
       subTitle = `${subject} — ${grade} (${academicSetting?.phase || '-'}) — Semester ${semester}`;
-      fileName = `Modul_Ajar_${cleanSubject}_${cleanGrade}.pdf`;
+      fileName = `${context.learningPlanPresentation==='RPM' ? 'RPM' : 'Modul_Ajar'}_${cleanSubject}_${cleanGrade}.pdf`;
 
       {
         sections.push({ type: 'paragraph', text: [
