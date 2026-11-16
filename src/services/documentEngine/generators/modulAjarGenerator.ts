@@ -26,7 +26,7 @@ import { formatOfficialDate, DOCX_BG_TABLE_HEADER } from '../docxStyles';
 import { AssessmentCriterion, KKTPLevel, LearningPlan, SchoolData, TeacherProfile } from '../../../types';
 import { createEmptyLearningPlan } from '../../learningPlanService';
 import { getCurriculumTypeFromSetting, isMerdeka } from '../../curriculumRouter';
-import { buildModulAjarProjection, ModulAjarMeeting } from '../modulAjarProjection';
+import { buildModulAjarProjection, ModulAjarMeeting, formatModulAssessment, modulDeepLearningLines, modulGlobalActivityLines } from '../modulAjarProjection';
 
 /**
  * Creates professional standard Modul Ajar identity metadata table in Times New Roman.
@@ -220,7 +220,7 @@ function createModulAjarMeetingTable(
   });
 
   // 2. Tujuan Pembelajaran
-  const tpParagraphs: Paragraph[] = [];
+  const tpParagraphs: Paragraph[] = [new Paragraph({spacing:{after:40},children:[new TextRun({text:'ATP: '+(meeting.atpSummary || meeting.linkedAtpItemIds.join(', ')),size:22,font:'Times New Roman'})]})];
   if (meeting.resolvedTPs && meeting.resolvedTPs.length > 0) {
     meeting.resolvedTPs.forEach((t) => {
       const stmt = cleanText(t.statement);
@@ -273,7 +273,7 @@ function createModulAjarMeetingTable(
           spacing: { line: 276, after: 40 },
           children: [
             new TextRun({
-              text: `• ${a.type ? `[${a.type}] ` : ''}${desc || 'Asesmen'}${a.technique ? ` (Teknik: ${cleanText(a.technique)})` : ''}${a.instrument ? ` (Instrumen: ${cleanText(a.instrument)})` : ''}`,
+              text: '• '+cleanText(formatModulAssessment(a)),
               size: 22,
               font: 'Times New Roman',
             }),
@@ -307,23 +307,10 @@ function createModulAjarMeetingTable(
   const kktpParagraphs = (meeting.kktpSummaryLines.length ? meeting.kktpSummaryLines : ['-']).map(text =>
     new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, after: 40 },
       children: [new TextRun({ text: cleanText(text), size: 22, font: 'Times New Roman' })] }));
-  const activityParagraphs: Paragraph[] = [];
-  for (const [phase, label] of [['opening', 'Pendahuluan'], ['core', 'Kegiatan Inti'], ['closing', 'Penutup']]) {
-    activityParagraphs.push(new Paragraph({ spacing: { line: 276, before: 60, after: 40 },
-      children: [new TextRun({ text: label, bold: true, size: 22, font: 'Times New Roman' })] }));
-    const steps = meeting.activities.filter(activity => activity.phase === phase);
-    steps.forEach(activity => activityParagraphs.push(new Paragraph({
-      alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, after: 40 },
-      children: [new TextRun({ text: (activity.title ? cleanText(activity.title) + ' — ' : '') + cleanText(activity.description) + ' (' + activity.durationMinutes + ' Menit)', size: 22, font: 'Times New Roman' })],
-    })));
-    if (phase === 'core') {
-      meeting.activities.filter(activity => ['UNDERSTAND', 'APPLY', 'REFLECT'].includes(activity.phase)).forEach(activity => {
-        const labels: Record<string, string> = { UNDERSTAND: 'Memahami', APPLY: 'Mengaplikasi', REFLECT: 'Merefleksi' };
-        activityParagraphs.push(new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, after: 40 },
-          children: [new TextRun({ text: labels[activity.phase] + ': ' + cleanText(activity.description) + ' (pendekatan kegiatan inti)', size: 22, font: 'Times New Roman' })] }));
-      });
-    }
-  }
+  const activityParagraphs = meeting.activityLines.map(text => new Paragraph({
+    alignment: AlignmentType.JUSTIFIED, spacing: { line: 276, after: 40 },
+    children: [new TextRun({text:cleanText(text),size:22,font:'Times New Roman'})],
+  }));
   const activityRow = new TableRow({
     children: [createLabelCell('Kegiatan Pembelajaran'), new TableCell({
       width: { size: 75, type: WidthType.PERCENTAGE }, margins: cellMargin,
@@ -390,7 +377,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
   const docChildren: (Paragraph | Table)[] = [];
 
   // Official Title - Clean, centered, bold, black, 14pt (no [DRAFT] or AI tags)
-  const docTitle = 'MODUL AJAR';
+  const docTitle = context.learningPlanPresentation==='RPM' ? 'RENCANA PEMBELAJARAN MENDALAM (RPM)' : 'MODUL AJAR';
   const subTitle = `${academicSetting.curriculum || '-'} — ${formatClassLabel(academicSetting)} (${academicSetting.phase || '-'})`;
 
   docChildren.push(
@@ -546,7 +533,9 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
       : [];
   const dimensionsText = explicitDimensions.length > 0 ? explicitDimensions.join(', ') : '-';
 
-  {
+  if (context.learningPlanPresentation==='RPM') {
+    for(const section of sharedProjection.sections || []) {addSectionTitle(section.title);for(const line of section.lines)addListParagraph(line);}
+  } else {
     // I. INFORMASI UMUM
     addSectionTitle('I. INFORMASI UMUM');
 
@@ -579,6 +568,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
     // Model/Praktik Pembelajaran
     addSubSectionTitle(`${String.fromCharCode(nextLetterCode)}. Model/Praktik Pembelajaran`);
     addProseParagraph(plan.learningModel || '-');
+    for (const line of modulDeepLearningLines(plan)) addListParagraph(line);
 
     // II. KOMPONEN INTI
     addSectionTitle('II. KOMPONEN INTI');
@@ -610,6 +600,8 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
       addListParagraph('-');
     }
 
+    if (sharedProjection.meetings?.length) for (const line of modulGlobalActivityLines(plan)) addListParagraph(line);
+
     // III. RENCANA PERTEMUAN
     // Gunakan langsung sharedProjection.meetings; jangan parsing section.lines.
     addSectionTitle('III. RENCANA PERTEMUAN');
@@ -638,7 +630,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
         items.forEach((a) => {
           const desc = cleanText(a.description || a.method);
           addListParagraph(
-            `• ${a.type ? `[${a.type}] ` : ''}${desc || 'Asesmen'}${a.technique ? ` (Teknik: ${cleanText(a.technique)})` : ''}${a.instrument ? ` (Instrumen: ${cleanText(a.instrument)})` : ''}`
+            '• '+cleanText(formatModulAssessment(a))
           );
         });
       }
@@ -668,10 +660,10 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
           c.indicators && c.indicators.length > 0 ? c.indicators.map(cleanText).filter(Boolean).join('; ') : '-',
           'Indikator: '
         );
-        addListParagraph(getLevelDesc(c.levels, 'Perlu Bimbingan'), '• Perlu Bimbingan: ');
-        addListParagraph(getLevelDesc(c.levels, 'Cukup'), '• Cukup: ');
-        addListParagraph(getLevelDesc(c.levels, 'Baik'), '• Baik: ');
-        addListParagraph(getLevelDesc(c.levels, 'Sangat Baik'), '• Sangat Baik: ');
+        for (const level of c.levels || []) addListParagraph(cleanText(level.description), '• '+(level.label || level.level)+': ');
+        if (c.approach) addListParagraph(c.approach,'Pendekatan: ');
+        if (c.passingThreshold != null) addListParagraph(String(c.passingThreshold),'Ambang: ');
+        if (c.notes) addListParagraph(c.notes,'Catatan: ');
         docChildren.push(new Paragraph({ spacing: { after: 100 } }));
       });
     } else {
@@ -716,7 +708,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
       school,
       profile,
       isBlankMode,
-      context.documentDate, 'Modul Ajar' + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')
+      context.documentDate, docTitle + ' — ' + [academicSetting.subject, academicSetting.grade, academicSetting.academicYear].filter(Boolean).join(' / ')
     )
   );
 
@@ -734,7 +726,7 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
   recordModulAjarExportDiagnostic(context, sharedProjection, snapshot, 'docx');
   const cleanSubject = (academicSetting.subject || 'Mapel').replace(/[^a-zA-Z0-9]/g, '_');
   const cleanGrade = (academicSetting.grade || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_');
-  const fileName = `MODUL_AJAR_${cleanSubject}_${cleanGrade}_${new Date().toISOString().slice(0, 10)}.docx`;
+  const fileName = `${context.learningPlanPresentation==='RPM' ? 'RPM' : 'MODUL_AJAR'}_${cleanSubject}_${cleanGrade}_${new Date().toISOString().slice(0, 10)}.docx`;
 
   if (!context.skipDownload) {
     saveAs(blob, fileName);

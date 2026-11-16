@@ -27,6 +27,7 @@ import {
   normalizeAIReflection,
   normalizeDeepLearningContext,
   normalizeAIResources,
+  validateAILearningPlanPayload,
 } from './learningPlanService';
 import { recordDiagnosticEvent } from './diagnosticService';
 import {recordStep07Diagnostic,readStep07AnalysisResponse,Step07AnalysisResponseError,step07ErrorCategory,type Step07DiagnosticEvent,type Step07DiagnosticScope} from './step07DiagnosticsService';
@@ -928,6 +929,8 @@ export async function generateLearningPlanWithAI(params: GenerateLearningPlanPar
     if (!data.data || typeof data.data !== 'object' || Array.isArray(data.data)) {
       throw new Error('Hasil respon AI Modul Ajar tidak berbentuk objek valid.');
     }
+    const designValidation=validateAILearningPlanPayload(data.data,{tpIds:params.tps.map(tp=>tp.id),meetings:params.meetings});
+    if (!designValidation.isValid) throw new Error(designValidation.reason);
 
     const meetingIds = (params.meetings || []).map(m => m.meetingId);
     const activityValidation = validateLearningPlanActivityMeetings(data.data, meetingIds, meetingIds.length > 0, params.meetings || [], params.academicSetting);

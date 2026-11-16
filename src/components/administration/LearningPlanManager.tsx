@@ -1,4 +1,5 @@
 import { updateLearningPlanActivityMeeting } from '../../services/learningPlanActivityMeetingService';
+import { modulDeepLearningLines } from '../../services/documentEngine/modulAjarProjection';
 import React, { useState, useMemo } from 'react';
 import {
   BookOpen,
@@ -1600,13 +1601,21 @@ export const LearningPlanManager: React.FC<LearningPlanManagerProps> = ({
                         />
                       </div>
 
+                      <details className="col-span-full rounded-lg border border-slate-200 p-3 text-sm">
+                        <summary className="cursor-pointer font-semibold">Identifikasi dan Desain Pembelajaran Mendalam</summary>
+                        <p className="mt-2 text-xs text-slate-500">Jika belum tersedia hasil asesmen nyata, tulis kesiapan sebagai asumsi perencanaan untuk diperiksa melalui asesmen awal. Kemitraan dan digital digunakan sesuai kebutuhan.</p>
+                        <label className="mt-2 block text-xs font-semibold">Karakteristik Materi (opsional pada data lama)</label>
+                        <textarea rows={2} value={activePlan.materialCharacteristics || ''} onChange={e=>handleUpdateActivePlan({materialCharacteristics:e.target.value})} className="mt-1 w-full rounded border border-slate-300 p-2" />
+                        {modulDeepLearningLines(activePlan).map((line,index)=><p key={index} className="mt-2 text-xs">{line}</p>)}
+                      </details>
+
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Sarana & Sumber Belajar
                         </label>
                         <textarea
                           rows={2}
-                          value={(activePlan.resources || []).map((r) => r.title).join('\n')}
+                            value={(activePlan.resources || []).map((r) => r.title).join('\n')}
                           onChange={(e) => {
                             const lines = e.target.value.split('\n').filter((l) => l.trim().length > 0);
                             handleUpdateActivePlan({

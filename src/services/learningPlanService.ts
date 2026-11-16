@@ -822,14 +822,19 @@ export function normalizeDeepLearningContext(raw: any): DeepLearningContext | un
   const graduateProfileDimensions = Array.isArray(raw.graduateProfileDimensions)
     ? raw.graduateProfileDimensions.filter((d: unknown): d is string => typeof d === 'string' && d.trim().length > 0)
     : undefined;
+  const framework: NonNullable<DeepLearningContext['framework']> = {};
+  for (const key of ['pedagogicalPractice','learningPartnership','learningEnvironment','digitalUtilization'] as const) {
+    if (Array.isArray(raw.framework?.[key])) framework[key] = raw.framework[key].filter((value:unknown):value is string=>typeof value==='string' && !!value.trim()).map((value:string)=>value.trim());
+  }
 
-  if ((!principles || principles.length === 0) && (!graduateProfileDimensions || graduateProfileDimensions.length === 0)) {
+  if ((!principles || principles.length === 0) && (!graduateProfileDimensions || graduateProfileDimensions.length === 0) && !Object.keys(framework).length) {
     return undefined;
   }
 
   return {
     principles: principles && principles.length > 0 ? Array.from(new Set(principles)) : undefined,
     graduateProfileDimensions,
+    ...(Object.keys(framework).length ? {framework} : {}),
   };
 }
 
@@ -847,7 +852,7 @@ function normalizeAIAssessmentItems(rawItems: any, type: AssessmentPlanItem['typ
     results.push({
       id: `asm-${type.toLowerCase()}-${results.length + 1}-${Date.now().toString(36)}`,
       type,
-      linkedTpIds: [...tpIds],
+      linkedTpIds: Array.isArray(item.linkedTpIds) ? [...new Set<string>(item.linkedTpIds.filter((id:unknown):id is string=>typeof id==='string').map((id:string)=>id.trim()))] : [...tpIds],
       method,
       technique,
       instrument,
@@ -858,7 +863,7 @@ function normalizeAIAssessmentItems(rawItems: any, type: AssessmentPlanItem['typ
   return results;
 }
 
-export function validateAILearningPlanPayload(data: any): { isValid: boolean; reason?: string } {
+export function validateAILearningPlanPayload(data: any, design?: {tpIds:string[];meetings?:{meetingId:string;linkedTpIds?:string[]}[]}): { isValid: boolean; reason?: string } {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return { isValid: false, reason: 'Payload AI bukan berupa objek valid' };
   }
@@ -891,6 +896,46 @@ export function validateAILearningPlanPayload(data: any): { isValid: boolean; re
     if (!phaseSet.has(phase)) {
       return { isValid: false, reason: `Pengalaman Belajar wajib memuat fase ${phase}` };
     }
+  }
+
+  // New AI drafts only. Historical/manual LearningPlans keep their existing
+  // validation path; field presence is not a claim of pedagogical equivalence.
+  if (design) {
+    const fail = (reason:string) => ({isValid:false,reason});
+    const operational = (value:unknown,label:string) => typeof value==='string' && !!value.trim() && value.trim().toLowerCase()!==label.toLowerCase();
+    if (!operational(data.targetStudents,'Kesiapan murid')) return fail('Identifikasi: targetStudents harus menjelaskan asumsi kesiapan/kebutuhan yang akan diperiksa melalui asesmen awal.');
+    if (!operational(data.materialCharacteristics,'Karakteristik materi')) return fail('Identifikasi: materialCharacteristics harus menjelaskan karakteristik materi dalam lingkup TP.');
+    const framework=data.deepLearningContext?.framework;
+    for (const key of ['pedagogicalPractice','learningPartnership','learningEnvironment','digitalUtilization']) {
+      if (!Array.isArray(framework?.[key]) || framework[key].some((value:unknown)=>!operational(value,key))) return fail(`Desain pembelajaran: framework.${key} harus berupa daftar uraian; gunakan [] untuk kemitraan/digital yang tidak relevan.`);
+    }
+    if (!framework.pedagogicalPractice.length || !framework.learningEnvironment.length) return fail('Praktik pedagogis dan lingkungan pembelajaran harus dijelaskan secara operasional.');
+    const principles=data.deepLearningContext?.principles;
+    if (!Array.isArray(principles) || !principles.length || principles.some((p:unknown)=>!normalizeDeepLearningPrinciple(p))) return fail('Prinsip Pembelajaran Mendalam harus dipilih secara sah dan diterapkan kontekstual pada desain/kegiatan.');
+    const allowed=new Set(design.tpIds),covered=new Set<string>();
+    if (!allowed.size) return fail('Scope TP kanonikal kosong.');
+    const references = (item:any,label:string) => {
+      if (!Array.isArray(item.linkedTpIds) || !item.linkedTpIds.length || item.linkedTpIds.some((id:unknown)=>typeof id!=='string' || !allowed.has(id))) return `${label}: linkedTpIds kosong atau bukan TP dalam scope.`;
+      if (item.learningMeetingId !== undefined && design.meetings?.length) {
+        const meeting=design.meetings.find(m=>m.meetingId===item.learningMeetingId);
+        if (!meeting || (meeting.linkedTpIds?.length && item.linkedTpIds.some((id:string)=>!meeting.linkedTpIds!.includes(id)))) return `${label}: relasi TP tidak sesuai pertemuan kanonikal ${item.learningMeetingId}.`;
+      }
+    };
+    for (const exp of data.learningExperiences) {
+      if (!operational(exp.description,exp.phase) || !operational(exp.description,LEARNING_EXPERIENCE_PHASE_LABELS[exp.phase as LearningExperiencePhase])) return fail(`Pengalaman ${exp.phase} harus berisi uraian kegiatan, bukan label fase.`);
+      const issue=references(exp,'Pengalaman '+exp.phase);if(issue)return fail(issue);
+    }
+    for (const group of ['initial','formative','summative']) {
+      const items=data.assessmentPlan?.[group];
+      if (!Array.isArray(items) || !items.length) return fail(`Asesmen ${group} belum tersedia.`);
+      for (const item of items) {
+        if (!operational(item.description,group) || !operational(item.description,item.technique || group)) return fail(`Asesmen ${group} harus menjelaskan apa yang dinilai, bukan hanya label teknik.`);
+        const issue=references(item,'Asesmen '+group);if(issue)return fail(issue);
+        if(group==='summative')item.linkedTpIds.forEach((id:string)=>covered.add(id));
+      }
+    }
+    const missing=design.tpIds.filter(id=>!covered.has(id));
+    if(missing.length)return fail('Asesmen akhir belum mencakup TP: '+missing.join(', '));
   }
 
   return { isValid: true };
@@ -1886,6 +1931,7 @@ export function createAIDraftLearningPlan(params: {
     remedialPlan: aiDraft.remedialPlan,
     initialCompetency: aiDraft.initialCompetency,
     targetStudents: aiDraft.targetStudents,
+    materialCharacteristics: aiDraft.materialCharacteristics,
     learningModel: aiDraft.learningModel,
     p3Dimensions: aiDraft.p3Dimensions,
     allocatedJP: canonicalAllocatedJP,
@@ -2144,6 +2190,7 @@ export function migrateLegacyLearningPlan(
     remedialPlan: legacy?.remedialPlan,
     initialCompetency: legacy?.initialCompetency,
     targetStudents: legacy?.targetStudents,
+    materialCharacteristics: legacy?.materialCharacteristics,
     learningModel: legacy?.learningModel,
     p3Dimensions: Array.isArray(legacy?.p3Dimensions) ? legacy.p3Dimensions : [],
     allocatedJP: typeof legacy?.allocatedJP === 'number' ? legacy.allocatedJP : undefined,

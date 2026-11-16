@@ -4,6 +4,7 @@ import { isCP4RequestId } from './src/services/cpAnalysisRun';
 import { redactStep07Diagnostic } from './src/services/step07DiagnosticsService';
 import { assignGeneratedTPCodes, TP_CODE_FORMAT_DESCRIPTION } from './src/services/tpCodeContract';
 import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets } from './src/services/learningPlanActivityMeetingService';
+import { validateAILearningPlanPayload as validateLearningPlanDesignPayload } from './src/services/learningPlanService';
 import express from 'express';
 import { validateATPUnitMappingCanonical } from './src/services/atpUnitMappingValidationService';
 import { validateUnitExecutionPlan } from './src/services/unitExecutionPlanService';
@@ -3222,9 +3223,13 @@ export function isPedagogicalItemValid(item: any): boolean {
   );
 }
 
-export function validateAILearningPlanPayload(data: any, meetings: { meetingId: string; jp: number }[] = [], academicSetting?: any): { isValid: boolean; reason?: string } {
+export function validateAILearningPlanPayload(data: any, meetings: { meetingId: string; jp: number }[] = [], academicSetting?: any, tpIds?:string[]): { isValid: boolean; reason?: string } {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return { isValid: false, reason: 'Payload AI bukan berupa objek valid' };
+  }
+  if (tpIds) {
+    const design=validateLearningPlanDesignPayload(data,{tpIds,meetings});
+    if (!design.isValid) return design;
   }
 
   // Print-readiness mandatory pedagogical fields for Kurikulum Merdeka
@@ -3384,6 +3389,7 @@ INSTRUKSI PERBAIKAN (WAJIB DIPATUHI SECARA MUTLAK):
 3. Jika scope meeting tersedia, setiap learningExperience/learningStep wajib memiliki learningMeetingId EXACT dari daftar: ${JSON.stringify((meetings || []).map(m => m.meetingId))}. Setiap meeting wajib memiliki learningSteps.opening + core + closing, deskripsi nonblank dan durationMinutes > 0; jumlah menit tiga fase harus tepat durationMinutes pada anggaran meeting (jp × minutesPerJP dari konteks kurikulum). learningExperiences hanya pendekatan kegiatan inti, bukan pengganti fase atau tambahan durasi. Anggaran canonical: ${JSON.stringify(meetings || [])}. Jangan infer ID dari urutan, judul atau TP. Jika scope tidak tersedia, jangan buat learningMeetingId.
 3a. Opening ringkas mencakup salam, sapa, kabar/kesiapan, kehadiran, apersepsi materi sebelumnya, fokus materi hari ini, kaitan kehidupan sehari-hari, afirmasi/motivasi. Closing mencakup refleksi/cek pemahaman, simpulan, tindak lanjut bila relevan, apresiasi, salam; PJOK boleh pendinginan sesuai konteks.
 4. JANGAN menghasilkan asesmen fiktif, JANGAN mengosongkan kelompok asesmen '${failedGroups.join(', ') || 'apapun'}', dan JANGAN menggunakan placeholder generik.
+5. Perbaiki komponen yang disebutkan pada alasan kegagalan, termasuk targetStudents (asumsi, bukan hasil asesmen), materialCharacteristics dan empat bagian deepLearningContext.framework. Kemitraan/digital tidak relevan boleh []; praktik pedagogis dan lingkungan wajib operasional. Pertahankan linkedTpIds yang sah, lengkapi ID TP persis dari scope; jangan memasangkan seluruh TP secara mekanis. Prinsip diterapkan kontekstual, bukan dipaksakan semua pada tiap aktivitas. Jangan menyalin ulang paragraf sama antara learningSteps.core dan learningExperiences.
 
 Draft JSON sebelumnya yang memerlukan perbaikan:
 ${JSON.stringify(parsed || {}, null, 2)}
@@ -3401,11 +3407,14 @@ export const learningPlanResponseSchema = {
     'resources',
     'learningModel',
     'assessmentPlan',
+    'targetStudents', 'materialCharacteristics', 'deepLearningContext',
   ],
   properties: {
     title: { type: Type.STRING },
     topic: { type: Type.STRING },
     initialCompetency: { type: Type.STRING, description: 'Kompetensi awal atau prasyarat pembelajaran' },
+    targetStudents: {type:Type.STRING,description:'Asumsi perencanaan kesiapan/kebutuhan murid; bukan hasil asesmen yang belum dilakukan'},
+    materialCharacteristics: {type:Type.STRING,description:'Karakteristik materi dalam lingkup TP; tuntutan, konteks, atau risiko yang perlu diantisipasi'},
     graduateProfileDimensions: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
@@ -3434,15 +3443,21 @@ export const learningPlanResponseSchema = {
           phase: { type: Type.STRING, description: 'MUST be UNDERSTAND, APPLY, or REFLECT' },
           description: { type: Type.STRING },
           durationMinutes: { type: Type.NUMBER },
+          linkedTpIds: {type:Type.ARRAY,items:{type:Type.STRING}},
         },
-        required: ['phase', 'description'],
+        required: ['phase', 'description', 'linkedTpIds'],
       },
     },
     deepLearningContext: {
       type: Type.OBJECT,
+      required:['principles','framework'],
       properties: {
         principles: { type: Type.ARRAY, items: { type: Type.STRING } },
         graduateProfileDimensions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        framework: {type:Type.OBJECT,required:['pedagogicalPractice','learningPartnership','learningEnvironment','digitalUtilization'],properties:{
+          pedagogicalPractice:{type:Type.ARRAY,items:{type:Type.STRING}},learningPartnership:{type:Type.ARRAY,items:{type:Type.STRING}},
+          learningEnvironment:{type:Type.ARRAY,items:{type:Type.STRING}},digitalUtilization:{type:Type.ARRAY,items:{type:Type.STRING}},
+        }},
       },
     },
     learningSteps: {
@@ -3504,9 +3519,10 @@ export const learningPlanResponseSchema = {
           description: 'Minimal 1 butir asesmen diagnostik awal pembelajaran yang relevan dengan TP',
           items: {
             type: Type.OBJECT,
-            required: ['description'],
+            required: ['description','linkedTpIds'],
             properties: {
               type: { type: Type.STRING },
+              learningMeetingId:{type:Type.STRING}, linkedTpIds:{type:Type.ARRAY,items:{type:Type.STRING}},
               technique: { type: Type.STRING },
               method: { type: Type.STRING },
               instrument: { type: Type.STRING },
@@ -3520,9 +3536,10 @@ export const learningPlanResponseSchema = {
           description: 'Minimal 1 butir asesmen formatif proses belajar spesifik terhadap aktivitas dan KKTP',
           items: {
             type: Type.OBJECT,
-            required: ['description'],
+            required: ['description','linkedTpIds'],
             properties: {
               type: { type: Type.STRING },
+              learningMeetingId:{type:Type.STRING}, linkedTpIds:{type:Type.ARRAY,items:{type:Type.STRING}},
               technique: { type: Type.STRING },
               method: { type: Type.STRING },
               instrument: { type: Type.STRING },
@@ -3536,9 +3553,10 @@ export const learningPlanResponseSchema = {
           description: 'Minimal 1 butir asesmen sumatif lingkup materi/akhir bab spesifik terhadap capaian TP',
           items: {
             type: Type.OBJECT,
-            required: ['description'],
+            required: ['description','linkedTpIds'],
             properties: {
               type: { type: Type.STRING },
+              learningMeetingId:{type:Type.STRING}, linkedTpIds:{type:Type.ARRAY,items:{type:Type.STRING}},
               technique: { type: Type.STRING },
               method: { type: Type.STRING },
               instrument: { type: Type.STRING },
@@ -3666,7 +3684,7 @@ TOPIK: ${topic || tps[0]?.contentScope || tps[0]?.statement || 'Topik Pembelajar
 ALOKASI WAKTU KANONIKAL: ${canonicalAllocatedJP ? `${canonicalAllocatedJP} JP` : 'Belum ditentukan'}
 
 TUJUAN PEMBELAJARAN (TP) RUJUKAN:
-${tps.map((t: any, i: number) => `${i + 1}. [Kode: ${t.code || '-'}] ${t.statement} (Materi: ${t.contentScope || '-'}, Kompetensi: ${t.competence || '-'})`).join('\n')}
+${tps.map((t: any, i: number) => `${i + 1}. [ID: ${t.id}; Kode: ${t.code || '-'}] ${t.statement} (Materi: ${t.contentScope || '-'}, Kompetensi: ${t.competence || '-'})`).join('\n')}
 
 ATP RUJUKAN:
 ${atpContextStr}
@@ -3691,6 +3709,12 @@ INSTRUKSI WAJIB MENGENAI STRUKTUR PERTEMUAN & KKTP:
    - JANGAN mengarang kriteria atau indikator KKTP formal baru.
 
 INSTRUKSI INFORMASI UMUM & PEDAGOGIS:
+Susun satu LearningPlan untuk penyajian Modul Ajar maupun RPM: Identifikasi → Desain Pembelajaran → Pengalaman Belajar → Asesmen. Ini pilihan penyajian, bukan format resmi tunggal.
+Identifikasi: isi targetStudents sebagai ASUMSI perencanaan kesiapan/kebutuhan yang diperiksa dengan asesmen awal, bukan klaim hasil observasi/asesmen nyata. Isi materialCharacteristics dengan karakteristik materi dalam scope TP, kebutuhan alat/keselamatan/konsep yang relevan.
+Desain: isi deepLearningContext.framework dengan pedagogicalPractice, learningPartnership, learningEnvironment, digitalUtilization. Praktik dan lingkungan harus operasional; kemitraan boleh cukup antarmurid/guru, tidak wajib pihak luar. Gunakan [] untuk kemitraan/digital yang tidak diperlukan; jangan mengada-adakan fasilitas atau akses digital.
+Pilih deepLearningContext.principles dari MINDFUL, MEANINGFUL, JOYFUL, dan jelaskan penerapan kontekstual dalam praktik/kegiatan yang sesuai. Tidak wajib ketiganya pada setiap aktivitas.
+Setiap learningExperience dan butir assessmentPlan wajib memiliki linkedTpIds EXACT dari ID TP rujukan; pilih yang benar-benar dinilai/dipelajari. Jika memiliki learningMeetingId, gunakan hanya TP yang tercantum pada pertemuan tersebut. Gabungan asesmen akhir harus mencakup TP scope. Jangan menghubungkan semua TP secara mekanis.
+Hindari menyalin uraian sama ke learningSteps.core dan learningExperiences. learningSteps merupakan alur dan anggaran waktu; pengalaman memahami/mengaplikasi/merefleksi menguraikan fokus kegiatan inti, bukan tambahan menit atau pertemuan baru.
 1. "initialCompetency" (Kompetensi Awal): Tuliskan kalimat prasyarat kompetensi awal yang diharapkan (misal: "Murid diharapkan telah mengenal..." atau "Prasyarat pembelajaran meliputi..."). Jangan mengklaim penguasaan murid tanpa asesmen nyata.
 2. "graduateProfileDimensions": Pilih 2–4 dimensi profil lulusan yang paling relevan dari 8 dimensi kanonikal: "Keimanan dan Ketakwaan terhadap Tuhan Yang Maha Esa", "Kewargaan", "Penalaran Kritis", "Kreativitas", "Kolaborasi", "Kemandirian", "Kesehatan", "Komunikasi".
 3. "resources": Susun daftar sarana, prasarana, atau sumber belajar yang diperlukan atau direncanakan sesuai mata pelajaran dan aktivitas nyata.
@@ -3741,7 +3765,7 @@ Kembalikan output JSON sesuai schema.`;
     });
 
     let parsed = cleanAndParseJSON(response.text, null);
-    let validation = validateAILearningPlanPayload(parsed, meetings, academicSetting);
+    let validation = validateAILearningPlanPayload(parsed, meetings, academicSetting, tps.map((tp:any)=>tp.id));
 
     // AI Recovery: Jika validasi asesmen atau struktur gagal, jalankan MAKSIMAL SATU perbaikan AI
     if (!validation.isValid) {
@@ -3770,7 +3794,7 @@ Kembalikan output JSON sesuai schema.`;
         });
 
         const repairedParsed = cleanAndParseJSON(repairResponse.text, null);
-        const repairedValidation = validateAILearningPlanPayload(repairedParsed, meetings, academicSetting);
+        const repairedValidation = validateAILearningPlanPayload(repairedParsed, meetings, academicSetting, tps.map((tp:any)=>tp.id));
 
         if (repairedValidation.isValid) {
           console.info(`[AI Service][learning-plan][${requestId}] Percobaan perbaikan AI berhasil!`);

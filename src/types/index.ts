@@ -1148,6 +1148,8 @@ export interface LearningPlan {
   // Explicit contextual metadata provided by teacher
   initialCompetency?: string;
   targetStudents?: string;
+  /** Planning description of material characteristics; never an observed student result. */
+  materialCharacteristics?: string;
   learningModel?: string;
 
   /**

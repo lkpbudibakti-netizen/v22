@@ -1,7 +1,7 @@
 import { AssessmentCriterion, AssessmentPlanItem } from '../../types';
 import { resolveScheduledLearningMeetings, ScheduledLearningMeetingProjection } from '../scheduledLearningMeetingProjectionService';
 import { LearningPlan, DocumentGenerationContext } from './types';
-import { validateLearningPlanForModulAjar, LearningPlanValidationResult } from '../learningPlanService';
+import { validateLearningPlanForModulAjar, LearningPlanValidationResult, DEEP_LEARNING_PRINCIPLE_LABELS } from '../learningPlanService';
 import { resolveLearningPlanMeetingBudgets } from '../learningPlanActivityMeetingService';
 
 export interface ModulAjarMeetingActivity {
@@ -17,6 +17,7 @@ export interface ModulAjarMeeting {
   minutesPerJP: number; durationMinutes: number;
   materials: ScheduledLearningMeetingProjection['materials'];
   linkedTpIds: string[]; linkedAtpItemIds: string[];
+  atpSummary?: string;
   resolvedTPs: ModulAjarProjection['resolvedTPs'];
   assessments: AssessmentPlanItem[];
   activities: ModulAjarMeetingActivity[];
@@ -26,6 +27,36 @@ export interface ModulAjarMeeting {
   kktpSummaryLines: string[];
 }
 export interface ModulAjarSection { title: string; lines: string[] }
+export function formatModulAssessment(item: AssessmentPlanItem): string {
+  return [item.type,item.description,item.method !== item.description ? item.method : '',
+    item.technique,item.instrument,'TP: '+item.linkedTpIds.join(', ')].filter(Boolean).join(' | ');
+}
+export function modulDeepLearningLines(plan: LearningPlan): string[] {
+  const framework = plan.deepLearningContext?.framework;
+  return [
+    ...(plan.materialCharacteristics ? ['Karakteristik Materi: '+plan.materialCharacteristics] : []),
+    ...(plan.deepLearningContext?.principles?.length ? ['Prinsip Pembelajaran: '+plan.deepLearningContext.principles.map(p=>DEEP_LEARNING_PRINCIPLE_LABELS[p] || p).join(', ')] : []),
+    ...([['Praktik Pedagogis',framework?.pedagogicalPractice],['Kemitraan Pembelajaran',framework?.learningPartnership],
+      ['Lingkungan Pembelajaran',framework?.learningEnvironment],['Pemanfaatan Digital',framework?.digitalUtilization]] as const)
+      .flatMap(([label,values])=>values?.length ? [label+': '+values.join('; ')] : []),
+  ];
+}
+const phaseLabels: Record<string,string> = {opening:'Pendahuluan',core:'Kegiatan Inti',closing:'Penutup',UNDERSTAND:'Memahami',APPLY:'Mengaplikasi',REFLECT:'Merefleksi'};
+function activityLinesFor(activities: Array<{phase:string;description:string;title?:string;durationMinutes?:number}>) {
+  const same = (a:string,b:string) => a.trim().replace(/\s+/g,' ') === b.trim().replace(/\s+/g,' ');
+  return activities.filter(a=>a.description?.trim()).filter(a=>!['UNDERSTAND','APPLY','REFLECT'].includes(a.phase) || !activities.some(step=>step.phase==='core' && same(step.description,a.description))).map(a=>{
+    const approaches = a.phase==='core' ? activities.filter(exp=>['UNDERSTAND','APPLY','REFLECT'].includes(exp.phase) && same(exp.description,a.description)).map(exp=>phaseLabels[exp.phase]) : [];
+    const isStep=['opening','core','closing'].includes(a.phase);
+    return [phaseLabels[a.phase] || a.phase,...approaches].join(' / ')+': '+(a.title ? a.title+' — ' : '')+a.description+
+      (isStep && a.durationMinutes ? ' ('+a.durationMinutes+' Menit)' : isStep ? '' : ' (pendekatan kegiatan inti)');
+  });
+}
+export function modulGlobalActivityLines(plan: LearningPlan): string[] {
+  return activityLinesFor([
+    ...Object.entries(plan.learningSteps || {}).flatMap(([phase,steps])=>(steps || []).filter(step=>step.learningMeetingId===undefined).map(step=>({...step,phase}))),
+    ...(plan.learningExperiences || []).filter(exp=>exp.learningMeetingId===undefined),
+  ]);
+}
 export interface ModulAjarProjection {
   unitTitle?: string;
   meetings?: ModulAjarMeeting[];
@@ -144,9 +175,8 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     const assessments = Object.values(selectedPlan.assessmentPlan || {}).flatMap(items => items || []);
     const criteria = (context.assessmentCriteria || []).filter(criterion => selectedPlan.tpIds.includes(criterion.tpId));
     const sections = buildSections(selectedPlan, [], objectives, assessments, criteria);
-    sections[2].lines = ['Jadwal/relasi pertemuan belum lengkap; kegiatan master ditampilkan tanpa menetapkan ulang tanggal.',
-      ...masterActivities.map(activity => activity.phase + ': ' + ('title' in activity ? activity.title || '' : '') + ' ' + activity.description)];
-    return { isReady: true, plan: selectedPlan, resolvedTPs: objectives, meetings: [], sections,
+    sections[2].lines = ['Jadwal/relasi pertemuan belum lengkap; kegiatan master ditampilkan tanpa menetapkan ulang tanggal.', ...modulGlobalActivityLines(selectedPlan)];
+    return { isReady: true, plan: selectedPlan, resolvedTPs: objectives, meetings: [], sections:presentSections(context,selectedPlan,sections),
       unitTitle: context.atpUnitMapping?.units?.find(unit => unit.id === selectedPlan.unitId)?.title,
       resolvedAllocatedJP: validation.resolvedAllocatedJP, jpResolutionSource: 'UNRESOLVED', validation };
   };
@@ -203,12 +233,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
       .filter(a => a.learningMeetingId === r.meetingId)
       .map(a => ({ ...a, learningMeetingId: r.meetingId }));
     const complete = meetingActivities.length > 0 && meetingActivities.every(a => a.description?.trim());
-    const activityLines = meetingActivities.filter(a => a.description?.trim()).map(a => {
-      const labels: Record<string, string> = { opening: 'Pendahuluan', core: 'Kegiatan Inti', closing: 'Penutup', UNDERSTAND: 'Memahami', APPLY: 'Mengaplikasi', REFLECT: 'Merefleksi' };
-      const isStep = ['opening', 'core', 'closing'].includes(a.phase);
-      return (labels[a.phase] || a.phase) + ': ' + (a.title ? a.title + ' — ' : '') + a.description +
-        (isStep && a.durationMinutes ? ' (' + a.durationMinutes + ' Menit)' : isStep ? '' : ' (pendekatan kegiatan inti)');
-    });
+    const activityLines = activityLinesFor(meetingActivities);
     if (!complete) activityLines.push('Belum lengkap: kegiatan pembelajaran pertemuan belum tersedia atau deskripsinya belum diisi.');
     const KKTP = criteria.filter(c => r.linkedTpIds.includes(c.tpId))
       .map(c => ({ id: c.id, tpId: c.tpId, description: c.description, indicators: c.indicators }));
@@ -217,6 +242,7 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
       minutesPerJP: budgets.meetings.find(m => m.meetingId === r.meetingId)!.minutesPerJP,
       durationMinutes: budgets.meetings.find(m => m.meetingId === r.meetingId)!.durationMinutes,
       materials: r.materials, linkedTpIds: r.linkedTpIds, linkedAtpItemIds: r.linkedAtpItemIds,
+      atpSummary:r.linkedAtpItemIds.map(id=>{const item=context.atp?.items.find(item=>item.id===id);return item ? 'Langkah '+item.stepNumber+(item.focus || item.materialScope ? ': '+(item.focus || item.materialScope) : '') : id;}).join('; '),
       resolvedTPs: validation.resolvedTPs.filter(t => r.linkedTpIds.includes(t.id)),
       assessments: assessments.filter(a => a.learningMeetingId === r.meetingId &&
         a.linkedTpIds.every(id => r.linkedTpIds.includes(id))),
@@ -236,12 +262,29 @@ export function buildModulAjarProjection(context: DocumentGenerationContext): Mo
     isReady: true,
     unitTitle: context.atpUnitMapping?.units.find(unit => unit.id === selectedPlan.unitId)?.title,
     plan: selectedPlan,
-    meetings, sections,
+    meetings, sections:presentSections(context,selectedPlan,sections),
     resolvedTPs: validation.resolvedTPs || [],
     resolvedAllocatedJP: validation.resolvedAllocatedJP,
     jpResolutionSource,
     validation,
   };
+}
+
+/** A presentation of the existing sections; no second plan or pedagogy engine. */
+function presentSections(context:DocumentGenerationContext,plan:LearningPlan,sections:ModulAjarSection[]):ModulAjarSection[] {
+  if(context.learningPlanPresentation!=='RPM')return sections;
+  const identification=(line:string)=>['Kompetensi Awal:','Dimensi Profil Lulusan:','Karakteristik/Kebutuhan Belajar Murid:','Karakteristik Materi:'].some(label=>line.startsWith(label));
+  const general=sections[0].lines;
+  const design=general.filter(line=>!identification(line));
+  for(const [key,label] of [['pedagogicalPractice','Praktik Pedagogis'],['learningPartnership','Kemitraan Pembelajaran'],['learningEnvironment','Lingkungan Pembelajaran'],['digitalUtilization','Pemanfaatan Digital']] as const) {
+    if(!design.some(line=>line.startsWith(label+':')))design.push(label+': '+(plan.deepLearningContext?.framework?.[key] ? 'Tidak direncanakan pada draf ini.' : 'Belum tercatat pada data tersimpan.'));
+  }
+  return [
+    {title:'I. IDENTIFIKASI',lines:[...general.filter(identification),...(!plan.materialCharacteristics ? ['Karakteristik Materi: Belum tercatat pada data tersimpan.'] : [])]},
+    {title:'II. DESAIN PEMBELAJARAN',lines:[...design,...sections[1].lines,...sections[4].lines,...sections[5].lines]},
+    {title:'III. PENGALAMAN BELAJAR',lines:[...sections[2].lines,...sections[6].lines]},
+    {title:'IV. ASESMEN',lines:sections[3].lines},
+  ];
 }
 
 
@@ -250,22 +293,22 @@ function buildSections(plan: LearningPlan, meetings: ModulAjarMeeting[], tps: Mo
     [tps.find(t => t.id === c.tpId)?.code || c.tpId, c.description, c.approach,
       ...c.indicators, ...c.levels.map(l => (l.label || l.level) + ': ' + l.description),
       c.passingThreshold != null ? 'Ambang: ' + c.passingThreshold : '', c.notes].filter(Boolean).join(' | '));
-  const assessmentLines = (items: AssessmentPlanItem[]) => items.map(a =>
-    [a.type, a.description, a.method, a.technique, a.instrument, 'TP: ' + a.linkedTpIds.join(', ')].filter(Boolean).join(' | '));
+  const assessmentLines = (items: AssessmentPlanItem[]) => items.map(formatModulAssessment);
   return [
     { title: 'I. INFORMASI UMUM', lines: [
       'Kompetensi Awal: ' + (plan.initialCompetency || '-'),
-      'Dimensi Profil Lulusan: ' + (plan.graduateProfileDimensions || plan.p3Dimensions || []).join(', '),
+      'Dimensi Profil Lulusan: ' + (plan.graduateProfileDimensions?.length ? plan.graduateProfileDimensions : plan.p3Dimensions || []).join(', '),
       'Sarana dan Prasarana: ' + (plan.resources || []).map(r => r.title + (r.source ? ' (' + r.source + ')' : '')).join('; '),
       'Karakteristik/Kebutuhan Belajar Murid: ' + (plan.targetStudents || '-'),
-      'Model/Praktik Pembelajaran: ' + (plan.learningModel || '-')] },
+      'Model/Praktik Pembelajaran: ' + (plan.learningModel || '-'), ...modulDeepLearningLines(plan)] },
     { title: 'II. KOMPONEN INTI', lines: [...tps.map(t => (t.code || t.id) + ': ' + t.statement + (t.materialScope ? ' (Materi: ' + t.materialScope + ')' : '')),
       'Pemahaman Bermakna: ' + (plan.meaningfulUnderstanding || '-'),
       'Pertanyaan Pemantik: ' + (plan.triggerQuestions || []).join('; '),
-      ...Object.entries(plan.learningSteps || {}).flatMap(([phase, steps]) => (steps || []).filter(step => step.learningMeetingId === undefined).map(step => phase + ': ' + (step.title || '') + ' ' + step.description + (step.durationMinutes ? ' (' + step.durationMinutes + ' Menit)' : '')))] },
+      ...(meetings.length ? modulGlobalActivityLines(plan) : [])] },
     { title: 'III. RENCANA PERTEMUAN', lines: meetings.flatMap(m => [
       'Pertemuan ' + m.order + ': ' + m.title + ' | ' + m.date + ' | ' + m.jp + ' JP | ' + m.durationMinutes + ' Menit',
       'Materi: ' + m.materials.map(x => x.title).join('; '),
+      'ATP: ' + (m.atpSummary || m.linkedAtpItemIds.join(', ')),
       'TP:', ...m.resolvedTPs.map(t => (t.code || t.id) + ': ' + t.statement),
       'Kegiatan Pembelajaran:', ...m.activityLines,
       'Asesmen:', ...assessmentLines(m.assessments), 'KKTP ringkas:', ...m.kktpSummaryLines]) },
