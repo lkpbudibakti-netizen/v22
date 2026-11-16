@@ -1,5 +1,5 @@
 import type { MeetingAlignmentApproval } from '../services/meetingAlignmentService';
-import { assessAnnualJP, assessProductionJPSufficiency, sumSemesterAllocatedJP, compareAnnualJPReference, type AnnualJPSemester } from '../services/annualJPAssessment';
+import { assessAnnualJP, assessJPSufficiency, sumSemesterAllocatedJP, compareAnnualJPReference, type AnnualJPSemester } from '../services/annualJPAssessment';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   CalendarRange,
@@ -108,7 +108,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
   }, [semesterPlans]);
 
   const isKurikulumMerdeka = academicSetting.curriculumType === 'KURIKULUM_MERDEKA';
-  const productionSufficiencyMode = productionMode && isKurikulumMerdeka;
+  const jpSufficiencyMode = isKurikulumMerdeka;
 
   const mappingReadiness = useMemo(() => {
     if (!isKurikulumMerdeka) return null;
@@ -117,8 +117,8 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
   // Access is unrestricted in Production; dependent actions still use canonical
   // substance/identity/reference checks, never workflow status as a certificate.
-  const productionActionIssues = useMemo(() => {
-    if (!productionMode || !isKurikulumMerdeka) return [];
+  const planningActionIssues = useMemo(() => {
+    if (!isKurikulumMerdeka) return [];
     const issues: string[] = [];
     if (!school.id || !profile.id || profile.schoolId !== school.id) issues.push('Identitas profil/sekolah tujuan tidak valid.');
     if (!mapping?.id || !mapping.units?.length || !tp?.items?.length || !atp?.items?.length) issues.push('Pemetaan Bab, TP, dan ATP diperlukan untuk tindakan pertemuan/alokasi.');
@@ -210,9 +210,9 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
   const annualJPSemesters: AnnualJPSemester[] = [
     { semester: 1, capacityJP: s1Capacity?.isCalendarConfirmed && s1Capacity.capacitySource === 'ACTUAL_SLOTS' ? s1Capacity.availableJP : null, calendarLostJP: s1Capacity?.calendarLostJP,
-      allocatedJP: productionSufficiencyMode && !s1Data?.learningMeetingSchedule ? null : sumSemesterAllocatedJP(s1Data) },
+      allocatedJP: jpSufficiencyMode && !s1Data?.learningMeetingSchedule ? null : sumSemesterAllocatedJP(s1Data) },
     { semester: 2, capacityJP: s2Capacity?.isCalendarConfirmed && s2Capacity.capacitySource === 'ACTUAL_SLOTS' ? s2Capacity.availableJP : null, calendarLostJP: s2Capacity?.calendarLostJP,
-      allocatedJP: productionSufficiencyMode && !s2Data?.learningMeetingSchedule ? null : sumSemesterAllocatedJP(s2Data) },
+      allocatedJP: jpSufficiencyMode && !s2Data?.learningMeetingSchedule ? null : sumSemesterAllocatedJP(s2Data) },
   ];
   const annualJPAssessment = assessAnnualJP(officialRule, annualJPSemesters);
   const storedAnnualReference = v5State.annualJPReferences?.find(e => e.yearPlanId === yearPlan?.id)?.value;
@@ -304,7 +304,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
   const s1ScheduleReadiness = useMemo(() => {
     return isLearningMeetingScheduleReady({
-      allowUnusedSlots: productionMode,
+      allowUnusedSlots: true,
       schedule: s1Data?.learningMeetingSchedule,
       semester: 1,
       mapping,
@@ -320,7 +320,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
   const s2ScheduleReadiness = useMemo(() => {
     return isLearningMeetingScheduleReady({
-      allowUnusedSlots: productionMode,
+      allowUnusedSlots: true,
       schedule: s2Data?.learningMeetingSchedule,
       semester: 2,
       mapping,
@@ -387,10 +387,10 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
   const meetingCoverageComplete = Boolean(placementReady && meetingValidation?.isComplete);
   const meetingSlotsValid=useMemo(()=>{
     if(!mapping || !effectiveUnitExecutionPlan)return false;
-    try{const source=getMeetingAlignmentSourceV5(mapping.academicSettingId);return !source.context.calendarErrors?.length && !validateCalendarMeetingCandidate(effectiveUnitExecutionPlan,effectiveUnitExecutionPlan,mapping,source.capacity,source.context,{allowUnusedSlots:productionMode}).length;}catch{return false;}
+    try{const source=getMeetingAlignmentSourceV5(mapping.academicSettingId);return !source.context.calendarErrors?.length && !validateCalendarMeetingCandidate(effectiveUnitExecutionPlan,effectiveUnitExecutionPlan,mapping,source.capacity,source.context,{allowUnusedSlots:true}).length;}catch{return false;}
   },[productionMode,mapping,effectiveUnitExecutionPlan,s1Data,s2Data]);
-  const productionScheduleErrors = useMemo(() => {
-    if (!productionMode || !mapping || !effectiveUnitExecutionPlan) return [];
+  const scheduleErrors = useMemo(() => {
+    if (!mapping || !effectiveUnitExecutionPlan) return [];
     return ([s1Data, s2Data] as const).flatMap((data, index) => {
       if (!data?.learningMeetingSchedule || !data.academicCalendar?.calendar || !data.subjectWeeklySchedule || data.academicCalendar.calendar.workflowStatus !== 'CONFIRMED') return [];
       const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: true, data: data.learningMeetingSchedule, semester: index === 0 ? 1 : 2,
@@ -400,10 +400,10 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
       return checked.errors.filter(error => !error.startsWith('Jadwal stale:') && !error.startsWith('Status DRAFT tidak valid karena seluruh pertemuan'));
     });
   }, [productionMode, mapping, effectiveUnitExecutionPlan, s1Data, s2Data, s1Capacity, s2Capacity]);
-  const productionSufficiency = assessProductionJPSufficiency(officialRule, annualJPSemesters,
-    !productionActionIssues.length && !productionScheduleErrors.length && meetingValidation?.isValid === true && placementValidation?.isValid === true,
+  const jpSufficiency = assessJPSufficiency(officialRule, annualJPSemesters,
+    !planningActionIssues.length && !scheduleErrors.length && meetingValidation?.isValid === true && placementValidation?.isValid === true,
     meetingCoverageComplete && meetingSlotsValid && isS1ExactScheduleReady && isS2ExactScheduleReady && s1TimeReady && s2TimeReady);
-  const meetingExactReady = productionSufficiencyMode ? productionSufficiency.status === 'SELESAI' : Boolean(
+  const meetingExactReady = jpSufficiencyMode ? jpSufficiency.status === 'SELESAI' : Boolean(
     meetingCoverageComplete &&
     (meetingSlotsValid || (isS1ExactScheduleReady && isS2ExactScheduleReady)) &&
     s1TimeReady &&
@@ -417,7 +417,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
     const t2Complete = s2TimeReady;
     const t3Complete = placementReady;
     const t4Complete = meetingExactReady;
-    const t5Complete = productionSufficiencyMode ? productionSufficiency.status === 'SELESAI' : isTask5Complete;
+    const t5Complete = jpSufficiencyMode ? jpSufficiency.status === 'SELESAI' : isTask5Complete;
 
     const t2Locked = false;
 
@@ -465,7 +465,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
         title: 'Struktur Pertemuan',
         status: t4Complete
           ? 'COMPLETE'
-          : productionSufficiencyMode && productionSufficiency.status === 'ERROR' ? 'ERROR'
+          : jpSufficiencyMode && jpSufficiency.status === 'ERROR' ? 'ERROR'
           : meetingCoverageComplete
           ? 'NEEDS_REVIEW'
           : 'PENDING',
@@ -476,15 +476,15 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
       {
         id: 'time-allocation',
         title: 'Alokasi Waktu',
-        status: t5Complete ? 'COMPLETE' : productionSufficiencyMode ? (productionSufficiency.status === 'ERROR' ? 'ERROR' : 'NEEDS_REVIEW') : 'PENDING',
+        status: t5Complete ? 'COMPLETE' : jpSufficiencyMode ? (jpSufficiency.status === 'ERROR' ? 'ERROR' : 'NEEDS_REVIEW') : 'PENDING',
         isLocked: t5Locked,
         lockReason: 'Lengkapi Waktu Semester dan Pembagian Bab terlebih dahulu',
       },
     ];
   }, [
     productionMode,
-    productionSufficiency.status,
-    productionSufficiencyMode,
+    jpSufficiency.status,
+    jpSufficiencyMode,
     s1TimeReady,
     s2TimeReady,
     placementReady,
@@ -546,7 +546,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
   const handleSaveProductionPlan = (plan: UnitExecutionPlanData, approval?: MeetingAlignmentApproval) => {
     if (!onSaveUnitExecutionPlan) return false;
     if (!productionMode) return onSaveUnitExecutionPlan(plan, approval);
-    if (productionActionIssues.length || !mapping || !validateUnitExecutionPlan(plan, mapping, atp, tp).isValid) return false;
+    if (planningActionIssues.length || !mapping || !validateUnitExecutionPlan(plan, mapping, atp, tp).isValid) return false;
     // Revalidate against current references only on an explicit save. Opening a
     // task never rebases or writes the stored snapshot. V5 retains its guards.
     return onSaveUnitExecutionPlan({ ...plan, basedOnMappingUpdatedAt: mapping.updatedAt }, approval);
@@ -722,16 +722,16 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
       </div>
 
       {productionMode && <p role="status" className="text-xs text-amber-800">WARNING: status SIAP, needsReview dan stale tidak mengunci navigasi Produksi. Tindakan tetap memerlukan data, konteks dan referensi yang valid.</p>}
-      {productionMode && ['placement', 'meetings'].includes(activeTaskId) && productionActionIssues.length > 0 && <div role="alert" className="text-xs text-red-800"><p>Tindakan belum dapat dijalankan:</p><ul>{productionActionIssues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
+      {productionMode && ['placement', 'meetings'].includes(activeTaskId) && planningActionIssues.length > 0 && <div role="alert" className="text-xs text-red-800"><p>Tindakan belum dapat dijalankan:</p><ul>{planningActionIssues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         <AnnualPlanningTaskRail tasks={annualTasks} onSelectTask={handleSelectTask} activeTaskId={activeTaskId} productionMode={productionMode} />
 
         <div className="min-w-0 flex-1 space-y-6">
           {/* Annual Summary & Both Semesters Overview Bar */}
           <div className="text-xs p-3 border rounded-xl space-y-1" id="annual-jp-assessment">
-            {productionSufficiencyMode && <div role="status"><strong>{productionSufficiency.status}</strong> — JP Acuan Resmi: {productionSufficiency.officialJP ?? 'Belum terverifikasi'} | JP Teralokasi: {productionSufficiency.allocatedJP ?? 'Belum lengkap'} | JP Tersedia: {productionSufficiency.capacityJP ?? 'Belum lengkap'} | Sisa Kapasitas: {productionSufficiency.unallocatedJP ?? 'Belum lengkap'}
-              {productionSufficiency.status === 'SELESAI' && <p>Alokasi pembelajaran telah memenuhi JP acuan. Sisa kapasitas kalender tidak wajib dialokasikan.</p>}
-              <ul>{[...productionSufficiency.reasons, ...productionScheduleErrors].map(reason => <li key={reason}>{reason}</li>)}</ul>
+            {jpSufficiencyMode && <div role="status"><strong>{jpSufficiency.status}</strong> — JP Acuan Resmi: {jpSufficiency.officialJP ?? 'Belum terverifikasi'} | JP Teralokasi: {jpSufficiency.allocatedJP ?? 'Belum lengkap'} | JP Tersedia: {jpSufficiency.capacityJP ?? 'Belum lengkap'} | Sisa Kapasitas: {jpSufficiency.unallocatedJP ?? 'Belum lengkap'}
+              {jpSufficiency.status === 'SELESAI' && <p>Alokasi pembelajaran telah memenuhi JP acuan. Sisa kapasitas kalender tidak wajib dialokasikan.</p>}
+              <ul>{[...jpSufficiency.reasons, ...scheduleErrors].map(reason => <li key={reason}>{reason}</li>)}</ul>
             </div>}
             <div>Status acuan: <strong>{referenceReview.status}</strong>. JP intrakurikuler tahunan resmi: {annualJPAssessment.officialJP ?? 'Belum terverifikasi'}.</div>
             <div>JP rencana/teralokasi S1 + S2: {annualJPAssessment.allocatedJP ?? 'UNRESOLVED'}. Kapasitas JP aktual: {annualJPAssessment.capacityJP ?? 'UNRESOLVED'}.</div>
@@ -1047,7 +1047,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
                 <div id="time-planning-container" className="pt-1 scroll-mt-4">
                   <TimePlanningManager
                     productionMode={productionMode}
-                    allocationBlockers={productionMode ? productionActionIssues : undefined}
+                    allocationBlockers={productionMode ? planningActionIssues : undefined}
                     school={school}
                     profile={profile}
                     academicSetting={{
@@ -1121,7 +1121,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
             {/* B. UnitSemesterPlanningManager Container */}
             <div id="annual-task-placement" className={activeTaskId === 'placement' ? 'block animate-in fade-in duration-150' : 'hidden'}>
-              {mapping && effectiveUnitExecutionPlan && onSaveUnitExecutionPlan && !productionActionIssues.length && (
+              {mapping && effectiveUnitExecutionPlan && onSaveUnitExecutionPlan && !planningActionIssues.length && (
                 <UnitSemesterPlanningManager
                   productionMode={productionMode}
                   mapping={mapping}
@@ -1135,7 +1135,7 @@ export const AnnualPlanningManager: React.FC<AnnualPlanningManagerProps> = ({
 
             {/* C. UnitExecutionPlanManager Container */}
             <div id="annual-task-meetings" className={activeTaskId === 'meetings' ? 'block animate-in fade-in duration-150 font-sans' : 'hidden'}>
-              {mapping && atp && tp && onSaveUnitExecutionPlan && !productionActionIssues.length && (
+              {mapping && atp && tp && onSaveUnitExecutionPlan && !planningActionIssues.length && (
                 <UnitExecutionPlanManager
                   productionMode={productionMode}
                   mapping={mapping}

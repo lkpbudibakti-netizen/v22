@@ -166,7 +166,6 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
   const alignmentSource = useMemo(() => {
     try {
       const source=getMeetingAlignmentSourceV5(mapping.academicSettingId);
-      if (productionMode) source.context.allowUnusedSlots = true;
       if(JSON.stringify(source.persistedPlan)!==JSON.stringify(unitExecutionPlan)) source.context.errors.push('Struktur tersimpan berubah di luar draf ini. Muat ulang sebelum meninjau.');
       return {source,error:null};
     } catch(error) {return {source:null,error:error instanceof Error ? error.message : String(error)};}
@@ -210,12 +209,12 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_REQUEST',metadata:{mappingId:mapping.id,mode}});
     try {
       const live=getMeetingAlignmentSourceV5(mapping.academicSettingId);
-      const request=prepareCalendarMeetingGeneration(generationBase,live.mapping,live.capacity,live.context,mode);
-      if(mode==='COMPLETE' && !validateCalendarMeetingCandidate(draft,draft,live.mapping,live.capacity,live.context).length) {
+      if(mode==='COMPLETE' && !validateCalendarMeetingCandidate(draft,draft,live.mapping,live.capacity,live.context,{allowUnusedSlots:true}).length) {
         setLastAIDiagnostic({code:'NO_WORK',stage:'CAPACITY_CHECK'});setLastAIGenerationError(null);
-        setGenerationNotice('Jumlah dan JP pertemuan sudah persis sesuai seluruh slot aktual.');
+        setGenerationNotice('Relasi dan JP pertemuan sesuai slot aktual yang digunakan; sisa kapasitas tidak wajib diisi.');
         recordDiagnosticEvent({scope:'UNIT_EXECUTION_PLAN',action:'AI_GENERATION_NO_WORK',status:'SUCCESS',metadata:{mappingId:mapping.id}});return;
       }
+      const request=prepareCalendarMeetingGeneration(generationBase,live.mapping,live.capacity,live.context,mode);
       const additional=request.allocation.semester1.newTarget+request.allocation.semester2.newTarget;
       const result=additional===0 ? {units:[]} : await generateUnitMeetingsWithAI({subject:subject || 'Mata Pelajaran',grade,phase,mapping:live.mapping,tpData:tp,atpData:atp,currentPlan:request.basis,
         calendarSlots:request.slots,
@@ -349,7 +348,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
     return "Lengkapi Pertemuan sesuai Kalender dengan AI";
   }, [totalMeetingsCount]);
 
-  const isAINoWork = useMemo(() => !!alignmentSource.source && !validateCalendarMeetingCandidate(draft,draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,{allowUnusedSlots:productionMode}).length,[productionMode,draft,mapping,alignmentSource]);
+  const isAINoWork = useMemo(() => !!alignmentSource.source && !validateCalendarMeetingCandidate(draft,draft,mapping,alignmentSource.source.capacity,alignmentSource.source.context,{allowUnusedSlots:true}).length,[productionMode,draft,mapping,alignmentSource]);
 
   const capacityOverflow = useMemo(() => {
     if (!meetingCapacity) return null;
@@ -802,7 +801,7 @@ export const UnitExecutionPlanManager: React.FC<UnitExecutionPlanManagerProps> =
       {isAINoWork && (
         <div className="px-5 py-3 text-xs font-medium bg-emerald-50 text-emerald-950 border-b border-emerald-200 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{productionMode ? 'Relasi dan slot pertemuan tersimpan valid. Kecukupan JP diperiksa pada ringkasan Step 8; sisa slot kalender tidak wajib diisi.' : 'Struktur Pertemuan sudah sesuai kapasitas perencanaan semester dan seluruh coverage telah tercakup.'}</span>
+          <span>{'Relasi dan slot pertemuan tersimpan valid. Kecukupan JP diperiksa pada ringkasan Step 8; sisa slot kalender tidak wajib diisi.'}</span>
         </div>
       )}
 

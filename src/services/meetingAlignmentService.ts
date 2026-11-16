@@ -232,7 +232,7 @@ export function proposeMeetingAlignment(plan:UnitExecutionPlanData,mapping:ATPUn
     const ids=new Set(semester===1?placement.semester1UnitIds:placement.semester2UnitIds);
     const units=[...mapping.units].sort((a,b)=>a.order-b.order).filter(u=>ids.has(u.id));
     const input=units.flatMap(u=>[...(working.units.find(p=>p.unitId===u.id)?.meetings || [])].sort((a,b)=>a.order-b.order));
-    if(context.allowUnusedSlots && input.length<=cap.targetMeetingCount && details) {
+    if(context.allowUnusedSlots && input.some(meeting=>context.usedSlotIds?.[meeting.id]) && input.length<=cap.targetMeetingCount && details) {
       const ids=new Set(input.map(meeting=>meeting.id));
       const selected=selectMeetingSlots(input,details,Object.entries(context.usedSlotIds || {}).filter(([id])=>ids.has(id)).map(([meetingId,sourceSlotId])=>({meetingId,sourceSlotId})));
       result.errors.push(...selected.errors); details=selected.slots; slots=details.map(slot=>slot.jp);

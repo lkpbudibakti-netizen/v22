@@ -1486,6 +1486,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
     if(dated.length===1)context.protectedSlots![id]={date:dated[0].date,sessionId:dated[0].sessionId,jp:dated[0].jp};
     else if(dated.length>1)context.errors.push('Jadwal pertemuan terlindungi '+id+' ganda; tinjau manual.');
   }
+  if (Object.keys(context.usedSlotIds || {}).length) context.allowUnusedSlots = true;
   const schedules=state.semesterData.learningMeetingSchedules?.filter(e => semesterIds.has(e.semesterPlanId)) || [];
   if(schedules.length) context.impacts.push('Jadwal tersimpan ditandai DRAFT/stale. Entry ID yang dipertahankan beserta tanggalnya tetap disimpan; ID yang dikurangi dilepas. Tinjau dan simpan ulang Langkah 5.');
   if(state.semesterData.learningPlan.some(e => semesterIds.has(e.semesterPlanId) && e.value.length)) context.impacts.push('Rencana pembelajaran/asesmen tetap disimpan dan memerlukan validasi ulang setelah jadwal diperbarui.');
@@ -2042,7 +2043,7 @@ export function saveLearningMeetingScheduleV5(
     throw new Error(`Validasi jadwal pertemuan gagal: ${validation.errors.join('; ')}`);
   }
 
-  if (options?.allowUnusedSlots) {
+  if (options?.allowUnusedSlots !== false) {
     const source = getMeetingAlignmentSourceV5(yearPlan.id, state);
     for (const [id, anchor] of Object.entries(source.context.protectedSlots || {})) {
       const previous = state.semesterData.learningMeetingSchedules?.find(entry => entry.semesterPlanId === semesterPlanId)?.value.entries.find(entry => entry.meetingId === id);

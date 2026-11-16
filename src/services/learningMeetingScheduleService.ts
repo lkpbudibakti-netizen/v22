@@ -517,11 +517,11 @@ export function validateLearningMeetingScheduleData(
   }
 
   const autoResult = resolveLearningMeetingSchedule({
-    slotAssignments: params.allowUnusedSlots ? data.entries : undefined,
+    slotAssignments: params.allowUnusedSlots !== false ? data.entries : undefined,
     semesterPlanId: data.semesterPlanId,
     semester,
     mapping,
-    unitExecutionPlan: params.allowUnusedSlots ? { ...unitExecutionPlan, units: unitExecutionPlan.units.map(unit => ({ ...unit, meetings: unit.meetings.filter(meeting => data.entries.some(entry => entry.meetingId === meeting.id)) })) } : unitExecutionPlan,
+    unitExecutionPlan: params.allowUnusedSlots !== false ? { ...unitExecutionPlan, units: unitExecutionPlan.units.map(unit => ({ ...unit, meetings: unit.meetings.filter(meeting => data.entries.some(entry => entry.meetingId === meeting.id)) })) } : unitExecutionPlan,
     subjectSlotResult,
   });
 

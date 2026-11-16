@@ -256,7 +256,8 @@ runTest('Switching YearPlan clears incompatible semester and retains V3 sentinel
   assert.equal(mockStorage.getItem(V3_STORAGE_KEY),v3Sentinel);
 });
 
-const ready=createReadyV21WorkflowFixture();
+// A complete annual plan must satisfy the resolver's official 108 JP benchmark.
+const ready=createReadyV21WorkflowFixture([3],undefined,18);
 ready.activeProfileId=ready.profiles[0].id;ready.activeYearPlanId=ready.yearPlans[0].id;ready.activeWorkspaceId=ready.workspaces[0].id;ready.activeSemesterPlanId=undefined;
 function context(state=ready) {
   const annual=(key:string)=>(state.annualData as any)[key][0]?.value;

@@ -187,7 +187,7 @@ export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePre
   const scheduleResult = useMemo(() => {
     if (!mapping || !unitExecutionPlan) return null;
     return resolveLearningMeetingSchedule({
-      slotAssignments: productionMode && persistedSchedule?.status === 'COMPLETE' ? persistedSchedule.entries : undefined,
+      slotAssignments: persistedSchedule?.status === 'COMPLETE' ? persistedSchedule.entries : undefined,
       semesterPlanId,
       semester,
       mapping,
@@ -959,7 +959,7 @@ export const LearningMeetingSchedulePreview: React.FC<LearningMeetingSchedulePre
       });
 
       const validation = validateLearningMeetingScheduleData({
-        allowUnusedSlots: productionMode,
+        allowUnusedSlots: true,
         data: dataToSave,
         semester,
         mapping,

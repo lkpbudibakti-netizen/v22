@@ -39,6 +39,8 @@ function setup(pattern=[3]) {
     state.semesterJPSettings.find(e=>e.semesterPlanId===sp.id)!.value={semesterPlanId:sp.id,actualScheduledWeeklyJP:weekly,source:'SEMESTER_OVERRIDE'};
     state.semesterData.subjectWeeklySchedules!.find(e=>e.semesterPlanId===sp.id)!.value={semesterPlanId:sp.id,basedOnWeeklyJP:weekly,updatedAt:stamp,sessions:pattern.map((jp,i)=>({id:`session-${i}`,jp,dayOfWeek:i?3:1,order:i+1}))};
   }
+  // Build this fixture's first schedules after replacing inherited session IDs.
+  state.semesterData.learningMeetingSchedules=[];
   saveStorageV5(state);
   finalizeSchedules();
   return loadStorageV5();
@@ -73,17 +75,17 @@ function finalButton(h:ReturnType<typeof view>) {
 }
 let state=setup();let advances=0;let h=view(()=>advances++);
 const initialWrites=writes;h.nodes();assert.equal(writes,initialWrites,'render never repairs data');
-assert.equal(workflow().stepStates['annual-planning'].isComplete,true,JSON.stringify(workflow().stepStates));
+assert.equal(workflow().stepStates['annual-planning'].isComplete,false,JSON.stringify(workflow().stepStates));
 const html=renderToStaticMarkup(h.nodes()[0]);
 for(const label of ['VERIFIED','JP rencana/teralokasi','Kapasitas JP aktual','144','108','Selisih acuan','Kekurangan kapasitas'])assert(html.includes(label),label);
-let button=finalButton(h);assert.equal(button.props.disabled,false);button.props.onClick();assert.equal(advances,1,'actual rendered final CTA executes');
+let button=finalButton(h);assert.equal(button.props.disabled,true);button.props.onClick();assert.equal(advances,0,'short annual allocation cannot finalize');
 const beforeReview=loadStorageV5();h.nodes().find(n=>n.props.id==='review-annual-jp-reference').props.onClick();
 state=loadStorageV5();assert.equal(state.annualJPReferences[0].value.officialAnnualJP,108);
 const unchanged=structuredClone(state);unchanged.annualJPReferences=beforeReview.annualJPReferences;
 assert.deepEqual(unchanged,beforeReview,'explicit review changes only AnnualJPReference');
 assert.equal(state.annualJPReferences[0].value.referenceWeeklyEquivalentJP,3);
 assert.equal(compareAnnualJPReference(state.annualJPReferences[0].value,{isOfficial:true,referenceAnnualJP:108}).needsReview,false);
-assert.equal(finalButton(view()).props.disabled,false,'reload remains final-ready after annual review');
+assert.equal(finalButton(view()).props.disabled,true,'reference review cannot remove the annual JP shortage');
 
 // ESTIMATE stays ready for preview and can be saved as a weekly-pattern draft, never finalized.
 const actual=structuredClone(state);
@@ -107,11 +109,11 @@ saveSubjectWeeklyScheduleV5('sp1',actual.semesterData.subjectWeeklySchedules![0]
 assert.deepEqual(loadStorageV5().annualData.unitExecutionPlans,overflow.annualData.unitExecutionPlans,'saving teaching days with overcapacity must preserve meeting data');
 assert.deepEqual(loadStorageV5().documents,overflow.documents,'saving teaching days must preserve document snapshots');
 saveStorageV5(beforeOverflow);
-h=view(()=>advances++);button=finalButton(h);assert.equal(button.props.disabled,true);button.props.onClick();assert.equal(advances,1,'programmatic click cannot bypass gate');
+h=view(()=>advances++);button=finalButton(h);assert.equal(button.props.disabled,true);button.props.onClick();assert.equal(advances,0,'programmatic click cannot bypass gate');
 assert(renderToStaticMarkup(h.nodes()[0]).includes('Kapasitas JP aktual: UNRESOLVED'));
 assert.deepEqual(loadStorageV5().semesterData.learningMeetingSchedules,actual.semesterData.learningMeetingSchedules,'draft saves do not erase saved schedules');
 saveSubjectWeeklyScheduleV5('sp1',actual.semesterData.subjectWeeklySchedules![0].value);finalizeSchedules();
-assert.equal(finalButton(view()).props.disabled,false,'ESTIMATE → ACTUAL_SLOTS');
+assert.equal(finalButton(view()).props.disabled,true,'ESTIMATE → ACTUAL_SLOTS');
 
 // Calendar holidays and semesters remain independent; stale final schedule cannot be reused.
 state=loadStorageV5();const second=JSON.stringify(getSemesterDataV5('sp2'));
@@ -133,12 +135,12 @@ assert.equal(loadStorageV5().annualJPReferences[0].value.referenceWeeklyEquivale
 assert.deepEqual(loadStorageV5().semesterJPSettings,paiBefore.semesterJPSettings);
 assert.deepEqual(loadStorageV5().semesterData,paiBefore.semesterData);
 assert.equal(resolveSemesterCapacityV5('sp1',loadStorageV5()).actualScheduledWeeklyJP,3);
-assert.equal(finalButton(view()).props.disabled,false);
+assert.equal(finalButton(view()).props.disabled,true);
 
-// Mathematics 5 = 3+2; finalization is independent of matching the annual reference.
+// Mathematics 5 = 3+2; session pattern remains valid but annual shortage blocks finalization.
 state=setup([3,2]);state.yearPlans[0].subject='Matematika';state.yearPlans[0].grade='Kelas 3';state.yearPlans[0].phase='B';saveStorageV5(state);
 assert.deepEqual(getSemesterDataV5('sp1').learningMeetingSchedule!.entries.map(e=>e.jp),[3,2]);
-assert.equal(finalButton(view()).props.disabled,false);
+assert.equal(finalButton(view()).props.disabled,true);
 const assessment=assessAnnualJP(getSubjectJP({curriculumType:'KURIKULUM_MERDEKA',level:'SD',grade:'3',subject:'Matematika',academicYear:'2026/2027'}),[1,2].map(semester=>({semester:semester as 1|2,capacityJP:resolveSemesterCapacityV5(`sp${semester}`,state).availableJP,allocatedJP:sumSemesterAllocatedJP(getSemesterDataV5(`sp${semester}`))})));
 assert.equal(assessment.officialJP,180);assert.equal(assessment.capacityJP,10);assert.equal(assessment.referenceDifferenceJP,170);
 assert.equal(assessment.capacityStatus,'BALANCED');
@@ -148,14 +150,14 @@ state=setup([2]);Object.assign(state.yearPlans[0],{subject:'Pendidikan Pancasila
 state.annualJPReferences[0].value.referenceWeeklyEquivalentJP=1.5;saveStorageV5(state);
 reviewAnnualJPReferenceV5('y');assert.equal(loadStorageV5().annualJPReferences[0].value.officialAnnualJP,54);
 assert.equal(loadStorageV5().annualJPReferences[0].value.referenceWeeklyEquivalentJP,1.5);
-assert.equal(finalButton(view()).props.disabled,false);
+assert.equal(finalButton(view()).props.disabled,true);
 const fractional=loadStorageV5();fractional.semesterJPSettings=[];saveStorageV5(fractional);
 assert.equal(resolveSemesterCapacityV5('sp1',loadStorageV5()).isReady,false);
 saveStorageV5(state);reviewAnnualJPReferenceV5('y');
 
 // V5 backup reload and actual project ZIP export/import preserve both semesters and explicit review.
 const backup=parseBackupV5(serializeBackupV5(loadStorageV5()));saveStorageV5(backup);
-assert.equal(finalButton(view()).props.disabled,false);
+assert.equal(finalButton(view()).props.disabled,true);
 const archive=await readCompleteProjectZip(await createCompleteProjectZip(loadStorageV5(),'y'));
 assert.deepEqual(archive.project.annualJPReferences,loadStorageV5().annualJPReferences);
 assert.deepEqual(exportCompleteAdministrationProjectFromState(loadStorageV5(),'y').project.semesterJPSettings,loadStorageV5().semesterJPSettings);
@@ -164,10 +166,10 @@ const importedState=loadStorageV5();
 assert.equal(importedState.annualJPReferences.find(e=>e.yearPlanId===imported.yearPlanId)!.value.officialAnnualJP,54);
 assert.equal(importedState.semesterPlans.filter(s=>s.yearPlanId===imported.yearPlanId).length,2);
 assert.equal(importedState.semesterData.learningMeetingSchedules!.filter(e=>importedState.semesterPlans.some(s=>s.yearPlanId===imported.yearPlanId&&s.id===e.semesterPlanId)).length,2);
-assert.equal(finalButton(view(()=>advances++,imported.yearPlanId)).props.disabled,false,'imported schedules remain final-ready after ID remapping');
-assert.equal(workflow(imported.yearPlanId).stepStates['annual-planning'].isComplete,true);
-assert.equal(workflow(imported.yearPlanId).stepStates.semester.isBlocked,false);
-finalButton(view(()=>advances++,imported.yearPlanId)).props.onClick();assert.equal(advances,2);
+assert.equal(finalButton(view(()=>advances++,imported.yearPlanId)).props.disabled,true,'valid ID remapping does not waive annual JP sufficiency');
+assert.equal(workflow(imported.yearPlanId).stepStates['annual-planning'].isComplete,false);
+assert.equal(workflow(imported.yearPlanId).stepStates.semester.isBlocked,true);
+finalButton(view(()=>advances++,imported.yearPlanId)).props.onClick();assert.equal(advances,0);
 // Unknown master cannot be promoted or changed by the review action.
 state=loadStorageV5();state.yearPlans.find(y=>y.id==='y')!.subject='Mapel rekaan';saveStorageV5(state);
 const beforeUnknown=memory.get(STORAGE_KEY_V5);assert.throws(()=>reviewAnnualJPReferenceV5('y'));assert.equal(memory.get(STORAGE_KEY_V5),beforeUnknown);

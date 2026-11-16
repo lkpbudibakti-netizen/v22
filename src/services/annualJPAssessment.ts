@@ -45,8 +45,8 @@ export function assessAnnualJP(reference: Pick<SubjectJPResult, 'isOfficial' | '
   };
 }
 
-/** Production completion is sufficiency against verified regulation, not full calendar consumption. */
-export function assessProductionJPSufficiency(reference: Pick<SubjectJPResult, 'isOfficial' | 'referenceAnnualJP'>, semesters: AnnualJPSemester[], structureValid: boolean, schedulesSaved: boolean) {
+/** Completion is sufficiency against verified regulation, not full calendar consumption. */
+export function assessJPSufficiency(reference: Pick<SubjectJPResult, 'isOfficial' | 'referenceAnnualJP'>, semesters: AnnualJPSemester[], structureValid: boolean, schedulesSaved: boolean) {
   const assessment = assessAnnualJP({ ...reference, isOfficial: reference.isOfficial && finite(reference.referenceAnnualJP) && reference.referenceAnnualJP > 0 }, semesters);
   const reasons: string[] = [];
   if (!structureValid) reasons.push('Relasi atau pertemuan/jadwal yang digunakan tidak valid.');
@@ -57,3 +57,6 @@ export function assessProductionJPSufficiency(reference: Pick<SubjectJPResult, '
   if (assessment.referenceCheck === 'BELOW_REFERENCE') reasons.push(`JP teralokasi kurang ${assessment.referenceDifferenceJP} JP dari acuan resmi.`);
   return { ...assessment, status: error ? 'ERROR' as const : reasons.length ? 'REVIEW' as const : 'SELESAI' as const, reasons };
 }
+
+/** Compatibility alias for existing callers; both modes use the same assessment. */
+export const assessProductionJPSufficiency = assessJPSufficiency;

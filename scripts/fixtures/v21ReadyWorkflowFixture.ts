@@ -8,7 +8,7 @@ import { resolvePlannedMeetingCapacity, resolveEffectiveSubjectSlots, isActualPl
 import { buildLearningMeetingScheduleData, resolveLearningMeetingSchedule } from '../../src/services/learningMeetingScheduleService';
 import { assessAnnualJP, compareAnnualJPReference, sumSemesterAllocatedJP } from '../../src/services/annualJPAssessment';
 const stamp='2026-01-01T00:00:00Z';
-export function createReadyV21WorkflowFixture(pattern=[3],firstDates=['2026-08-03','2027-01-04']) {
+export function createReadyV21WorkflowFixture(pattern=[3],firstDates=['2026-08-03','2027-01-04'],weeks=1) {
   const state=createTwoSemesterAdministrationImportFixture();
   Object.assign(state,{activeYearPlanId:'y',activeProfileId:'p1',activeSchoolId:'s1',activeWorkspaceId:'w',activeSemesterPlanId:'sp1'});
   const mapping=state.annualData.atpUnitMappings![0].value;
@@ -17,7 +17,7 @@ export function createReadyV21WorkflowFixture(pattern=[3],firstDates=['2026-08-0
     const tpId=i?'t-z':'t',atpId=i?'az':'a';
     unit.linkedTpIds=[tpId];unit.linkedAtpItemIds=[atpId];
     unit.materials[0].linkedTpIds=[tpId];unit.materials[0].linkedAtpItemIds=[atpId];
-    plan.units[i].meetings=pattern.map((_,j)=>({...structuredClone(plan.units[i].meetings[0]),id:j?`meeting-${i}-${j}`:plan.units[i].meetings[0].id,order:j+1,linkedTpIds:[tpId],linkedAtpItemIds:[atpId],materialIds:[unit.materials[0].id]}));
+    plan.units[i].meetings=Array.from({length:pattern.length*weeks},(_,j)=>({...structuredClone(plan.units[i].meetings[0]),id:j?`meeting-${i}-${j}`:plan.units[i].meetings[0].id,order:j+1,linkedTpIds:[tpId],linkedAtpItemIds:[atpId],materialIds:[unit.materials[0].id]}));
   });
   const weekly=pattern.reduce((a,b)=>a+b,0);
   state.annualJPReferences=[{yearPlanId:'y',value:{officialAnnualJP:144,referenceWeeklyEquivalentJP:weekly,weeklyJPSource:'LEGACY_VALUE',regulationReference:'Ac uan lama'}}];
@@ -26,12 +26,16 @@ export function createReadyV21WorkflowFixture(pattern=[3],firstDates=['2026-08-0
     const first=firstDates[sp.semester-1];
     const dateAt=(offset:number)=>{const date=new Date(first+'T00:00:00Z');date.setUTCDate(date.getUTCDate()+offset);return date.toISOString().slice(0,10);};
     cal.calendar.startDate=first;
-    cal.calendar.endDate=dateAt(4);
+    cal.calendar.endDate=dateAt((weeks-1)*7+4);
     cal.calendar.updatedAt=stamp;
-    cal.days=Array.from({length:5},(_,i)=>({id:`${sp.id}-${i}`,academicCalendarId:cal.calendar.id,date:dateAt(i),status:'EFFECTIVE_LEARNING' as const}));
+    cal.days=Array.from({length:(weeks-1)*7+5},(_,i)=>({id:`${sp.id}-${i}`,academicCalendarId:cal.calendar.id,date:dateAt(i),status:'EFFECTIVE_LEARNING' as const})).filter(day=>![0,6].includes(new Date(day.date).getUTCDay()));
     state.semesterJPSettings.find(e=>e.semesterPlanId===sp.id)!.value={semesterPlanId:sp.id,actualScheduledWeeklyJP:weekly,source:'SEMESTER_OVERRIDE'};
     state.semesterData.subjectWeeklySchedules!.find(e=>e.semesterPlanId===sp.id)!.value={semesterPlanId:sp.id,basedOnWeeklyJP:weekly,updatedAt:stamp,sessions:pattern.map((jp,i)=>({id:`session-${i}`,jp,dayOfWeek:i?3:1,order:i+1}))};
   }
+  // This factory replaces the inherited calendar/session pattern before creating
+  // its first actual schedules. Do not model inherited placeholder rows as an
+  // existing protected schedule that the save operation is allowed to move.
+  state.semesterData.learningMeetingSchedules=[];
   saveStorageV5(state);
   finalizeSchedules();
   return loadStorageV5();

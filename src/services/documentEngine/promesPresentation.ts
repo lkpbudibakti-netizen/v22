@@ -22,19 +22,19 @@ export function formatAllocationStatusIndonesian(
   if (typeof statusOrRemaining === 'number') {
     if (statusOrRemaining === 0) return 'Alokasi sesuai';
     if (statusOrRemaining < 0) return 'Alokasi melebihi ketentuan';
-    if (statusOrRemaining > 0) return 'Alokasi belum terpenuhi';
+    if (statusOrRemaining > 0) return 'Sisa kapasitas kalender (informasi)';
     return '-';
   }
 
   if (remainingJP !== undefined && remainingJP !== null) {
     if (remainingJP === 0) return 'Alokasi sesuai';
     if (remainingJP < 0) return 'Alokasi melebihi ketentuan';
-    if (remainingJP > 0) return 'Alokasi belum terpenuhi';
+    if (remainingJP > 0) return 'Sisa kapasitas kalender (informasi)';
   }
 
   if (statusOrRemaining === 'BALANCED') return 'Alokasi sesuai';
   if (statusOrRemaining === 'OVER_ALLOCATED') return 'Alokasi melebihi ketentuan';
-  if (statusOrRemaining === 'UNDER_ALLOCATED') return 'Alokasi belum terpenuhi';
+  if (statusOrRemaining === 'UNDER_ALLOCATED') return 'Sisa kapasitas kalender (informasi)';
 
   return '-';
 }

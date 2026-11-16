@@ -29,7 +29,8 @@ import { getPhaseFromGrade } from '../data/curriculumDefaults';
 import { validateKKTPData, resolveCriterionTPReference, resolveATPItemTPReferences, validateTPDataWorkflow, validateCPAnalysisDataWorkflow, validateATPDataWorkflow, validateCPDataWorkflow } from './cpWorkflowService';
 import { loadStorageV5, getSemesterDataV5 } from './storageV5';
 import { getSubjectJP, resolveSemesterCapacityV5 } from './jpEngine';
-import { assessProductionJPSufficiency, sumSemesterAllocatedJP } from './annualJPAssessment';
+import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
+import { assessJPSufficiency, sumSemesterAllocatedJP } from './annualJPAssessment';
 import { validateATPUnitMappingCanonical } from './atpUnitMappingValidationService';
 import { productionReferenceIssues } from './productionValidation';
 import { validateUnitExecutionPlan } from './unitExecutionPlanService';
@@ -801,7 +802,8 @@ export function validateWorkflowDependencies(
 
     // 5c. Perencanaan Tahunan (Kalender & JP S1 & S2) step state (Requires structurally complete Pemetaan & saved time allocations)
     let isAnnualPlanningComplete = false;
-    let productionAnnualComplete = false;
+    let annualJPSufficient = false;
+    let mappingReadyForAnnualPlanning = false;
     let annualPlanningReason: string | undefined = undefined;
     let isScheduleStale = false;
 
@@ -945,7 +947,7 @@ export function validateWorkflowDependencies(
         const s2WeeklyJP = s2Cap?.actualScheduledWeeklyJP ?? s2Data?.semesterJPSetting?.actualScheduledWeeklyJP;
 
         const s1ScheduleReadiness = isLearningMeetingScheduleReady({
-          allowUnusedSlots: options.productionMode,
+          allowUnusedSlots: true,
           schedule: s1Data?.learningMeetingSchedule,
           semester: 1,
           mapping: currentMapping,
@@ -957,7 +959,7 @@ export function validateWorkflowDependencies(
         });
 
         const s2ScheduleReadiness = isLearningMeetingScheduleReady({
-          allowUnusedSlots: options.productionMode,
+          allowUnusedSlots: true,
           schedule: s2Data?.learningMeetingSchedule,
           semester: 2,
           mapping: currentMapping,
@@ -982,12 +984,10 @@ export function validateWorkflowDependencies(
         allocationReason = 'Lengkapi dan simpan Jadwal Aktual Semester 1 dan Semester 2 terlebih dahulu.';
       }
 
-      // Step 08 Complete Check
-      isAnnualPlanningComplete = isMappingComplete && isS1TimeReady && isS2TimeReady && isPlacementComplete && isMeetingComplete && isAllocationComplete;
-
       // Priority Reasons cascading
-      if (options.productionMode) {
+      {
         const year = v5State.yearPlans.find(y => y.id === currentYearPlanId);
+        mappingReadyForAnnualPlanning = isATPComplete && resolveATPUnitMappingReadiness(currentMapping, currentATP, currentTP, academicSetting).canProceed;
         const reference = getSubjectJP({ ...academicSetting, ...year });
         const canonical = validateATPUnitMappingCanonical(currentMapping, currentATP, currentTP);
         const identityValid = !!profile?.id && !!school?.id && profile.schoolId === school.id
@@ -995,17 +995,17 @@ export function validateWorkflowDependencies(
           && !!currentTP?.items?.length && currentTP.items.every(item => !!item.statement?.trim())
           && !!currentATP && !!currentTP && (currentATP.tpDataId || currentATP.tpId) === currentTP.id
           && currentMapping?.atpId === currentATP.id && (!currentMapping?.tpDataId || currentMapping.tpDataId === currentTP.id);
-        const sufficiency = assessProductionJPSufficiency(reference, [
+        const sufficiency = assessJPSufficiency(reference, [
           { semester: 1, capacityJP: s1PlannedCapacity.isReady ? s1PlannedCapacity.totalJP : null, allocatedJP: s1Data?.learningMeetingSchedule ? sumSemesterAllocatedJP(s1Data) : null },
           { semester: 2, capacityJP: s2PlannedCapacity.isReady ? s2PlannedCapacity.totalJP : null, allocatedJP: s2Data?.learningMeetingSchedule ? sumSemesterAllocatedJP(s2Data) : null },
         ], identityValid && canonical.isValid && canonical.isComplete && productionReferenceIssues('ATP', { atp: currentATP, tp: currentTP }).length === 0 && isMeetingComplete && isPlacementComplete,
           isS1TimeReady && isS2TimeReady && isAllocationComplete);
-        productionAnnualComplete = sufficiency.status === 'SELESAI';
-        isAnnualPlanningComplete = productionAnnualComplete;
+        annualJPSufficient = sufficiency.status === 'SELESAI';
+        isAnnualPlanningComplete = annualJPSufficient && (options.productionMode || mappingReadyForAnnualPlanning);
         annualPlanningReason = sufficiency.reasons.join(' ') || undefined;
       }
 
-      if (!options.productionMode && !isMappingComplete) {
+      if (!options.productionMode && !mappingReadyForAnnualPlanning) {
         annualPlanningReason = 'Memerlukan penyelesaian Pemetaan Unit/Bab & Lingkup Materi (07) terlebih dahulu';
       } else if (!isS1TimeReady) {
         annualPlanningReason = 'Waktu Semester 1: tetapkan kalender dan hari mengajar untuk slot aktual yang valid; estimasi hanya untuk draf.';
@@ -1022,7 +1022,7 @@ export function validateWorkflowDependencies(
       isAnnualPlanningComplete = false;
     }
 
-    const isAnnualPlanningBlocked = !options.productionMode && !isMappingComplete;
+    const isAnnualPlanningBlocked = !options.productionMode && !mappingReadyForAnnualPlanning;
     const isAnnualPlanningStale = (!options.productionMode && isMappingStale) || isScheduleStale;
 
     stepStates['annual-planning'] = {
@@ -1037,14 +1037,14 @@ export function validateWorkflowDependencies(
       isBlocked: isAnnualPlanningBlocked,
       isComplete: isAnnualPlanningComplete && !isAnnualPlanningBlocked,
       isStale: isAnnualPlanningStale,
-      reason: options.productionMode ? (productionAnnualComplete ? undefined : annualPlanningReason) : !isATPComplete
+      reason: options.productionMode ? (annualJPSufficient ? undefined : annualPlanningReason) : !isATPComplete
         ? 'Memerlukan penyusunan Alur Tujuan Pembelajaran (ATP) terlebih dahulu'
-        : !isMappingComplete
+        : !mappingReadyForAnnualPlanning
         ? 'Memerlukan penyelesaian Pemetaan Unit/Bab & Lingkup Materi (07) terlebih dahulu'
         : annualPlanningReason,
       missingDependencies: options.productionMode ? undefined : !isATPComplete
         ? ['Alur Tujuan Pembelajaran (ATP)']
-        : !isMappingComplete
+        : !mappingReadyForAnnualPlanning
         ? ['Pemetaan Unit/Bab & Lingkup Materi']
         : undefined,
     };
