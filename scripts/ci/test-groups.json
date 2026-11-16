@@ -26,6 +26,7 @@
     "scripts/testMerdekaCanonicalWorkflowRegression.ts"
   ],
   "planning": [
+    "scripts/testProductionIdentitySchedule.tsx",
     "scripts/testStep08JPSufficiency.tsx",
     "scripts/testStep08ProductionAccess.tsx",
     "scripts/testStep07PedagogicalAlignment.tsx",

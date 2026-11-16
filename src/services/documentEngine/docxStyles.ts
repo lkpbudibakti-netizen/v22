@@ -88,8 +88,8 @@ export function formatOfficialDate(
   documentDate?: string
 ): string {
   const location =
+    school.regency?.trim() ||
     school.district?.replace(/^Kec\.\s*/i, '') ||
-    school.regency ||
     school.village ||
     'Tempat';
 

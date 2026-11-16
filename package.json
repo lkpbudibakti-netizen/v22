@@ -78,7 +78,8 @@
     "test:mapping-apply": "tsx scripts/testATPUnitMappingActionApplyRegression.ts",
     "ci:tests": "node scripts/runCIGroup.mjs",
     "test:print-layout": "tsx scripts/testPrintLayoutRegression.ts",
-    "test:blank-export": "tsx scripts/testBlankIdentityExport.ts"
+    "test:blank-export": "tsx scripts/testBlankIdentityExport.ts",
+    "test:production-identity-schedule": "tsx scripts/testProductionIdentitySchedule.tsx"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

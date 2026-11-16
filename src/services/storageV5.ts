@@ -1831,7 +1831,8 @@ export function getSemesterDataV5(semesterPlanId: string): SemesterDataV5Result 
 
 export function saveSubjectWeeklyScheduleV5(
   semesterPlanId: string,
-  value: SubjectWeeklySchedule
+  value: SubjectWeeklySchedule,
+  options?: { productionMode?: boolean }
 ): SubjectWeeklySchedule {
   if (value.semesterPlanId !== semesterPlanId) {
     throw new Error(
@@ -1881,6 +1882,42 @@ export function saveSubjectWeeklyScheduleV5(
 
   if (!state.semesterData.subjectWeeklySchedules) {
     state.semesterData.subjectWeeklySchedules = [];
+  }
+  if (options?.productionMode) {
+    const previous = state.semesterData.subjectWeeklySchedules.find(e => e.semesterPlanId === semesterPlanId)?.value;
+    const substance = (schedule: SubjectWeeklySchedule) => JSON.stringify([
+      schedule.basedOnWeeklyJP,
+      [...schedule.sessions].sort((a,b)=>a.order-b.order).map(s=>[s.id,s.order,s.dayOfWeek ?? null,s.jp]),
+    ]);
+    if (previous && substance(previous) === substance(value)) return previous;
+    value = {...value, updatedAt:new Date(Math.max(Date.now(), (Date.parse(previous?.updatedAt || '') || 0)+1)).toISOString()};
+    const sp = state.semesterPlans.find(s => s.id === semesterPlanId)!;
+    const calendar = state.semesterData.academicCalendar.find(e => e.semesterPlanId === semesterPlanId)?.value;
+    const saved = state.semesterData.learningMeetingSchedules?.find(e => e.semesterPlanId === semesterPlanId);
+    if (!previous && saved?.value.entries.length) throw new Error('Pola mengajar lama tidak tersedia untuk memetakan ulang tanggal. Pulihkan pola sumber; tidak ada data disimpan.');
+    if (previous && saved?.value.entries.length) {
+      if (!calendar || calendar.calendar.workflowStatus !== 'CONFIRMED') throw new Error('Kalender tersimpan harus dikonfirmasi sebelum memindahkan hari mengajar.');
+      const source = getMeetingAlignmentSourceV5(sp.yearPlanId, state);
+      if (!source.mapping || !source.persistedPlan) throw new Error('Pemetaan/struktur pertemuan belum tersedia.');
+      if (source.context.errors.length) throw new Error('Referensi data terlindungi tidak valid: '+source.context.errors.join('; '));
+      const expectedWeeklyJP = resolveSemesterJPFromState(semesterPlanId, state).weeklyJP;
+      const previousCheck = validateLearningMeetingScheduleData({data:saved.value,semester:sp.semester,mapping:source.mapping,unitExecutionPlan:source.persistedPlan,subjectWeeklySchedule:previous,expectedWeeklyJP,calendar:calendar.calendar,calendarDays:calendar.days});
+      if (!previousCheck.isValid || previousCheck.isStale) throw new Error('Jadwal lama belum valid; tinjau alokasi sebelum mengubah hari: '+previousCheck.errors.join('; '));
+      const slotsFor = (schedule: SubjectWeeklySchedule) => resolveEffectiveSubjectSlots({semesterPlanId, calendar:calendar.calendar, calendarDays:calendar.days, schedule, expectedWeeklyJP});
+      const oldSlots = slotsFor(previous), nextSlots = slotsFor(value);
+      if (!oldSlots.isReady || !nextSlots.isReady) throw new Error('Slot kalender tidak valid: '+[...oldSlots.errors,...nextSlots.errors].join('; '));
+      const entries = saved.value.entries.map(entry => {
+        const index = oldSlots.slots.findIndex(slot => slot.id === entry.sourceSlotId);
+        const slot = nextSlots.slots[index];
+        if (index < 0 || !slot || slot.jp !== entry.jp) throw new Error(`Pertemuan ${entry.meetingId}: kapasitas/JP slot pengganti tidak mencukupi atau berbeda. Tinjau hari/sesi mengajar; jadwal lama dipertahankan.`);
+        if (source.context.protectedMeetings[entry.meetingId]?.length && (slot.date !== entry.date || slot.sessionId !== entry.sessionId || slot.jp !== entry.jp)) throw new Error(`Pertemuan ${entry.meetingId} terlindungi (${source.context.protectedMeetings[entry.meetingId].join(', ')}). Perubahan tanggal/sesi memerlukan persetujuan eksplisit; tidak ada data disimpan.`);
+        return {...entry,sourceSlotId:slot.id,date:slot.date,sessionId:slot.sessionId,dayOfWeek:slot.dayOfWeek,weekIndex:slot.weekIndex};
+      });
+      const next = {...saved.value,entries,basedOnSubjectWeeklyScheduleUpdatedAt:value.updatedAt,updatedAt:value.updatedAt};
+      const checked = validateLearningMeetingScheduleData({allowUnusedSlots:true,data:next,semester:sp.semester,mapping:source.mapping,unitExecutionPlan:source.persistedPlan,subjectWeeklySchedule:value,expectedWeeklyJP,calendar:calendar.calendar,calendarDays:calendar.days});
+      if (!checked.isValid || checked.isStale) throw new Error('Perubahan hari mengajar ditolak: '+checked.errors.join('; '));
+      saved.value = next;
+    }
   }
   upsertSemesterScopedEntry(state.semesterData.subjectWeeklySchedules, semesterPlanId, value);
   saveStorageV5(state);

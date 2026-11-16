@@ -33,6 +33,8 @@ import { PDF_THEME } from './renderers/pdf/pdfTheme';
 import { isValidDocumentDate } from '../documentDateService';
 import { validateKKTPData } from '../cpWorkflowService';
 import { checkAssessmentExportEligibility, isAssessmentDocumentSnapshot } from './assessmentExportService';
+import { validateLearningMeetingScheduleData } from '../learningMeetingScheduleService';
+import { resolveSemesterJPFromValues } from '../semesterJPResolver';
 import { buildPromesProjection, buildAlokasiWaktuProjection } from './promesProjection';
 import { buildProtaProjection, buildK13ProtaProjection } from './protaProjection';
 import { buildModulAjarProjection } from './modulAjarProjection';
@@ -584,6 +586,29 @@ export function validateDocumentRequirements(type: DocumentType, context: Partia
     result = validateDocumentRequirementsCore(type, context);
     const references = productionReferenceIssues(type, context);
     if (references.length) result = { ...result, isValid: false, missingFields: [...result.missingFields, ...references] };
+    if (['PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','ASESMEN','JURNAL'].includes(type) && context.atpUnitMapping && context.unitExecutionPlan) {
+      for (const bundle of context.learningMeetingSchedules || []) {
+        if (!bundle.schedule.entries.length) continue;
+        const source = context.zipAnnualSource;
+        const ownSemester = bundle.semesterPlanId === context.academicSetting?.id;
+        if (type !== 'PROTA' && context.learningMeetingSchedules.some(item=>item.semesterPlanId===context.academicSetting?.id) && !ownSemester) continue;
+        const calendar = source?.semesterData.academicCalendar.find(e=>e.semesterPlanId===bundle.semesterPlanId)?.value;
+        const weekly = source?.semesterData.subjectWeeklySchedules?.find(e=>e.semesterPlanId===bundle.semesterPlanId)?.value || (ownSemester ? context.subjectWeeklySchedule : undefined);
+        const activeCalendar = calendar?.calendar || (ownSemester ? context.calendar : undefined);
+        if (!weekly || !activeCalendar) {
+          result = {...result,isValid:false,missingFields:[...result.missingFields,'Kalender/pola mengajar untuk memverifikasi tanggal jadwal belum tersedia.']};
+          continue;
+        }
+        const setting = source?.semesterJPSettings.find(e=>e.semesterPlanId===bundle.semesterPlanId)?.value || (ownSemester ? context.semesterJPSetting : undefined);
+        const checked = validateLearningMeetingScheduleData({data:bundle.schedule,semester:bundle.semester,mapping:context.atpUnitMapping,unitExecutionPlan:context.unitExecutionPlan,
+          subjectWeeklySchedule:weekly,expectedWeeklyJP:resolveSemesterJPFromValues(setting,context.annualJPReference).weeklyJP,
+          // Production treats confirmation as a workflow warning. Validate the
+          // actual saved days/slots and fingerprints without promoting storage.
+          calendar:{...activeCalendar,workflowStatus:'CONFIRMED'},calendarDays:calendar?.days || context.calendarDays || []});
+        const errors = checked.errors.filter(error=>!error.startsWith('Status DRAFT tidak valid karena seluruh pertemuan'));
+        if (errors.length) result = {...result,isValid:false,missingFields:[...result.missingFields,...errors.map(error=>'Jadwal aktual perlu diperbarui: '+error)]};
+      }
+    }
   } catch (error) {
     result = { isValid: false, missingFields: [error instanceof Error ? error.message : String(error)] };
   }

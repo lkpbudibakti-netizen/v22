@@ -613,6 +613,24 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
 
   // Step 1: SEARCH CALENDAR WITH AI (ANNUAL SCOPE)
   const handleAutoResolve = async (showNotification: boolean = true) => {
+    if (productionMode) {
+      if (calendar?.startDate && calendar?.endDate) {
+        setResolutionMessage('Kalender tersimpan dipertahankan. Perubahan identitas/wilayah sekolah tidak mengganti kalender atau penyesuaian historis.');
+        return;
+      }
+      const baseline = resolvePlanningBaseline({academicYear,semester:semester || '1'});
+      if (!baseline.isBaselineAvailable) { setResolutionMessage(baseline.label); return; }
+      const national = buildNationalBaseCandidate(academicYear);
+      setStartDate(startDate || baseline.startDate);setEndDate(endDate || baseline.endDate);
+      if (!schoolDaysPerWeek) setSchoolDaysPerWeek(baseline.schoolDaysPerWeek);
+      setOnlineDiscovery(national);setSourceType('NATIONAL_HOLIDAY_OVERLAY');
+      setSourceName('Baseline Nasional (SKB 3 Menteri)');setSourceAuthority(national.authority);
+      setSourceDocumentNumber(national.documentNumber || '');setSourceUrl(national.sourceUrl);setDraftVerifiedAt(undefined);
+      setDays(projectNationalBaseToSemesterDraft({candidate:national,academicYear,semester:semester || '1',calendarId:calendar?.id || `cal-${academicSetting.id}`,existingDays:days}));
+      setWorkflowStatus('AUTO_RESOLVED');setResolutionStatus('PARTIALLY_RESOLVED');
+      setResolutionMessage('Baseline nasional untuk perencanaan; bukan kalender daerah terverifikasi. Tinjau rentang semester dan simpan secara eksplisit.');
+      return;
+    }
     const prov = searchProvince || selectedProvince || school.province;
     const regency = searchRegency || school.regency;
 
@@ -1802,7 +1820,7 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
               title="Jalankan Ulang Resolusi Otomatis"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Resolusi Otomatis</span>
+              <span>{productionMode ? 'Baseline Nasional' : 'Resolusi Otomatis'}</span>
             </button>
 
             {workflowStatus !== 'CONFIRMED' && (
@@ -2220,11 +2238,11 @@ export const TimePlanningManager: React.FC<TimePlanningManagerProps> = ({
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isOnlineSearching ? 'animate-spin' : ''}`} />
-                <span>{isOnlineSearching ? 'Mencari Kalender...' : (onlineDiscovery ? 'Cari Ulang dengan AI' : 'Cari Kalender dengan AI')}</span>
+                <span>{productionMode ? 'Gunakan Baseline Nasional' : isOnlineSearching ? 'Mencari Kalender...' : (onlineDiscovery ? 'Cari Ulang dengan AI' : 'Cari Kalender dengan AI')}</span>
               </button>
 
               <p className="text-[11px] text-slate-500 italic text-center">
-                AI akan mencari: {searchRegency || 'Kota Tangerang'} → {searchProvince || 'Banten'} → sumber nasional
+                {productionMode ? 'Baseline nasional tidak bergantung pada kota sekolah; kalender tersimpan tetap dipertahankan.' : <>AI akan mencari: {searchRegency || 'Kota Tangerang'} → {searchProvince || 'Banten'} → sumber nasional</>}
               </p>
             </div>
           </div>

@@ -1147,7 +1147,8 @@ export function App() {
         return false;
       }
 
-      saveSubjectWeeklyScheduleV5(targetSemesterPlanId, schedule);
+      if (productionMode) saveSubjectWeeklyScheduleV5(targetSemesterPlanId, schedule, { productionMode: true });
+      else saveSubjectWeeklyScheduleV5(targetSemesterPlanId, schedule);
       refreshV5();
       return true;
     } catch (err: any) {
@@ -1157,7 +1158,7 @@ export function App() {
       });
       return false;
     }
-  }, [activeSemesterPlan?.id, v5State, refreshV5]);
+  }, [activeSemesterPlan?.id, v5State, refreshV5, productionMode]);
 
   const handleSaveLearningMeetingSchedule = useCallback((schedule: LearningMeetingScheduleData, explicitSemesterPlanId?: string): boolean => {
     const targetSemesterPlanId = explicitSemesterPlanId || activeSemesterPlan?.id;
