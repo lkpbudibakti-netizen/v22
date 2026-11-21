@@ -26,7 +26,7 @@ import { validateAcademicSettingReadiness } from './academicSettingReadiness';
 import { resolveCurriculumContext, resolveSubjectInput } from '../data/curriculum/resolver';
 import { ResolvedCurriculumContext } from '../data/curriculum/types';
 import { getPhaseFromGrade } from '../data/curriculumDefaults';
-import { validateKKTPData, resolveCriterionTPReference, resolveATPItemTPReferences, validateTPDataWorkflow, validateCPAnalysisDataWorkflow, validateATPDataWorkflow, validateCPDataWorkflow } from './cpWorkflowService';
+import { validateKKTPData, resolveCriterionTPReference, resolveATPItemTPReferences, validateTPDataWorkflow, validateCPAnalysisDataWorkflow, validateATPDataWorkflow, validateCPDataWorkflow, isValidLineageTimestamp } from './cpWorkflowService';
 import { loadStorageV5, getSemesterDataV5 } from './storageV5';
 import { getSubjectJP, resolveSemesterCapacityV5 } from './jpEngine';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
@@ -206,9 +206,11 @@ export function isUpstreamStale(
   downstreamReferenceUpdatedAt?: string,
   thresholdMs: number = 1000
 ): boolean {
-  if (!upstreamUpdatedAt || !downstreamReferenceUpdatedAt) return false;
-  const upstreamTime = new Date(upstreamUpdatedAt).getTime();
-  const refTime = new Date(downstreamReferenceUpdatedAt).getTime();
+  if (!isValidLineageTimestamp(upstreamUpdatedAt) || !isValidLineageTimestamp(downstreamReferenceUpdatedAt)) {
+    return false;
+  }
+  const upstreamTime = new Date(upstreamUpdatedAt!).getTime();
+  const refTime = new Date(downstreamReferenceUpdatedAt!).getTime();
   return upstreamTime > refTime + thresholdMs;
 }
 
@@ -619,6 +621,20 @@ export function validateWorkflowDependencies(
           module: 'KKTP',
           code: 'AMBIGUOUS_CRITERIA_REFERENCE',
           message: ref.issue || `Kriteria KKTP '${crit.id}' memiliki referensi TP yang ambigu.`,
+          targetId: crit.id,
+        });
+      }
+
+      if (
+        (typeof crit.basedOnTpUpdatedAt === 'string' && crit.basedOnTpUpdatedAt.trim() && !isValidLineageTimestamp(crit.basedOnTpUpdatedAt)) ||
+        (typeof crit.updatedAt === 'string' && crit.updatedAt.trim() && !isValidLineageTimestamp(crit.updatedAt))
+      ) {
+        hasOrphanCriterion = true;
+        issues.push({
+          severity: 'WARNING',
+          module: 'KKTP',
+          code: 'INVALID_LINEAGE_TIMESTAMP',
+          message: `Timestamp lineage pada kriteria KKTP '${crit.id}' tidak valid.`,
           targetId: crit.id,
         });
       }

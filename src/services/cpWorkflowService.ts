@@ -17,6 +17,13 @@ import {
 import { checkTPSemanticFidelity } from './tpSemanticFidelity';
 import { checkATPSemanticFidelity } from './atpSemanticFidelity';
 
+export function isValidLineageTimestamp(value?: string): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || /^\d+$/.test(trimmed)) return false;
+  return Number.isFinite(Date.parse(trimmed));
+}
+
 export interface CPValidationDetails {
   status: WorkflowCompletionStatus;
   isSiap: boolean;
@@ -77,6 +84,10 @@ export function validateCPDataWorkflow(
     } else if (status === 'VERSION_CONFLICT') {
       issues.push('Terjadi konflik versi CP (AMBIGUOUS). Spesifikasikan tahun ajaran/regulasi.');
     }
+  }
+
+  if (typeof cp.updatedAt === 'string' && cp.updatedAt.trim() && !isValidLineageTimestamp(cp.updatedAt)) {
+    issues.push('Timestamp pembaruan CP (updatedAt) tidak valid.');
   }
 
   // Check context match if context is provided
@@ -140,9 +151,18 @@ export function validateCPAnalysisDataWorkflow(
     }
 
     // Jika cp.updatedAt tersedia, basedOnCpUpdatedAt wajib tersedia
+    if (cp.updatedAt && cp.updatedAt.trim() && !isValidLineageTimestamp(cp.updatedAt)) {
+      issues.push('Timestamp pembaruan CP acuan (updatedAt) tidak valid.');
+    }
     if (cp.updatedAt && !cpAnalysis.basedOnCpUpdatedAt) {
       issues.push('Timestamp rujukan CP (basedOnCpUpdatedAt) belum tercatat.');
     }
+  }
+  if (typeof cpAnalysis.updatedAt === 'string' && cpAnalysis.updatedAt.trim() && !isValidLineageTimestamp(cpAnalysis.updatedAt)) {
+    issues.push('Timestamp pembaruan Analisis CP (updatedAt) tidak valid.');
+  }
+  if (typeof cpAnalysis.basedOnCpUpdatedAt === 'string' && cpAnalysis.basedOnCpUpdatedAt.trim() && !isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt)) {
+    issues.push('Timestamp rujukan CP (basedOnCpUpdatedAt) pada Analisis CP tidak valid.');
   }
 
   // Check if CP version changed or review needed
@@ -229,9 +249,9 @@ export function validateCPAnalysisDataWorkflow(
   }
 
   // Check if source CP is outdated
-  if (cp && cpAnalysis.basedOnCpUpdatedAt && cp.updatedAt) {
-    const cpTime = new Date(cp.updatedAt).getTime();
-    const anaTime = new Date(cpAnalysis.basedOnCpUpdatedAt).getTime();
+  if (cp && isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt) && isValidLineageTimestamp(cp.updatedAt)) {
+    const cpTime = new Date(cp.updatedAt!).getTime();
+    const anaTime = new Date(cpAnalysis.basedOnCpUpdatedAt!).getTime();
     if (cpTime > anaTime + 1000) {
       issues.push('Teks CP telah diperbarui sejak analisis ini dibuat. Mohon sesuaikan analisis.');
     }
@@ -562,6 +582,16 @@ export function validateTPDataWorkflow(
     );
   }
 
+  if (typeof tp.updatedAt === 'string' && tp.updatedAt.trim() && !isValidLineageTimestamp(tp.updatedAt)) {
+    issues.push('Timestamp pembaruan TP (updatedAt) tidak valid.');
+  }
+  if (typeof tp.basedOnCpUpdatedAt === 'string' && tp.basedOnCpUpdatedAt.trim() && !isValidLineageTimestamp(tp.basedOnCpUpdatedAt)) {
+    issues.push('Timestamp rujukan CP (basedOnCpUpdatedAt) pada TP tidak valid.');
+  }
+  if (typeof tp.basedOnAnalysisUpdatedAt === 'string' && tp.basedOnAnalysisUpdatedAt.trim() && !isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt)) {
+    issues.push('Timestamp rujukan Analisis CP (basedOnAnalysisUpdatedAt) pada TP tidak valid.');
+  }
+
   // Check CP source validity if CP is provided
   if (cp) {
     const cpStatus = normalizeCPVerificationStatus(
@@ -571,9 +601,9 @@ export function validateTPDataWorkflow(
       issues.push(`CP rujukan berstatus ${cpStatus} dan tidak valid untuk perumusan TP.`);
     }
 
-    if (cp.updatedAt && tp.basedOnCpUpdatedAt) {
-      const cpTime = new Date(cp.updatedAt).getTime();
-      const tpCpTime = new Date(tp.basedOnCpUpdatedAt).getTime();
+    if (isValidLineageTimestamp(cp.updatedAt) && isValidLineageTimestamp(tp.basedOnCpUpdatedAt)) {
+      const cpTime = new Date(cp.updatedAt!).getTime();
+      const tpCpTime = new Date(tp.basedOnCpUpdatedAt!).getTime();
       if (cpTime > tpCpTime + 1000) {
         issues.push('Capaian Pembelajaran (CP) telah diperbarui sejak TP ini dirumuskan.');
       }
@@ -593,9 +623,9 @@ export function validateTPDataWorkflow(
     if (cpAnalysis.needsReview) {
       issues.push('Analisis CP rujukan memerlukan peninjauan ulang.');
     }
-    if (cpAnalysis.updatedAt && tp.basedOnAnalysisUpdatedAt) {
-      const anaTime = new Date(cpAnalysis.updatedAt).getTime();
-      const tpAnaTime = new Date(tp.basedOnAnalysisUpdatedAt).getTime();
+    if (isValidLineageTimestamp(cpAnalysis.updatedAt) && isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt)) {
+      const anaTime = new Date(cpAnalysis.updatedAt!).getTime();
+      const tpAnaTime = new Date(tp.basedOnAnalysisUpdatedAt!).getTime();
       if (anaTime > tpAnaTime + 1000) {
         issues.push('Analisis CP telah diperbarui sejak TP ini dirumuskan.');
       }
@@ -1086,6 +1116,13 @@ export function validateATPDataWorkflow(
     issues.push(`ATP terikat pada Academic Setting lain (${atp.academicSettingId}).`);
   }
 
+  if (typeof atp.updatedAt === 'string' && atp.updatedAt.trim() && !isValidLineageTimestamp(atp.updatedAt)) {
+    issues.push('Timestamp pembaruan ATP (updatedAt) tidak valid.');
+  }
+  if (typeof atp.basedOnTpUpdatedAt === 'string' && atp.basedOnTpUpdatedAt.trim() && !isValidLineageTimestamp(atp.basedOnTpUpdatedAt)) {
+    issues.push('Timestamp rujukan TP (basedOnTpUpdatedAt) pada ATP tidak valid.');
+  }
+
   // 5. Provenance & Stale check against TPData
   if (tp?.id) {
     if (atp.tpId && atp.tpId !== tp.id) {
@@ -1096,9 +1133,9 @@ export function validateATPDataWorkflow(
     }
     if (!atp.basedOnTpUpdatedAt) {
       issues.push('Lineage ATP belum mencatat waktu TP acuan saat dikonfirmasi.');
-    } else if (tp.updatedAt) {
-      const tpTime = new Date(tp.updatedAt).getTime();
-      const atpTpTime = new Date(atp.basedOnTpUpdatedAt).getTime();
+    } else if (isValidLineageTimestamp(tp.updatedAt) && isValidLineageTimestamp(atp.basedOnTpUpdatedAt)) {
+      const tpTime = new Date(tp.updatedAt!).getTime();
+      const atpTpTime = new Date(atp.basedOnTpUpdatedAt!).getTime();
       if (tpTime > atpTpTime + 1000) {
         issues.push('TP acuan telah berubah sejak ATP dikonfirmasi.');
       }

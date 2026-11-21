@@ -48,7 +48,7 @@ import { resolveSemesterJPFromState } from './semesterJPResolver';
 import { validateLearningMeetingScheduleData } from './learningMeetingScheduleService';
 import { validateCalendarCompleteness } from './jpEngine';
 import { validateSubjectWeeklySchedule } from './subjectScheduleService';
-import { validateCPDataWorkflow, validateCPAnalysisDataWorkflow, validateTPDataWorkflow, validateATPDataWorkflow } from './cpWorkflowService';
+import { validateCPDataWorkflow, validateCPAnalysisDataWorkflow, validateTPDataWorkflow, validateATPDataWorkflow, isValidLineageTimestamp } from './cpWorkflowService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
 import { computeAtpSubstantiveFingerprint, computeMappingFingerprint, computeStep07VerifiedFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
 import { reviewedTpFingerprint } from './mappingAlignmentService';
@@ -451,6 +451,13 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       ? sourceAtp?.workflowStatus || 'DRAFT' : check.status;
     warnings.push(...check.issues);
   }
+  } else {
+    // Even in production mode, invalid timestamp strings must surface clear diagnostics
+    // and never masquerade as confirmed SIAP data.
+    if (cp) warnings.push(...validateCPDataWorkflow(cp, year).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (analysis) warnings.push(...validateCPAnalysisDataWorkflow(analysis, cp).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (tp) warnings.push(...validateTPDataWorkflow(tp, cp, analysis).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (atp) warnings.push(...validateATPDataWorkflow(atp, tp, undefined, cp, analysis).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
   }
   if (modernMode) {
     for (const key of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
@@ -712,6 +719,13 @@ export function importAdministrationProjectIntoState(
     };
   }
 
+  normalizeLegacyAnnualLineage(
+    params.package,
+    context,
+    annualResult,
+    semesterResults.flatMap((result) => result.assessmentCriteria)
+  );
+
   nextState.yearPlans.push(context.yearPlan);
   nextState.workspaces.push(context.workspace);
   nextState.semesterPlans.push(...Array.from(context.semesterPlansByNumber.values()));
@@ -877,6 +891,161 @@ function buildAnnualData(
   return { cp, cpAnalysis, tp, atp };
 }
 
+function normalizeLegacyAnnualLineage(
+  pkg: AdministrationProjectPackage,
+  context: ImportContext,
+  annual: {
+    cp?: CPData;
+    cpAnalysis?: CPAnalysisData;
+    tp?: TPData;
+    atp?: ATPData;
+  },
+  criteria: AssessmentCriterion[]
+): void {
+  const hasRaw = (value?: string): boolean => typeof value === 'string' && value.trim().length > 0;
+  const hasInvalid = (value?: string): boolean => hasRaw(value) && !isValidLineageTimestamp(value);
+  const fallbackAnchor = isValidLineageTimestamp(pkg.header.exportedAt)
+    ? pkg.header.exportedAt!.trim()
+    : context.now;
+
+  const { cp, cpAnalysis, tp, atp } = annual;
+
+  // Guard 1: Invalid non-empty timestamps are preserved untouched and never disguised as confirmed SIAP.
+  if (cp && hasInvalid(cp.updatedAt)) {
+    cp.workflowStatus = 'PERLU_DILENGKAPI';
+  }
+  if (cpAnalysis && (hasInvalid(cpAnalysis.updatedAt) || hasInvalid(cpAnalysis.basedOnCpUpdatedAt))) {
+    cpAnalysis.workflowStatus = 'PERLU_DILENGKAPI';
+    cpAnalysis.needsReview = true;
+    cpAnalysis.reviewReason ||= 'Timestamp lineage Analisis CP tidak valid.';
+  }
+  if (
+    tp &&
+    (hasInvalid(tp.updatedAt) || hasInvalid(tp.basedOnCpUpdatedAt) || hasInvalid(tp.basedOnAnalysisUpdatedAt))
+  ) {
+    tp.workflowStatus = 'PERLU_DILENGKAPI';
+    tp.needsReview = true;
+    tp.reviewReason ||= 'Timestamp lineage TP tidak valid.';
+  }
+  if (atp && (hasInvalid(atp.updatedAt) || hasInvalid(atp.basedOnTpUpdatedAt))) {
+    atp.workflowStatus = 'PERLU_DILENGKAPI';
+    atp.needsReview = true;
+    atp.reviewReason ||= 'Timestamp lineage ATP tidak valid.';
+  }
+
+  // Guard 2: Deterministically resolve missing `updatedAt` using verified downstream lineage references
+  // (only when source relationships are proven valid & non-conflicting); never fabricate `basedOn*UpdatedAt`.
+  if (cp && !hasRaw(cp.updatedAt)) {
+    const cpStructValid = validateCPDataWorkflow(cp).isSiap;
+    const anaRef =
+      cpAnalysis &&
+      cpAnalysis.workflowStatus === 'SIAP' &&
+      !cpAnalysis.needsReview &&
+      isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt) &&
+      validateCPAnalysisDataWorkflow(cpAnalysis, { ...cp, updatedAt: cpAnalysis.basedOnCpUpdatedAt }).isSiap
+        ? cpAnalysis.basedOnCpUpdatedAt!.trim()
+        : undefined;
+    const tpCpRef =
+      tp &&
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      isValidLineageTimestamp(tp.basedOnCpUpdatedAt)
+        ? tp.basedOnCpUpdatedAt!.trim()
+        : undefined;
+    const noReverseConflict =
+      !anaRef || !tpCpRef || Date.parse(tpCpRef) <= Date.parse(anaRef) + 1000;
+
+    if (cpStructValid && anaRef && noReverseConflict) {
+      cp.updatedAt = anaRef;
+    } else if (cpStructValid && !cpAnalysis && tpCpRef) {
+      cp.updatedAt = tpCpRef;
+    } else {
+      cp.updatedAt = fallbackAnchor;
+    }
+  }
+
+  if (cpAnalysis && !hasRaw(cpAnalysis.updatedAt)) {
+    const anaValidVsCp =
+      cpAnalysis.workflowStatus === 'SIAP' &&
+      !cpAnalysis.needsReview &&
+      validateCPAnalysisDataWorkflow(cpAnalysis, cp).isSiap;
+    const tpAnaRef =
+      tp &&
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt)
+        ? tp.basedOnAnalysisUpdatedAt!.trim()
+        : undefined;
+    const consistentWithCpRef =
+      !tpAnaRef ||
+      !isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt) ||
+      Date.parse(tpAnaRef) >= Date.parse(cpAnalysis.basedOnCpUpdatedAt!) - 1000;
+
+    cpAnalysis.updatedAt =
+      anaValidVsCp && tpAnaRef && consistentWithCpRef ? tpAnaRef : fallbackAnchor;
+  }
+
+  if (tp && !hasRaw(tp.updatedAt)) {
+    const tpValid =
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      validateTPDataWorkflow(tp, cp, cpAnalysis).isSiap;
+    const atpRef =
+      atp &&
+      atp.workflowStatus === 'SIAP' &&
+      !atp.needsReview &&
+      isValidLineageTimestamp(atp.basedOnTpUpdatedAt) &&
+      validateATPDataWorkflow(
+        { ...atp, updatedAt: atp.basedOnTpUpdatedAt },
+        { ...tp, updatedAt: atp.basedOnTpUpdatedAt },
+        undefined,
+        cp,
+        cpAnalysis
+      ).isSiap
+        ? atp.basedOnTpUpdatedAt!.trim()
+        : undefined;
+    const critRefs = criteria
+      .filter((crit) => !crit.needsReview && isValidLineageTimestamp(crit.basedOnTpUpdatedAt))
+      .map((crit) => crit.basedOnTpUpdatedAt!.trim());
+    const candidates = [atpRef, ...critRefs].filter((val): val is string => Boolean(val));
+    const latestCandidate =
+      candidates.length > 0
+        ? candidates.reduce((best, curr) => (Date.parse(curr) > Date.parse(best) ? curr : best))
+        : undefined;
+    const consistentWithUpstream =
+      !latestCandidate ||
+      ((!isValidLineageTimestamp(tp.basedOnCpUpdatedAt) ||
+        Date.parse(latestCandidate) >= Date.parse(tp.basedOnCpUpdatedAt!) - 1000) &&
+        (!isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt) ||
+          Date.parse(latestCandidate) >= Date.parse(tp.basedOnAnalysisUpdatedAt!) - 1000));
+
+    tp.updatedAt =
+      tpValid && latestCandidate && consistentWithUpstream ? latestCandidate : fallbackAnchor;
+  }
+
+  if (atp && !hasRaw(atp.updatedAt)) {
+    const atpValid =
+      atp.workflowStatus === 'SIAP' &&
+      !atp.needsReview &&
+      isValidLineageTimestamp(atp.basedOnTpUpdatedAt) &&
+      validateATPDataWorkflow(atp, tp, undefined, cp, cpAnalysis).isSiap;
+    atp.updatedAt = atpValid ? atp.basedOnTpUpdatedAt!.trim() : fallbackAnchor;
+  }
+
+  for (const criterion of criteria) {
+    if (hasInvalid(criterion.updatedAt) || hasInvalid(criterion.basedOnTpUpdatedAt)) {
+      criterion.needsReview = true;
+      continue;
+    }
+    if (!hasRaw(criterion.updatedAt)) {
+      criterion.updatedAt =
+        (isValidLineageTimestamp(criterion.basedOnTpUpdatedAt)
+          ? criterion.basedOnTpUpdatedAt!.trim()
+          : undefined) || fallbackAnchor;
+    }
+  }
+}
+
 function buildSemesterData(
   pkg: AdministrationProjectPackage,
   semester: 1 | 2,
@@ -952,7 +1121,7 @@ function remapCP(source: PortableCPData, context: ImportContext): CPData {
     next.id = newElementId;
     return next;
   });
-  cp.updatedAt = source.updatedAt || context.now;
+  cp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return cp;
 }
 
@@ -973,7 +1142,7 @@ function remapCPAnalysis(source: PortableCPAnalysisData, context: ImportContext)
     next.elementId = remapOptional(item.elementId, context.cpElementIdMap, context, 'annual.cpAnalysis.items.elementId');
     return next;
   });
-  cpAnalysis.updatedAt = source.updatedAt || context.now;
+  cpAnalysis.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return cpAnalysis;
 }
 
@@ -1030,7 +1199,7 @@ function remapTP(
       };
     });
   }
-  tp.updatedAt = source.updatedAt || context.now;
+  tp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return tp;
 }
 
@@ -1045,7 +1214,7 @@ function remapATP(source: PortableATPData, context: ImportContext): ATPData {
   atp.items = (source.items || []).map((item, index) =>
     remapATPItem(item, context, `annual.atp.items[${index}]`)
   );
-  atp.updatedAt = source.updatedAt || context.now;
+  atp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return atp;
 }
 
@@ -1120,7 +1289,7 @@ function remapAssessmentCriterion(
   criterion.academicSettingId = context.yearPlan.id;
   criterion.workspaceId = context.workspace.id;
   criterion.tpId = requireMapped(source.tpId, context.tpItemIdMap, context, `${path}.tpId`);
-  criterion.updatedAt = source.updatedAt || context.now;
+  criterion.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : '';
   return criterion;
 }
 

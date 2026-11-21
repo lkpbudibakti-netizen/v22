@@ -435,7 +435,7 @@ console.log('PASS: complete/partial ZIP, cross-school copy, canonical remap, rou
       startDate, endDate, schoolDaysPerWeek: 5, workflowStatus: 'CONFIRMED', confirmedAt: sourceStamp, updatedAt: sourceStamp,
     });
     calEntry.days = [];
-    for (let d = startDate; d <= endDate; d = plusDays(d, 1)) {
+    for (let d: string = startDate; d <= endDate; d = plusDays(d, 1)) {
       if (![0, 6].includes(new Date(d).getUTCDay())) {
         calEntry.days.push({ id: `${spId}-${d}`, academicCalendarId: calEntry.calendar.id, date: d, status: 'EFFECTIVE_LEARNING' });
       }
@@ -676,6 +676,69 @@ console.log('PASS: complete/partial ZIP, cross-school copy, canonical remap, rou
     });
     assert.equal(failLegacy.success, false);
     assert.equal(bIndStore.get(STORAGE_KEY_V5), snapBeforeFail);
+
+    // Scenario B (Legacy partial empty timestamps): missing upstream updatedAt on valid SIAP lineage uses deterministic
+    // dependency-consistent fallback (no false stale), while missing basedOn*UpdatedAt is NOT falsely validated.
+    const partialEmptyPkg = structuredClone(legacyExport.package);
+    partialEmptyPkg.annual.cp[0].updatedAt = '';
+    partialEmptyPkg.annual.cpAnalysis![0].updatedAt = '';
+    partialEmptyPkg.annual.tp[0].updatedAt = '';
+    partialEmptyPkg.annual.atp[0].updatedAt = '';
+    const partialEmptyRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: partialEmptyPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'B-PARTIAL',
+    });
+    assert.equal(partialEmptyRes.success, true, JSON.stringify(partialEmptyRes));
+    if (partialEmptyRes.success) {
+      const peState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const peCp = peState.annualData.cp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peAna = peState.annualData.cpAnalysis.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peTp = peState.annualData.tp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peAtp = peState.annualData.atp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      assert.equal(peCp.updatedAt, sourceStamp, 'Empty CP updatedAt must deterministically match proven downstream basedOnCpUpdatedAt');
+      assert.equal(peAna.updatedAt, sourceStamp, 'Empty CPAnalysis updatedAt must deterministically match proven downstream basedOnAnalysisUpdatedAt');
+      assert.equal(peTp.updatedAt, sourceStamp, 'Empty TP updatedAt must deterministically match proven downstream basedOnTpUpdatedAt');
+      assert.equal(peAtp.updatedAt, sourceStamp);
+      const peWf = evalWorkflow(peState, partialEmptyRes.yearPlanId);
+      assert.equal(peWf.hasStaleModules, false, JSON.stringify(peWf.issues));
+      assert.equal(peWf.stepStates['cp-analysis'].status, 'COMPLETE');
+      assert.equal(peWf.stepStates.tp.status, 'COMPLETE');
+      assert.equal(peWf.stepStates.atp.status, 'COMPLETE');
+    }
+
+    const missingBasedOnPkg = structuredClone(legacyExport.package);
+    delete missingBasedOnPkg.annual.cpAnalysis![0].basedOnCpUpdatedAt;
+    delete missingBasedOnPkg.annual.atp[0].basedOnTpUpdatedAt;
+    const missingBasedOnRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: missingBasedOnPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'B-NOLINEAGE',
+    });
+    assert.equal(missingBasedOnRes.success, true);
+    if (missingBasedOnRes.success) {
+      const mlState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const mlWf = evalWorkflow(mlState, missingBasedOnRes.yearPlanId);
+      assert.notEqual(mlWf.stepStates['cp-analysis'].status, 'COMPLETE', 'Missing basedOnCpUpdatedAt must not falsely validate CPAnalysis');
+      assert.notEqual(mlWf.stepStates.atp.status, 'COMPLETE', 'Missing basedOnTpUpdatedAt must not falsely validate ATP');
+    }
+
+    // Scenario C (Invalid timestamps in legacy importer): preserved untouched (never masked as SIAP), emits clear diagnostic
+    const invalidTsPkg = structuredClone(legacyExport.package);
+    invalidTsPkg.annual.cp[0].updatedAt = 'bukan-tanggal';
+    invalidTsPkg.annual.cpAnalysis![0].basedOnCpUpdatedAt = '2026-99-99';
+    const invalidTsRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: invalidTsPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'C-INVALID',
+    });
+    assert.equal(invalidTsRes.success, true);
+    if (invalidTsRes.success) {
+      const ivState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const ivCp = ivState.annualData.cp.find((e: any) => e.yearPlanId === invalidTsRes.yearPlanId)!.value;
+      const ivAna = ivState.annualData.cpAnalysis.find((e: any) => e.yearPlanId === invalidTsRes.yearPlanId)!.value;
+      assert.equal(ivCp.updatedAt, 'bukan-tanggal', 'Invalid timestamp must not be masked by replacement');
+      assert.notEqual(ivCp.workflowStatus, 'SIAP');
+      assert.notEqual(ivAna.workflowStatus, 'SIAP');
+      const ivWf = evalWorkflow(ivState, invalidTsRes.yearPlanId);
+      assert.notEqual(ivWf.stepStates.cp.status, 'COMPLETE');
+      assert.ok((ivWf.stepStates.cp.reason || '').includes('tidak valid'), ivWf.stepStates.cp.reason);
+      assert.notEqual(ivWf.stepStates['cp-analysis'].status, 'COMPLETE');
+    }
   }
 
   // Test I & D & N: Legacy XLSX transfer importer keeps CP/TP/ATP in review/draft (never auto SIAP)
@@ -778,6 +841,17 @@ console.log('PASS: complete/partial ZIP, cross-school copy, canonical remap, rou
   const nlAtp = noLineageImp.state.annualData.atp.find(e => e.yearPlanId === noLineageImp.yearPlanId)!.value;
   assert.notEqual(nlAna.workflowStatus, 'SIAP');
   assert.notEqual(nlAtp.workflowStatus, 'SIAP');
+
+  // Scenario C (Complete ZIP invalid timestamp): produces clear diagnostic and never passes SIAP silently
+  const invalidZipArc = structuredClone(bIndArchive);
+  invalidZipArc.project.annualData.tp[0].value.basedOnAnalysisUpdatedAt = 'not-a-valid-date';
+  const invalidZipImp = prepareCompleteAdministrationProjectImport(bIndState, invalidZipArc, {
+    mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2',
+  });
+  const ivZipTp = invalidZipImp.state.annualData.tp.find(e => e.yearPlanId === invalidZipImp.yearPlanId)!.value;
+  assert.notEqual(ivZipTp.workflowStatus, 'SIAP');
+  assert.ok(invalidZipImp.warnings.some(w => w.includes('tidak valid')), JSON.stringify(invalidZipImp.warnings));
+  assert.notEqual(evalWorkflow(invalidZipImp.state, invalidZipImp.yearPlanId).stepStates.tp.status, 'COMPLETE');
 
   console.log('PASS: Bahasa Indonesia Kelas 4 Fase B A-N regression suite passed.');
 }
