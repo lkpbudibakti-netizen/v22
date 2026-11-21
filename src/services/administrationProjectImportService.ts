@@ -13,6 +13,7 @@ import type {
   CPData,
   CPElem,
   LearningPlan,
+  MappingChangeRecord,
   SemesterPlan,
   TPData,
   TPItem,
@@ -49,7 +50,10 @@ import { validateCalendarCompleteness } from './jpEngine';
 import { validateSubjectWeeklySchedule } from './subjectScheduleService';
 import { validateCPDataWorkflow, validateCPAnalysisDataWorkflow, validateTPDataWorkflow, validateATPDataWorkflow } from './cpWorkflowService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
-import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
+import { computeAtpSubstantiveFingerprint, computeMappingFingerprint, computeStep07VerifiedFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
+import { reviewedTpFingerprint } from './mappingAlignmentService';
+import { tpSubstanceFingerprint } from './tpSemanticFidelity';
+import { step07PersistedKey } from './step07AutoExecutionPolicy';
 import { isValidDocumentDate } from './documentDateService';
 import { buildImportedProjectExportContext, importedProjectExportReadiness } from './identityOnlyProjectExport';
 import { generateZipBundle } from './documentEngine';
@@ -239,7 +243,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   const remap = (node: any, key = ''): any => {
     if (externalProjectFields.has(key)) return cloneProject(node);
     if (typeof node === 'string') {
-      const isReference = key === 'id' || /Ids?$/.test(key) || ['tps', 'atp', 'tp'].includes(key);
+      const isReference = key === 'id' || /Ids?$/.test(key) || ['tps', 'atp', 'tp', 'undoOf'].includes(key);
       if (isReference && idMap.has(node)) return idMap.get(node);
       if (/Fingerprint$/i.test(key)) {
         try { return JSON.stringify(remap(JSON.parse(node))); } catch { return node; }
@@ -331,18 +335,91 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   const analysis = imported.annualData.cpAnalysis[0]?.value;
   const tp = imported.annualData.tp[0]?.value;
   const atp = imported.annualData.atp[0]?.value;
+  const sourceCp = source.annualData.cp[0]?.value;
+  const sourceAnalysis = source.annualData.cpAnalysis[0]?.value;
   const sourceMapping = source.annualData.atpUnitMappings?.[0]?.value;
   const sourceTp = source.annualData.tp[0]?.value;
   const sourceAtp = source.annualData.atp[0]?.value;
   const sourceReadiness = resolveATPUnitMappingReadiness(sourceMapping, sourceAtp, sourceTp);
-  // UUID remapping changes sort order inside fingerprints. Rebase only proven-fresh source snapshots.
-  if (mapping && sourceMapping) {
+  // UUID remapping changes JSON-serialized IDs inside review fingerprints. Rebase only proven-fresh source snapshots.
+  if (tp?.substanceReviews?.length && sourceTp?.substanceReviews?.length && analysis && sourceAnalysis) {
+    tp.substanceReviews = tp.substanceReviews.map((review, index) => {
+      const sourceReview = sourceTp.substanceReviews![index];
+      if (!sourceReview) return review;
+      const sourceAnalysisItem = sourceAnalysis.items.find(item => item.id === sourceReview.analysisId);
+      const targetAnalysisItem = analysis.items.find(item => item.id === review.analysisId);
+      const getAssoc = (tpDoc: TPData, analysisItemId: string) =>
+        (tpDoc.items || []).filter(item =>
+          (item.cpAnalysisItemIds && item.cpAnalysisItemIds.length > 0 ? item.cpAnalysisItemIds : item.cpAnalysisId ? [item.cpAnalysisId] : []).includes(analysisItemId));
+      const sourceAssoc = getAssoc(sourceTp, sourceReview.analysisId);
+      const targetAssoc = getAssoc(tp, review.analysisId);
+      if (sourceAnalysisItem && targetAnalysisItem && sourceReview.fingerprint === tpSubstanceFingerprint(sourceAssoc, sourceAnalysisItem)) {
+        return { ...review, fingerprint: tpSubstanceFingerprint(targetAssoc, targetAnalysisItem) };
+      }
+      return { ...review, fingerprint: sourceReview.fingerprint };
+    });
+  }
+  if (mapping && sourceMapping && tp && sourceTp) {
+    const rebaseHistoryFingerprints = (targetList?: MappingChangeRecord[], sourceList?: MappingChangeRecord[]) => {
+      if (!targetList?.length || !sourceList?.length) return;
+      targetList.forEach((record, index) => {
+        const sourceRecord = sourceList[index];
+        if (!sourceRecord?.reviewedTpFingerprint) return;
+        if (sourceRecord.reviewedTpIds?.length && sourceRecord.reviewedTpFingerprint === reviewedTpFingerprint(sourceRecord.reviewedTpIds, sourceTp)) {
+          record.reviewedTpFingerprint = reviewedTpFingerprint(record.reviewedTpIds || [], tp);
+        } else {
+          record.reviewedTpFingerprint = sourceRecord.reviewedTpFingerprint;
+        }
+      });
+    };
+    const rebaseUnitsHistory = (targetUnits?: typeof mapping.units, sourceUnits?: typeof sourceMapping.units) => {
+      if (!targetUnits?.length || !sourceUnits?.length) return;
+      targetUnits.forEach((unit, unitIndex) => {
+        const sourceUnit = sourceUnits[unitIndex];
+        if (!sourceUnit) return;
+        rebaseHistoryFingerprints(unit.actionHistory, sourceUnit.actionHistory);
+        rebaseHistoryFingerprints(unit.titleHistory, sourceUnit.titleHistory);
+        unit.materials.forEach((material, matIndex) => {
+          const sourceMaterial = sourceUnit.materials[matIndex];
+          if (!sourceMaterial) return;
+          rebaseHistoryFingerprints(material.titleHistory, sourceMaterial.titleHistory);
+        });
+      });
+    };
+    rebaseUnitsHistory(mapping.units, sourceMapping.units);
+    // UUID remapping changes sort order inside fingerprints. Rebase only proven-fresh source snapshots
+    // BEFORE recomputing step07PersistedKey (which embeds mapping fields + beforeUnits).
     if (matchesSubstantiveFingerprint(sourceMapping.basedOnTpFingerprint, computeTpSubstantiveFingerprint(sourceTp))) {
       mapping.basedOnTpFingerprint = computeTpSubstantiveFingerprint(tp);
     }
     if (matchesSubstantiveFingerprint(sourceMapping.basedOnAtpFingerprint, computeAtpSubstantiveFingerprint(sourceAtp))) {
       mapping.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
     }
+    if (mapping.step07AutoRepair && sourceMapping.step07AutoRepair && atp && sourceAtp) {
+      const sourceRepair = sourceMapping.step07AutoRepair;
+      rebaseUnitsHistory(mapping.step07AutoRepair.beforeUnits, sourceRepair.beforeUnits);
+      mapping.step07AutoRepair.verifiedFingerprint =
+        sourceRepair.verifiedFingerprint === computeStep07VerifiedFingerprint(sourceMapping.units, sourceAtp, sourceTp)
+          ? computeStep07VerifiedFingerprint(mapping.units, atp, tp)
+          : sourceRepair.verifiedFingerprint;
+      mapping.step07AutoRepair.resultFingerprint =
+        sourceRepair.resultFingerprint === computeMappingFingerprint(sourceMapping.units, sourceAtp, sourceTp)
+          ? computeMappingFingerprint(mapping.units, atp, tp)
+          : sourceRepair.resultFingerprint;
+      mapping.step07AutoRepair.expectedStoredFingerprint =
+        sourceRepair.expectedStoredFingerprint === step07PersistedKey(sourceMapping, sourceAtp, sourceTp)
+          ? step07PersistedKey(mapping, atp, tp)
+          : sourceRepair.expectedStoredFingerprint;
+    }
+  } else if (mapping && sourceMapping) {
+    if (matchesSubstantiveFingerprint(sourceMapping.basedOnTpFingerprint, computeTpSubstantiveFingerprint(sourceTp))) {
+      mapping.basedOnTpFingerprint = computeTpSubstantiveFingerprint(tp);
+    }
+    if (matchesSubstantiveFingerprint(sourceMapping.basedOnAtpFingerprint, computeAtpSubstantiveFingerprint(sourceAtp))) {
+      mapping.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
+    }
+  }
+  if (mapping && sourceMapping) {
     const before = validateATPUnitMappingCanonical(sourceMapping, sourceAtp, sourceTp);
     const after = validateATPUnitMappingCanonical(mapping, atp, tp);
     if (before.isValid !== after.isValid || before.isComplete !== after.isComplete) {
@@ -350,15 +427,30 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
     }
   }
   if (options.workMode !== 'production') {
-  if (cp) { const check = validateCPDataWorkflow(cp, year); cp.workflowStatus = check.status; warnings.push(...check.issues); }
-  if (analysis) { const check = validateCPAnalysisDataWorkflow(analysis, cp); analysis.workflowStatus = check.status; warnings.push(...check.issues); }
+  if (cp) {
+    const check = validateCPDataWorkflow(cp, year);
+    cp.workflowStatus = check.status === 'SIAP' && sourceCp?.workflowStatus !== 'SIAP'
+      ? sourceCp?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
+  if (analysis) {
+    const check = validateCPAnalysisDataWorkflow(analysis, cp);
+    analysis.workflowStatus = check.status === 'SIAP' && sourceAnalysis?.workflowStatus !== 'SIAP'
+      ? sourceAnalysis?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
   if (tp) {
     const check = validateTPDataWorkflow(tp, cp, analysis);
     tp.workflowStatus = check.status === 'SIAP' && sourceTp?.workflowStatus !== 'SIAP'
       ? sourceTp?.workflowStatus || 'DRAFT' : check.status;
     warnings.push(...check.issues);
   }
-  if (atp) { const check = validateATPDataWorkflow(atp, tp, undefined, cp, analysis); atp.workflowStatus = check.status; warnings.push(...check.issues); }
+  if (atp) {
+    const check = validateATPDataWorkflow(atp, tp, undefined, cp, analysis);
+    atp.workflowStatus = check.status === 'SIAP' && sourceAtp?.workflowStatus !== 'SIAP'
+      ? sourceAtp?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
   }
   if (modernMode) {
     for (const key of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
@@ -773,11 +865,13 @@ function buildAnnualData(
   assertSingleAnnualEntity(pkg.annual.tp, 'annual.tp', context);
   assertSingleAnnualEntity(pkg.annual.atp, 'annual.atp', context);
 
-  const cp = pkg.annual.cp[0] ? remapCP(pkg.annual.cp[0], context) : undefined;
-  const cpAnalysis = pkg.annual.cpAnalysis?.[0]
-    ? remapCPAnalysis(pkg.annual.cpAnalysis[0], context)
+  const sourceCp = pkg.annual.cp[0];
+  const sourceAnalysis = pkg.annual.cpAnalysis?.[0];
+  const cp = sourceCp ? remapCP(sourceCp, context) : undefined;
+  const cpAnalysis = sourceAnalysis
+    ? remapCPAnalysis(sourceAnalysis, context)
     : undefined;
-  const tp = pkg.annual.tp[0] ? remapTP(pkg.annual.tp[0], context) : undefined;
+  const tp = pkg.annual.tp[0] ? remapTP(pkg.annual.tp[0], context, sourceAnalysis, cpAnalysis) : undefined;
   const atp = pkg.annual.atp[0] ? remapATP(pkg.annual.atp[0], context) : undefined;
 
   return { cp, cpAnalysis, tp, atp };
@@ -858,7 +952,7 @@ function remapCP(source: PortableCPData, context: ImportContext): CPData {
     next.id = newElementId;
     return next;
   });
-  cp.updatedAt = context.now;
+  cp.updatedAt = source.updatedAt || context.now;
   return cp;
 }
 
@@ -879,11 +973,16 @@ function remapCPAnalysis(source: PortableCPAnalysisData, context: ImportContext)
     next.elementId = remapOptional(item.elementId, context.cpElementIdMap, context, 'annual.cpAnalysis.items.elementId');
     return next;
   });
-  cpAnalysis.updatedAt = context.now;
+  cpAnalysis.updatedAt = source.updatedAt || context.now;
   return cpAnalysis;
 }
 
-function remapTP(source: PortableTPData, context: ImportContext): TPData {
+function remapTP(
+  source: PortableTPData,
+  context: ImportContext,
+  sourceAnalysis?: PortableCPAnalysisData,
+  remappedAnalysis?: CPAnalysisData
+): TPData {
   const tp = clone(source) as TPData;
   context.tpDataIdMap.set(source.id, newId('tpd'));
   tp.id = context.tpDataIdMap.get(source.id)!;
@@ -905,7 +1004,33 @@ function remapTP(source: PortableTPData, context: ImportContext): TPData {
     );
     return next;
   });
-  tp.updatedAt = context.now;
+  if (Array.isArray(source.substanceReviews)) {
+    const getAssoc = (tpDoc: { items?: TPItem[] }, analysisItemId: string) =>
+      (tpDoc.items || []).filter(item =>
+        (item.cpAnalysisItemIds && item.cpAnalysisItemIds.length > 0 ? item.cpAnalysisItemIds : item.cpAnalysisId ? [item.cpAnalysisId] : []).includes(analysisItemId));
+    tp.substanceReviews = source.substanceReviews.map((review, index) => {
+      const mappedAnalysisId = remapOptional(
+        review.analysisId,
+        context.cpAnalysisItemIdMap,
+        context,
+        `annual.tp.substanceReviews[${index}].analysisId`
+      ) || review.analysisId;
+      const sourceAnalysisItem = sourceAnalysis?.items.find(item => item.id === review.analysisId);
+      const targetAnalysisItem = remappedAnalysis?.items.find(item => item.id === mappedAnalysisId);
+      const sourceAssoc = getAssoc(source, review.analysisId);
+      const targetAssoc = getAssoc(tp, mappedAnalysisId);
+      const fingerprint =
+        sourceAnalysisItem && targetAnalysisItem && review.fingerprint === tpSubstanceFingerprint(sourceAssoc, sourceAnalysisItem)
+          ? tpSubstanceFingerprint(targetAssoc, targetAnalysisItem)
+          : review.fingerprint;
+      return {
+        ...review,
+        analysisId: mappedAnalysisId,
+        fingerprint,
+      };
+    });
+  }
+  tp.updatedAt = source.updatedAt || context.now;
   return tp;
 }
 
@@ -915,12 +1040,12 @@ function remapATP(source: PortableATPData, context: ImportContext): ATPData {
   atp.id = context.atpDataIdMap.get(source.id)!;
   atp.academicSettingId = context.yearPlan.id;
   atp.workspaceId = context.workspace.id;
-  atp.tpId = remapOptional(source.tpId, context.tpItemIdMap, context, 'annual.atp.tpId');
+  atp.tpId = remapOptional(source.tpId, context.tpDataIdMap, context, 'annual.atp.tpId');
   atp.tpDataId = remapOptional(source.tpDataId, context.tpDataIdMap, context, 'annual.atp.tpDataId');
   atp.items = (source.items || []).map((item, index) =>
     remapATPItem(item, context, `annual.atp.items[${index}]`)
   );
-  atp.updatedAt = context.now;
+  atp.updatedAt = source.updatedAt || context.now;
   return atp;
 }
 
@@ -930,6 +1055,7 @@ function remapATPItem(source: ATPItem, context: ImportContext, path: string): AT
   context.atpItemIdMap.set(source.id, newItemId);
   item.id = newItemId;
   item.tpId = requireMapped(source.tpId, context.tpItemIdMap, context, `${path}.tpId`);
+  item.linkedTpIds = remapOptionalArray(source.linkedTpIds, context.tpItemIdMap, context, `${path}.linkedTpIds`);
   return item;
 }
 
@@ -994,7 +1120,7 @@ function remapAssessmentCriterion(
   criterion.academicSettingId = context.yearPlan.id;
   criterion.workspaceId = context.workspace.id;
   criterion.tpId = requireMapped(source.tpId, context.tpItemIdMap, context, `${path}.tpId`);
-  criterion.updatedAt = context.now;
+  criterion.updatedAt = source.updatedAt || context.now;
   return criterion;
 }
 
@@ -1007,7 +1133,7 @@ function remapAssessmentPlan(source: PortableAssessmentPlan, context: ImportCont
   plan.criterionIds = remapRequiredArray(source.criterionIds, context.criterionIdMap, context, `${path}.criterionIds`);
   plan.learningPlanIds = remapOptionalArray(source.learningPlanIds, context.learningPlanIdMap, context, `${path}.learningPlanIds`);
   plan.confirmedAt = undefined;
-  plan.updatedAt = context.now;
+  plan.updatedAt = source.updatedAt || context.now;
   return plan;
 }
 
@@ -1041,7 +1167,7 @@ function remapAssessmentPackage(
       `${path}.blueprintItems[${index}].criterionId`
     ),
   }));
-  assessmentPackage.updatedAt = context.now;
+  assessmentPackage.updatedAt = source.updatedAt || context.now;
   return assessmentPackage;
 }
 
