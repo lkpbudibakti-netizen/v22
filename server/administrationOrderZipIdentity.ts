@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { containsSourceIdentity } from '../src/services/documentEngine/sourceIdentityGuard';
 
-const packagePath = createRequire(import.meta.url).resolve('pdfjs-dist/package.json');
+const packagePath = (typeof require === 'function' ? require : createRequire(import.meta.url)).resolve('pdfjs-dist/package.json');
 const standardFontDataUrl = dirname(packagePath).replaceAll('\\', '/') + '/standard_fonts/';
 
 const xmlEntities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };

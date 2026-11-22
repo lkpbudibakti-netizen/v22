@@ -181,3 +181,70 @@ test('gagal menulis satu format menghasilkan PARTIAL dan tanpa ZIP pesanan', asy
   assert(!result.success && !('zip' in result));
   assert(result.validation.documents.some(item => item.status === 'PARTIAL' && item.reason?.includes('Simulasi')));
 });
+
+test('endpoint internal autentikasi, validasi, dan hanya mengirim ZIP lengkap', async (t) => {
+  const { app } = await import('../server');
+  const secret = 'integration-test-token';
+  const original = process.env.V22_ORDER_PROCESSOR_TOKEN;
+  process.env.V22_ORDER_PROCESSOR_TOKEN = secret;
+  const server = app.listen(0, '127.0.0.1');
+  t.after(() => {
+    if (original === undefined) delete process.env.V22_ORDER_PROCESSOR_TOKEN;
+    else process.env.V22_ORDER_PROCESSOR_TOKEN = original;
+    server.closeAllConnections();
+    return new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
+  const address = server.address();
+  assert(address && typeof address !== 'string');
+  const endpoint = 'http://127.0.0.1:' + address.port + '/api/internal/administration-orders/process';
+  const body = { projectZipBase64: Buffer.from(zip).toString('base64'), customer };
+  const send = (payload: unknown, token?: string) => fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: JSON.stringify(payload),
+  });
+  const expectJsonFailure = async (response: Response, status: number) => {
+    assert.equal(response.status, status, await response.clone().text());
+    assert.match(response.headers.get('content-type') || '', /^application\/json/);
+    assert.equal(response.headers.get('content-disposition'), null);
+    const error = await response.json();
+    assert.equal(error.success, false);
+    return error;
+  };
+  await expectJsonFailure(await send(body), 401);
+  await expectJsonFailure(await send(body, 'wrong-token'), 401);
+  await expectJsonFailure(await send({ ...body, projectZipBase64: '!!!' }, secret), 400);
+  await expectJsonFailure(await send({ ...body, customer: { ...customer, documentDate: '2026-02-30' } }, secret), 400);
+  await expectJsonFailure(await send({ ...body, projectZipBase64: 'UEsDBA==' }, secret), 400);
+  await expectJsonFailure(await send({ ...body, projectZipBase64: 'A'.repeat(12 * 1024 * 1024) }, secret), 413);
+  await expectJsonFailure(await send({ ...body, projectZipBase64: Buffer.alloc(8 * 1024 * 1024 + 1).toString('base64') }, secret), 413);
+
+  const response = await send(body, secret);
+  assert.equal(response.status, 200, response.ok ? undefined : await response.clone().text());
+  assert.equal(response.headers.get('content-type'), 'application/zip');
+  assert.match(response.headers.get('content-disposition') || '', /^attachment;.*\.zip/i);
+  const output = await JSZip.loadAsync(await response.arrayBuffer(), { checkCRC32: true });
+  const files = Object.values(output.files).filter(entry => !entry.dir);
+  assert.equal(files.filter(entry => entry.name.endsWith('.pdf')).length, 20);
+  assert.equal(files.filter(entry => entry.name.endsWith('.docx')).length, 20);
+
+  const originalArrayBuffer = Blob.prototype.arrayBuffer;
+  let failNextPdf = true;
+  const rendererFailure = t.mock.method(Blob.prototype, 'arrayBuffer', function (this: Blob) {
+    if (failNextPdf && this.type === 'application/pdf') {
+      failNextPdf = false;
+      throw new Error('Simulasi kegagalan ekspor HTTP');
+    }
+    return originalArrayBuffer.call(this);
+  });
+  try {
+    const error = await expectJsonFailure(await send(body, secret), 422);
+    assert(error.validation.documents.some(item => item.status === 'PARTIAL'));
+  } finally {
+    rendererFailure.mock.restore();
+  }
+});

@@ -6,6 +6,7 @@ import { assignGeneratedTPCodes, TP_CODE_FORMAT_DESCRIPTION } from './src/servic
 import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets } from './src/services/learningPlanActivityMeetingService';
 import { validateAILearningPlanPayload as validateLearningPlanDesignPayload } from './src/services/learningPlanService';
 import express from 'express';
+import { registerAdministrationOrderRoute } from './server/administrationOrderRoute';
 import { validateATPUnitMappingCanonical } from './src/services/atpUnitMappingValidationService';
 import { validateUnitExecutionPlan } from './src/services/unitExecutionPlanService';
 import { validateCalendarMeetingSlots } from './src/services/unitMeetingAllocationService';
@@ -48,10 +49,11 @@ import {
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const envPort = process.env.PORT ? parseInt(process.env.PORT, 10) : NaN;
 const PORT = (!isNaN(envPort) && envPort > 0) ? envPort : 3000;
 
+registerAdministrationOrderRoute(app);
 app.use(express.json({ limit: '10mb' }));
 
 // Logging middleware for Express /api routes to track Request ID, duration, and response Content-Type
