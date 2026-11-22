@@ -217,3 +217,642 @@ failStorageWrite = false;
 importCompleteAdministrationProject(archive, { mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2' });
 assert.equal(JSON.parse(memory.get(STORAGE_KEY_V5)!).yearPlans.length, 2);
 console.log('PASS: complete/partial ZIP, cross-school copy, canonical remap, roundtrip, conflicts, atomic save and rollback.');
+
+// ============================================================================
+// REGRESSION SUITE A-N: Representative Bahasa Indonesia Kelas 4 Fase B Fixture
+// (Exact user ZIP not present in repository; constructed per app contracts)
+// ============================================================================
+{
+  const { exportAdministrationProjectFromState } = await import('../src/services/administrationProjectExportService');
+  const { importAdministrationProject, importAdministrationProjectIntoState } = await import('../src/services/administrationProjectImportService');
+  const { performImportProjectTransferInState } = await import('../src/services/projectTransferImportService');
+  const { validateWorkflowDependencies } = await import('../src/services/workflowEngine');
+  const { hasTeacherMaterialSupport, reviewedTpFingerprint } = await import('../src/services/mappingAlignmentService');
+  const { tpSubstanceFingerprint } = await import('../src/services/tpSemanticFidelity');
+  const { computeStep07VerifiedFingerprint, computeMappingFingerprint } = await import('../src/services/atpMappingActionApplyService');
+  const { step07PersistedKey } = await import('../src/services/step07AutoExecutionPolicy');
+  const { createTwoSemesterAdministrationImportFixture } = await import('./fixtures/readyAdministrationImportFixture');
+
+  const sourceStamp = '2026-01-05T08:00:00Z';
+  const bIndState = createTwoSemesterAdministrationImportFixture();
+  bIndState.activeProfileId = 'p1';
+  bIndState.activeYearPlanId = 'y';
+  bIndState.activeWorkspaceId = 'w';
+  bIndState.activeSemesterPlanId = 'sp1';
+  bIndState.profiles[0].defaultSubject = 'Bahasa Indonesia';
+  bIndState.yearPlans[0] = {
+    ...bIndState.yearPlans[0],
+    subject: 'Bahasa Indonesia',
+    grade: 'Kelas 4',
+    phase: 'B',
+    level: 'SD',
+    createdAt: sourceStamp,
+    updatedAt: sourceStamp,
+  };
+  bIndState.workspaces[0].name = 'Bahasa Indonesia — Kelas 4';
+  bIndState.workspaces[0].createdAt = sourceStamp;
+  bIndState.workspaces[0].updatedAt = sourceStamp;
+
+  // Customize CP -> Analisis CP -> TP (with substanceReviews paraphrase + multi-TP) -> ATP -> Mapping (with reviewedTpFingerprint + undoOf) -> Execution -> Schedule -> KKTP
+  const bCp = bIndState.annualData.cp[0].value;
+  bCp.generalDescription = 'Peserta didik memiliki kemampuan berbahasa untuk berkomunikasi dan bernalar sesuai tujuan kepada teman sebaya dan orang dewasa tentang hal-hal menarik di lingkungan sekitar.';
+  bCp.elements = [
+    { id: 'el-bi-1', code: 'E1', name: 'Menyimak', content: 'Memahami ide pokok suatu pesan lisan, informasi dari media audio, teks aural, dan instruksi lisan.' },
+    { id: 'el-bi-2', code: 'E2', name: 'Membaca dan Memirsa', content: 'Memahami pesan dan informasi tentang kehidupan sehari-hari, teks narasi, dan puisi anak dalam bentuk cetak atau elektronik.' },
+  ];
+  bCp.updatedAt = sourceStamp;
+  bCp.workflowStatus = validateCPDataWorkflow(bCp).status;
+  assert.equal(bCp.workflowStatus, 'SIAP');
+
+  const bAnalysis = bIndState.annualData.cpAnalysis[0].value;
+  bAnalysis.basedOnCpUpdatedAt = sourceStamp;
+  bAnalysis.updatedAt = sourceStamp;
+  bAnalysis.items = [
+    { id: 'ai-bi-1', elementId: 'el-bi-1', elementName: 'Menyimak', cpText: bCp.elements[0].content, cpCompetence: 'Memahami', materialScope: 'Ide pokok pesan lisan dan instruksi lisan', order: 1 },
+    { id: 'ai-bi-2', elementId: 'el-bi-2', elementName: 'Membaca dan Memirsa', cpText: bCp.elements[1].content, cpCompetence: 'Memahami', materialScope: 'Teks narasi dan puisi anak', order: 2 },
+  ];
+  bAnalysis.workflowStatus = validateCPAnalysisDataWorkflow(bAnalysis, bCp).status;
+  assert.equal(bAnalysis.workflowStatus, 'SIAP');
+
+  const bTp = bIndState.annualData.tp[0].value;
+  bTp.basedOnCpUpdatedAt = sourceStamp;
+  bTp.basedOnAnalysisUpdatedAt = sourceStamp;
+  bTp.updatedAt = sourceStamp;
+  bTp.phase = 'B';
+  bTp.subjectCode = 'Bahasa Indonesia';
+  bTp.academicYear = '2026/2027';
+  bTp.items = [
+    { id: 'tp-bi-1', code: 'E1-SIM-01', statement: 'Peserta didik memahami ide pokok pesan lisan dan instruksi lisan.', competence: 'Memahami', contentScope: 'Ide pokok pesan lisan dan instruksi lisan', order: 1, cpAnalysisId: 'ai-bi-1', cpAnalysisItemIds: ['ai-bi-1'] },
+    // Paraphrased wording requiring valid teacher substanceReviews on ai-bi-2
+    { id: 'tp-bi-2', code: 'E2-BAC-01', statement: 'Peserta didik menjelaskan amanat cerita sehari-hari secara runtut.', competence: 'Menjelaskan', contentScope: 'Cerita bacaan', order: 2, cpAnalysisId: 'ai-bi-2', cpAnalysisItemIds: ['ai-bi-2'] },
+    { id: 'tp-bi-3', code: 'E2-BAC-02', statement: 'Peserta didik menjelaskan syair bacaan dan ungkapan sederhana.', competence: 'Menjelaskan', contentScope: 'Syair bacaan', order: 3, cpAnalysisId: 'ai-bi-2', cpAnalysisItemIds: ['ai-bi-2'] },
+  ];
+  bTp.substanceReviews = [
+    {
+      analysisId: 'ai-bi-2',
+      fingerprint: tpSubstanceFingerprint([bTp.items[1], bTp.items[2]], bAnalysis.items[1]),
+      rationale: 'Menjelaskan amanat cerita dan syair bacaan sehari-hari merupakan parafrasa langsung dari pemahaman teks narasi dan puisi anak.',
+    },
+  ];
+  bTp.workflowStatus = validateTPDataWorkflow(bTp, bCp, bAnalysis).status;
+  assert.equal(bTp.workflowStatus, 'SIAP');
+
+  const bAtp = bIndState.annualData.atp[0].value;
+  bAtp.tpId = bTp.id;
+  bAtp.tpDataId = bTp.id;
+  bAtp.basedOnTpUpdatedAt = sourceStamp;
+  bAtp.updatedAt = sourceStamp;
+  bAtp.phase = 'B';
+  bAtp.subjectCode = 'Bahasa Indonesia';
+  bAtp.academicYear = '2026/2027';
+  bAtp.items = [
+    { id: 'atp-bi-1', stepNumber: 1, tpId: 'tp-bi-1', linkedTpIds: ['tp-bi-1'], focus: 'Memahami ide pokok pesan lisan dan instruksi lisan', jp: 2 },
+    { id: 'atp-bi-2', stepNumber: 2, tpId: 'tp-bi-2', linkedTpIds: ['tp-bi-2'], focus: 'Menjelaskan amanat cerita sehari-hari secara runtut', jp: 1 },
+    { id: 'atp-bi-3', stepNumber: 3, tpId: 'tp-bi-3', linkedTpIds: ['tp-bi-3'], focus: 'Menjelaskan syair bacaan dan ungkapan sederhana', jp: 1 },
+  ];
+  bAtp.workflowStatus = 'SIAP';
+  assert.equal(validateATPDataWorkflow(bAtp, bTp, undefined, bCp, bAnalysis).isSiap, true);
+
+  const bMap = bIndState.annualData.atpUnitMappings![0].value;
+  bMap.basedOnTpUpdatedAt = sourceStamp;
+  bMap.basedOnAtpUpdatedAt = sourceStamp;
+  bMap.basedOnTpFingerprint = computeTpSubstantiveFingerprint(bTp);
+  bMap.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(bAtp);
+  bMap.updatedAt = sourceStamp;
+  const multiTpReviewFp = reviewedTpFingerprint(['tp-bi-2', 'tp-bi-3'], bTp);
+  bMap.units = [
+    {
+      id: 'u-bi-1',
+      title: 'Sudah Besar',
+      order: 1,
+      linkedTpIds: ['tp-bi-1'],
+      linkedAtpItemIds: ['atp-bi-1'],
+      materials: [{ id: 'm-bi-1', title: 'Ide pokok pesan lisan', order: 1, linkedTpIds: ['tp-bi-1'], linkedAtpItemIds: ['atp-bi-1'] }],
+      actionHistory: [
+        { id: 'rec-old', at: sourceStamp, kind: 'CONTENT_CHANGE', approval: 'TEACHER', unitId: 'u-bi-1', materialId: 'm-bi-1', before: 'Judul lama', after: 'Ide pokok pesan lisan', reason: 'Revisi awal guru' },
+        { id: 'rec-undo', at: sourceStamp, kind: 'UNDO', approval: 'TEACHER', unitId: 'u-bi-1', materialId: 'm-bi-1', before: 'Ide pokok pesan lisan', after: 'Judul lama', undoOf: 'rec-old', reason: 'Batalkan revisi awal' },
+      ],
+    },
+    {
+      id: 'u-bi-2',
+      title: 'Di Bawah Atap',
+      order: 2,
+      linkedTpIds: ['tp-bi-2', 'tp-bi-3'],
+      linkedAtpItemIds: ['atp-bi-2', 'atp-bi-3'],
+      materials: [{
+        id: 'm-bi-2',
+        title: 'Amanat cerita dan syair bacaan',
+        order: 1,
+        linkedTpIds: ['tp-bi-2', 'tp-bi-3'],
+        linkedAtpItemIds: ['atp-bi-2', 'atp-bi-3'],
+        titleHistory: [{
+          id: 'hist-multi-tp',
+          at: sourceStamp,
+          kind: 'CONTENT_CHANGE',
+          approval: 'TEACHER',
+          unitId: 'u-bi-2',
+          materialId: 'm-bi-2',
+          before: 'Amanat cerita',
+          after: 'Amanat cerita dan syair bacaan',
+          reason: 'Guru menyetujui gabungan dua TP dalam Bab 2.',
+          reviewedTitle: 'Amanat cerita dan syair bacaan',
+          reviewedTpIds: ['tp-bi-2', 'tp-bi-3'],
+          reviewedTpFingerprint: multiTpReviewFp,
+        }],
+      }],
+    },
+  ];
+  bMap.step07AutoRepair = {
+    scope: 'STEP07_AUTO_REPAIR',
+    version: 1,
+    runId: 'run-bi-1',
+    beforeUnits: structuredClone(bMap.units),
+    addedMaterialIds: ['m-bi-2'],
+    rounds: 1,
+    outcome: 'COMPLETE',
+    issues: [],
+    verifiedFingerprint: computeStep07VerifiedFingerprint(bMap.units, bAtp, bTp),
+    resultFingerprint: computeMappingFingerprint(bMap.units, bAtp, bTp),
+    expectedStoredFingerprint: '',
+  };
+  bMap.step07AutoRepair.expectedStoredFingerprint = step07PersistedKey(bMap, bAtp, bTp);
+
+  const { resolveEffectiveSubjectSlots } = await import('../src/services/subjectScheduleService');
+  const { resolveLearningMeetingSchedule, buildLearningMeetingScheduleData } = await import('../src/services/learningMeetingScheduleService');
+
+  const bExec = bIndState.annualData.unitExecutionPlans![0].value;
+  bExec.mappingId = bMap.id;
+  bExec.basedOnMappingUpdatedAt = sourceStamp;
+  bExec.updatedAt = sourceStamp;
+  bExec.semesterPlacement = { mode: 'CONTIGUOUS_BOUNDARY', semester1LastUnitId: 'u-bi-1', updatedAt: sourceStamp };
+  bExec.units = [
+    {
+      unitId: 'u-bi-1',
+      meetings: Array.from({ length: 18 }, (_, i) => ({
+        id: i === 0 ? 'meet-bi-1' : `meet-bi-1-${i + 1}`,
+        unitId: 'u-bi-1',
+        order: i + 1,
+        title: `Pertemuan 1.${i + 1}: Ide pokok pesan lisan`,
+        materialIds: ['m-bi-1'],
+        linkedTpIds: ['tp-bi-1'],
+        linkedAtpItemIds: ['atp-bi-1'],
+        plannedJP: 6,
+      })),
+    },
+    {
+      unitId: 'u-bi-2',
+      meetings: Array.from({ length: 18 }, (_, i) => ({
+        id: i === 0 ? 'meet-bi-2' : `meet-bi-2-${i + 1}`,
+        unitId: 'u-bi-2',
+        order: i + 1,
+        title: `Pertemuan 2.${i + 1}: Cerita dan puisi anak`,
+        materialIds: ['m-bi-2'],
+        linkedTpIds: ['tp-bi-2', 'tp-bi-3'],
+        linkedAtpItemIds: ['atp-bi-2', 'atp-bi-3'],
+        plannedJP: 6,
+      })),
+    },
+  ];
+
+  // Ensure S1 & S2 learning plans, KKTP, assessmentPlan, assessmentPackage, allocations & full 18-week 6 JP/week schedules
+  const sp1Id = bIndState.semesterPlans.find(s => s.semester === 1)!.id;
+  const sp2Id = bIndState.semesterPlans.find(s => s.semester === 2)!.id;
+  const s1Crit = bIndState.semesterData.assessmentCriteria.find(e => e.semesterPlanId === sp1Id)!.value;
+  s1Crit[0].tpId = 'tp-bi-1'; s1Crit[0].basedOnTpUpdatedAt = sourceStamp; s1Crit[0].updatedAt = sourceStamp;
+  s1Crit[1].tpId = 'tp-bi-2'; s1Crit[1].basedOnTpUpdatedAt = sourceStamp; s1Crit[1].updatedAt = sourceStamp;
+  const s2Crit = bIndState.semesterData.assessmentCriteria.find(e => e.semesterPlanId === sp2Id)!.value;
+  s2Crit[0].tpId = 'tp-bi-1'; s2Crit[0].basedOnTpUpdatedAt = sourceStamp; s2Crit[0].updatedAt = sourceStamp;
+  s2Crit[1].tpId = 'tp-bi-2'; s2Crit[1].basedOnTpUpdatedAt = sourceStamp; s2Crit[1].updatedAt = sourceStamp;
+
+  const plusDays = (date: string, days: number) => new Date(Date.parse(date) + days * 86400000).toISOString().slice(0, 10);
+  for (const [spId, semNum, unitIndex, unitId, meetId, tpId, atpId, critId, startDate] of [
+    [sp1Id, 1, 0, 'u-bi-1', 'meet-bi-1', 'tp-bi-1', 'atp-bi-1', s1Crit[0].id, '2026-07-06'],
+    [sp2Id, 2, 1, 'u-bi-2', 'meet-bi-2', 'tp-bi-2', 'atp-bi-2', s2Crit[1].id, '2027-01-04'],
+  ] as const) {
+    const calEntry = bIndState.semesterData.academicCalendar.find(e => e.semesterPlanId === spId)!.value;
+    const endDate = plusDays(startDate, 17 * 7 + 4);
+    Object.assign(calEntry.calendar, {
+      startDate, endDate, schoolDaysPerWeek: 5, workflowStatus: 'CONFIRMED', confirmedAt: sourceStamp, updatedAt: sourceStamp,
+    });
+    calEntry.days = [];
+    for (let d: string = startDate; d <= endDate; d = plusDays(d, 1)) {
+      if (![0, 6].includes(new Date(d).getUTCDay())) {
+        calEntry.days.push({ id: `${spId}-${d}`, academicCalendarId: calEntry.calendar.id, date: d, status: 'EFFECTIVE_LEARNING' });
+      }
+    }
+    bIndState.semesterJPSettings.find(e => e.semesterPlanId === spId)!.value = {
+      semesterPlanId: spId, actualScheduledWeeklyJP: 6, source: 'TEACHER_CONFIRMED',
+    };
+    const weekly = bIndState.semesterData.subjectWeeklySchedules!.find(e => e.semesterPlanId === spId)!.value;
+    Object.assign(weekly, {
+      sessions: [{ id: weekly.sessions[0].id, order: 1, dayOfWeek: 1, jp: 6 }],
+      basedOnWeeklyJP: 6, basedOnSchoolDaysPerWeek: 5, updatedAt: sourceStamp,
+    });
+    const slots = resolveEffectiveSubjectSlots({
+      semesterPlanId: spId, calendar: calEntry.calendar, calendarDays: calEntry.days, schedule: weekly, expectedWeeklyJP: 6,
+    });
+    assert.equal(slots.isReady, true, slots.errors.join('; '));
+    const resolvedSched = resolveLearningMeetingSchedule({
+      semesterPlanId: spId, semester: semNum, mapping: bMap, unitExecutionPlan: bExec, subjectSlotResult: slots,
+    });
+    assert.equal(resolvedSched.isValid && resolvedSched.isReady, true, resolvedSched.errors.join('; '));
+    bIndState.semesterData.learningMeetingSchedules!.find(e => e.semesterPlanId === spId)!.value = buildLearningMeetingScheduleData({
+      semesterPlanId: spId, semester: semNum, mapping: bMap, unitExecutionPlan: bExec,
+      subjectWeeklySchedule: weekly, expectedWeeklyJP: 6, calendar: calEntry.calendar,
+      autoResult: resolvedSched, manualOverrides: [],
+      persistedId: bIndState.semesterData.learningMeetingSchedules!.find(e => e.semesterPlanId === spId)!.value.id,
+    });
+
+    const lp = bIndState.semesterData.learningPlan.find(e => e.semesterPlanId === spId)!.value[0] as any;
+    lp.unitId = unitId; lp.learningMeetingIds = [meetId]; lp.meetingIds = [meetId];
+    lp.tpIds = [tpId]; lp.atpItemIds = [atpId]; lp.kktpCriterionIds = [critId];
+    lp.allocatedJP = 6;
+    lp.objectives = bTp.items.filter(i => i.id === tpId).map(i => ({ tpId: i.id, code: i.code, statement: i.statement }));
+    for (const stepList of Object.values(lp.learningSteps || {}) as any[][]) for (const step of stepList) {
+      if (step.learningMeetingId) step.learningMeetingId = meetId;
+    }
+    for (const rows of Object.values(lp.assessmentPlan) as any[][]) for (const item of rows) {
+      item.linkedTpIds = [tpId];
+      if (item.learningMeetingId) item.learningMeetingId = meetId;
+    }
+    const ap = bIndState.semesterData.assessmentPlan.find(e => e.semesterPlanId === spId)!.value[0] as any;
+    ap.tpIds = [tpId]; ap.criterionIds = [critId]; ap.learningPlanIds = [lp.id];
+    const pkg = bIndState.semesterData.assessmentPackage.find(e => e.semesterPlanId === spId)!.value[0] as any;
+    pkg.blueprintItems[0].objectiveRefId = tpId; pkg.blueprintItems[0].criterionId = critId;
+    const alloc = bIndState.semesterData.timeAllocation.find(e => e.semesterPlanId === spId)!.value[0];
+    alloc.tpId = tpId; alloc.atpItemId = atpId; alloc.jp = 108;
+    const journals = bIndState.semesterData.journalRealizations?.find(e => e.semesterPlanId === spId)?.value;
+    if (journals) for (const j of journals) j.meetingId = meetId;
+  }
+
+  validateStorageStateV5(bIndState);
+  const bIndStore = new Map<string, string>([[STORAGE_KEY_V5, JSON.stringify(bIndState)]]);
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem: (key: string) => bIndStore.get(key) ?? null,
+    setItem: (key: string, value: string) => { bIndStore.set(key, value); },
+    removeItem: (key: string) => { bIndStore.delete(key); },
+  } });
+
+  const bIndArchive = await readCompleteProjectZip(await createCompleteProjectZip(bIndState, 'y'));
+
+  // Helper to evaluate full Step 01-10 workflow dependencies for a project in state
+  const evalWorkflow = (st: typeof bIndState, yearPlanId: string) => {
+    bIndStore.set(STORAGE_KEY_V5, JSON.stringify(st));
+    const y = st.yearPlans.find(plan => plan.id === yearPlanId)!;
+    const s1 = st.semesterPlans.find(sp => sp.yearPlanId === yearPlanId && sp.semester === 1)!;
+    const allCriteria = st.semesterPlans
+      .filter(sp => sp.yearPlanId === yearPlanId)
+      .flatMap(sp => st.semesterData.assessmentCriteria.find(e => e.semesterPlanId === sp.id)?.value || []);
+    return validateWorkflowDependencies({
+      profile: st.profiles.find(p => p.id === y.profileId),
+      school: st.schools.find(s => s.id === y.schoolId),
+      academicSetting: {
+        ...y,
+        id: y.id,
+        curriculum: y.curriculumType === 'K13' ? 'Kurikulum 2013' : 'Kurikulum Merdeka',
+        semester: '1 (Ganjil)',
+      } as any,
+      cp: st.annualData.cp.find(e => e.yearPlanId === yearPlanId)?.value,
+      cpAnalysis: st.annualData.cpAnalysis.find(e => e.yearPlanId === yearPlanId)?.value,
+      tp: st.annualData.tp.find(e => e.yearPlanId === yearPlanId)?.value,
+      atp: st.annualData.atp.find(e => e.yearPlanId === yearPlanId)?.value,
+      atpUnitMapping: st.annualData.atpUnitMappings?.find(e => e.yearPlanId === yearPlanId)?.value,
+      unitExecutionPlan: st.annualData.unitExecutionPlans?.find(e => e.yearPlanId === yearPlanId)?.value,
+      assessmentCriteria: allCriteria,
+      learningPlans: st.semesterData.learningPlan.find(e => e.semesterPlanId === s1.id)?.value,
+      assessmentPlans: st.semesterData.assessmentPlan.find(e => e.semesterPlanId === s1.id)?.value,
+    });
+  };
+
+  // Source baseline must be completely ready without any stale errors
+  const srcWf = evalWorkflow(bIndState, 'y');
+  assert.equal(srcWf.hasStaleModules, false, JSON.stringify(srcWf.issues));
+  assert.equal(srcWf.stepStates.cp.status, 'COMPLETE');
+  assert.equal(srcWf.stepStates['cp-analysis'].status, 'COMPLETE');
+  assert.equal(srcWf.stepStates.tp.status, 'COMPLETE');
+  assert.equal(srcWf.stepStates.atp.status, 'COMPLETE');
+  assert.equal(srcWf.stepStates['atp-mapping'].status, 'COMPLETE');
+  assert.equal(srcWf.stepStates['annual-planning'].status, 'COMPLETE');
+  assert.equal(srcWf.stepStates.admin.isBlocked, false, srcWf.stepStates.admin.reason);
+
+  // Force UUID reverse sort order during remap to catch any sort-order fingerprint defects (E, B, A)
+  const realCrypto = globalThis.crypto;
+  let uuidCounter = 900;
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { randomUUID: () => String(uuidCounter--) } });
+  let continueImp: ReturnType<typeof prepareCompleteAdministrationProjectImport>;
+  try {
+    continueImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+      mode: 'CONTINUE_EDITING',
+      targetProfileId: 'p2',
+      targetSchoolId: 's2',
+      documentDate: '2026-11-16',
+    });
+  } finally {
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: realCrypto });
+  }
+
+  // Test A, B, E, K, L, M on CONTINUE_EDITING (ZIP with UUID reverse sort)
+  const cTp = continueImp.state.annualData.tp.find(e => e.yearPlanId === continueImp.yearPlanId)!.value;
+  const cAtp = continueImp.state.annualData.atp.find(e => e.yearPlanId === continueImp.yearPlanId)!.value;
+  const cMap = continueImp.state.annualData.atpUnitMappings!.find(e => e.yearPlanId === continueImp.yearPlanId)!.value;
+  const cExec = continueImp.state.annualData.unitExecutionPlans!.find(e => e.yearPlanId === continueImp.yearPlanId)!.value;
+  assert.equal(cTp.workflowStatus, 'SIAP', 'Paraphrased TP with fresh substanceReviews must remain SIAP after ID remap');
+  assert.equal(continueImp.step7.target.canProceed, true, continueImp.step7.target.blockers.join('; '));
+  assert.equal(continueImp.nextStep, 'admin');
+  assert.equal(hasTeacherMaterialSupport(cMap.units[1], cMap.units[1].materials[0], cTp), true,
+    'Multi-TP reviewedTpFingerprint must remain valid even when UUID remap reverses sort order');
+  assert.equal(cMap.units[0].actionHistory![1].undoOf, cMap.units[0].actionHistory![0].id,
+    'MappingChangeRecord.undoOf must be remapped to the new actionHistory record ID');
+  assert.equal(cMap.step07AutoRepair!.verifiedFingerprint, computeStep07VerifiedFingerprint(cMap.units, cAtp, cTp));
+  assert.equal(cMap.step07AutoRepair!.resultFingerprint, computeMappingFingerprint(cMap.units, cAtp, cTp));
+  assert.equal(cMap.step07AutoRepair!.expectedStoredFingerprint, step07PersistedKey(cMap, cAtp, cTp));
+  assert.equal(cExec.units[0].meetings[0].materialIds[0], cMap.units[0].materials[0].id);
+
+  const contWf = evalWorkflow(continueImp.state, continueImp.yearPlanId);
+  assert.equal(contWf.hasStaleModules, false, JSON.stringify(contWf.issues));
+  assert.equal(contWf.stepStates['cp-analysis'].isStale, false);
+  assert.equal(contWf.stepStates.tp.isStale, false);
+  assert.equal(contWf.stepStates.atp.isStale, false);
+  assert.equal(contWf.kktpState.isStale, false);
+  assert.equal(contWf.stepStates['annual-planning'].isComplete, true, contWf.stepStates['annual-planning'].reason);
+  assert.equal(contWf.stepStates.admin.isBlocked, false, contWf.stepStates.admin.reason);
+
+  // Test K: Re-import exported result with new IDs -> zero false stale
+  const secondArchive = await readCompleteProjectZip(await createCompleteProjectZip(continueImp.state, continueImp.yearPlanId));
+  const thirdImp = prepareCompleteAdministrationProjectImport(bIndState, secondArchive, {
+    mode: 'IDENTITY_ONLY', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-17',
+  });
+  assert.equal(evalWorkflow(thirdImp.state, thirdImp.yearPlanId).hasStaleModules, false);
+  assert.equal(thirdImp.step7.target.canProceed, true);
+
+  // Test H, I, M: COPY to different school -> CP..Step07 valid, calendar UNRESOLVED, schedule DRAFT, Step 10 legitimately waits Step 08
+  const copyImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+    mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2',
+  });
+  const copyWf = evalWorkflow(copyImp.state, copyImp.yearPlanId);
+  assert.equal(copyWf.stepStates['cp-analysis'].isStale, false);
+  assert.equal(copyWf.stepStates.tp.isStale, false);
+  assert.equal(copyWf.stepStates.atp.isStale, false);
+  assert.equal(copyWf.stepStates['atp-mapping'].status, 'COMPLETE');
+  assert.equal(copyWf.stepStates['annual-planning'].isComplete, false);
+  assert.equal(copyWf.stepStates.admin.isBlocked, true);
+  assert.equal(copyWf.stepStates.admin.reason, 'Selesaikan Perencanaan Tahunan (08) terlebih dahulu.');
+
+  // Test I: RESTORE, IDENTITY_SCHEDULE, OTHER_CLASS, Produksi mode
+  const restoreImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+    mode: 'RESTORE', targetProfileId: 'p1', targetSchoolId: 's1', replaceYearPlanId: 'y',
+  });
+  assert.equal(evalWorkflow(restoreImp.state, restoreImp.yearPlanId).hasStaleModules, false);
+  assert.equal(restoreImp.step7.target.canProceed, true);
+
+  const schedImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+    mode: 'IDENTITY_SCHEDULE', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  assert.equal(schedImp.nextStep, 'annual-planning');
+  assert.equal(evalWorkflow(schedImp.state, schedImp.yearPlanId).stepStates['atp-mapping'].isComplete, true);
+  assert.equal(evalWorkflow(schedImp.state, schedImp.yearPlanId).stepStates.admin.isBlocked, true);
+
+  const otherClassImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+    mode: 'OTHER_CLASS', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16', targetGrade: 'Kelas 4', targetClassSection: 'B',
+  });
+  assert.equal(evalWorkflow(otherClassImp.state, otherClassImp.yearPlanId).hasStaleModules, false);
+
+  const prodImp = prepareCompleteAdministrationProjectImport(bIndState, bIndArchive, {
+    mode: 'IDENTITY_ONLY', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16', workMode: 'production',
+  });
+  assert.equal(prodImp.step7.target.canProceed, true);
+
+  // Test I & A & B: Legacy JSON Importer (importAdministrationProjectIntoState) preserves updatedAt & remaps atp.tpId / linkedTpIds / substanceReviews
+  const legacyExport = exportAdministrationProjectFromState(bIndState, 'y');
+  assert.equal(legacyExport.success, true, JSON.stringify(legacyExport));
+  if (legacyExport.success) {
+    const legacyTargetState = structuredClone(bIndState);
+    const legacyRes = importAdministrationProjectIntoState(legacyTargetState, {
+      package: legacyExport.package,
+      targetProfileId: 'p2',
+      targetSchoolId: 's2',
+    });
+    assert.equal(legacyRes.success, true, JSON.stringify(legacyRes));
+    if (legacyRes.success) {
+      const savedAfterLegacy = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const lCp = savedAfterLegacy.annualData.cp.find((e: any) => e.yearPlanId === legacyRes.yearPlanId)!.value;
+      const lAna = savedAfterLegacy.annualData.cpAnalysis.find((e: any) => e.yearPlanId === legacyRes.yearPlanId)!.value;
+      const lTp = savedAfterLegacy.annualData.tp.find((e: any) => e.yearPlanId === legacyRes.yearPlanId)!.value;
+      const lAtp = savedAfterLegacy.annualData.atp.find((e: any) => e.yearPlanId === legacyRes.yearPlanId)!.value;
+      assert.equal(lCp.updatedAt, sourceStamp, 'Legacy importer must preserve original CP updatedAt');
+      assert.equal(lAna.updatedAt, sourceStamp, 'Legacy importer must preserve original CPAnalysis updatedAt');
+      assert.equal(lTp.updatedAt, sourceStamp, 'Legacy importer must preserve original TP updatedAt');
+      assert.equal(lAtp.updatedAt, sourceStamp, 'Legacy importer must preserve original ATP updatedAt');
+      assert.equal(lAtp.tpId, lTp.id, 'Legacy importer must remap ATPData.tpId using tpDataIdMap');
+      assert.equal(lAtp.items[0].linkedTpIds[0], lTp.items[0].id, 'Legacy importer must remap ATPItem.linkedTpIds');
+      assert.equal(validateTPDataWorkflow(lTp, lCp, lAna).isSiap, true, 'Legacy-imported TP with substanceReviews must remain SIAP');
+      assert.equal(validateATPDataWorkflow(lAtp, lTp, undefined, lCp, lAna).isSiap, true, 'Legacy-imported ATP must remain SIAP');
+      const legacyWf = evalWorkflow(savedAfterLegacy, legacyRes.yearPlanId);
+      assert.equal(legacyWf.stepStates['cp-analysis'].isStale, false);
+      assert.equal(legacyWf.stepStates.tp.isStale, false);
+      assert.equal(legacyWf.stepStates.atp.isStale, false);
+      assert.equal(legacyWf.kktpState.isStale, false);
+    }
+
+    // Legacy importer SOURCE_STALE preservation (C)
+    const stalePkg = structuredClone(legacyExport.package);
+    stalePkg.annual.cp[0].updatedAt = '2026-02-01T00:00:00Z';
+    const staleLegacyRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: stalePkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'Z',
+    });
+    assert.equal(staleLegacyRes.success, true);
+    if (staleLegacyRes.success) {
+      const stAfter = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const wf = evalWorkflow(stAfter, staleLegacyRes.yearPlanId);
+      assert.equal(wf.stepStates['cp-analysis'].isStale, true, 'Legacy importer must preserve genuine SOURCE_STALE');
+      assert.ok(wf.issues.some((i: any) => i.code === 'STALE_CP_ANALYSIS'));
+    }
+
+    // Legacy importer failure leaves localStorage untouched (J)
+    const snapBeforeFail = bIndStore.get(STORAGE_KEY_V5)!;
+    const failLegacy = importAdministrationProject({
+      package: { ...legacyExport.package, header: { ...legacyExport.package.header, subject: '' } },
+      targetProfileId: 'p2', targetSchoolId: 's2',
+    });
+    assert.equal(failLegacy.success, false);
+    assert.equal(bIndStore.get(STORAGE_KEY_V5), snapBeforeFail);
+
+    // Scenario B (Legacy partial empty timestamps): missing upstream updatedAt on valid SIAP lineage uses deterministic
+    // dependency-consistent fallback (no false stale), while missing basedOn*UpdatedAt is NOT falsely validated.
+    const partialEmptyPkg = structuredClone(legacyExport.package);
+    partialEmptyPkg.annual.cp[0].updatedAt = '';
+    partialEmptyPkg.annual.cpAnalysis![0].updatedAt = '';
+    partialEmptyPkg.annual.tp[0].updatedAt = '';
+    partialEmptyPkg.annual.atp[0].updatedAt = '';
+    const partialEmptyRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: partialEmptyPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'B-PARTIAL',
+    });
+    assert.equal(partialEmptyRes.success, true, JSON.stringify(partialEmptyRes));
+    if (partialEmptyRes.success) {
+      const peState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const peCp = peState.annualData.cp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peAna = peState.annualData.cpAnalysis.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peTp = peState.annualData.tp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      const peAtp = peState.annualData.atp.find((e: any) => e.yearPlanId === partialEmptyRes.yearPlanId)!.value;
+      assert.equal(peCp.updatedAt, sourceStamp, 'Empty CP updatedAt must deterministically match proven downstream basedOnCpUpdatedAt');
+      assert.equal(peAna.updatedAt, sourceStamp, 'Empty CPAnalysis updatedAt must deterministically match proven downstream basedOnAnalysisUpdatedAt');
+      assert.equal(peTp.updatedAt, sourceStamp, 'Empty TP updatedAt must deterministically match proven downstream basedOnTpUpdatedAt');
+      assert.equal(peAtp.updatedAt, sourceStamp);
+      const peWf = evalWorkflow(peState, partialEmptyRes.yearPlanId);
+      assert.equal(peWf.hasStaleModules, false, JSON.stringify(peWf.issues));
+      assert.equal(peWf.stepStates['cp-analysis'].status, 'COMPLETE');
+      assert.equal(peWf.stepStates.tp.status, 'COMPLETE');
+      assert.equal(peWf.stepStates.atp.status, 'COMPLETE');
+    }
+
+    const missingBasedOnPkg = structuredClone(legacyExport.package);
+    delete missingBasedOnPkg.annual.cpAnalysis![0].basedOnCpUpdatedAt;
+    delete missingBasedOnPkg.annual.atp[0].basedOnTpUpdatedAt;
+    const missingBasedOnRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: missingBasedOnPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'B-NOLINEAGE',
+    });
+    assert.equal(missingBasedOnRes.success, true);
+    if (missingBasedOnRes.success) {
+      const mlState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const mlWf = evalWorkflow(mlState, missingBasedOnRes.yearPlanId);
+      assert.notEqual(mlWf.stepStates['cp-analysis'].status, 'COMPLETE', 'Missing basedOnCpUpdatedAt must not falsely validate CPAnalysis');
+      assert.notEqual(mlWf.stepStates.atp.status, 'COMPLETE', 'Missing basedOnTpUpdatedAt must not falsely validate ATP');
+    }
+
+    // Scenario C (Invalid timestamps in legacy importer): preserved untouched (never masked as SIAP), emits clear diagnostic
+    const invalidTsPkg = structuredClone(legacyExport.package);
+    invalidTsPkg.annual.cp[0].updatedAt = 'bukan-tanggal';
+    invalidTsPkg.annual.cpAnalysis![0].basedOnCpUpdatedAt = '2026-99-99';
+    const invalidTsRes = importAdministrationProjectIntoState(structuredClone(bIndState), {
+      package: invalidTsPkg, targetProfileId: 'p2', targetSchoolId: 's2', targetClassSection: 'C-INVALID',
+    });
+    assert.equal(invalidTsRes.success, true);
+    if (invalidTsRes.success) {
+      const ivState = JSON.parse(bIndStore.get(STORAGE_KEY_V5)!);
+      const ivCp = ivState.annualData.cp.find((e: any) => e.yearPlanId === invalidTsRes.yearPlanId)!.value;
+      const ivAna = ivState.annualData.cpAnalysis.find((e: any) => e.yearPlanId === invalidTsRes.yearPlanId)!.value;
+      assert.equal(ivCp.updatedAt, 'bukan-tanggal', 'Invalid timestamp must not be masked by replacement');
+      assert.notEqual(ivCp.workflowStatus, 'SIAP');
+      assert.notEqual(ivAna.workflowStatus, 'SIAP');
+      const ivWf = evalWorkflow(ivState, invalidTsRes.yearPlanId);
+      assert.notEqual(ivWf.stepStates.cp.status, 'COMPLETE');
+      assert.ok((ivWf.stepStates.cp.reason || '').includes('tidak valid'), ivWf.stepStates.cp.reason);
+      assert.notEqual(ivWf.stepStates['cp-analysis'].status, 'COMPLETE');
+    }
+  }
+
+  // Test I & D & N: Legacy XLSX transfer importer keeps CP/TP/ATP in review/draft (never auto SIAP)
+  const xlsxState = structuredClone(bIndState);
+  const xlsxRes = performImportProjectTransferInState(xlsxState, {
+    pkg: {
+      schemaVersion: '1.0',
+      curriculumType: 'KURIKULUM_MERDEKA',
+      academicYear: '2026/2027',
+      subject: 'Bahasa Indonesia',
+      level: 'SD',
+      grade: 'Kelas 4',
+      phase: 'B',
+      cp: [{ element: 'Menyimak', content: 'Memahami pesan lisan', code: 'E1' }],
+      tp: [{ code: 'E1-SIM-01', cpCode: 'E1', statement: 'Peserta didik memahami pesan lisan.', competence: 'Memahami', materialScope: 'Pesan lisan' }],
+      atp: [{ order: 1, tpCode: 'E1-SIM-01', material: 'Pesan lisan', semester: 1 }],
+    },
+    profileId: 'p2',
+    schoolId: 's2',
+    classSection: 'C',
+  });
+  assert.notEqual(xlsxRes.cp.workflowStatus, 'SIAP');
+  assert.notEqual(xlsxRes.tp.workflowStatus, 'SIAP');
+  assert.equal(xlsxRes.tp.needsReview, true);
+  assert.equal(xlsxRes.atp.workflowStatus, 'DRAFT');
+
+  // Test C: Genuine SOURCE_STALE across CP->Analysis, Analysis->TP, TP->ATP, Schedule stays detected after ZIP import
+  const staleCpArc = structuredClone(bIndArchive);
+  staleCpArc.project.annualData.cp[0].value.updatedAt = '2026-02-01T00:00:00Z';
+  const staleCpImp = prepareCompleteAdministrationProjectImport(bIndState, staleCpArc, {
+    mode: 'CONTINUE_EDITING', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  const staleCpWf = evalWorkflow(staleCpImp.state, staleCpImp.yearPlanId);
+  assert.equal(staleCpWf.stepStates['cp-analysis'].isStale, true);
+  assert.ok(staleCpWf.issues.some((i: any) => i.code === 'STALE_CP_ANALYSIS'));
+
+  const staleAnaArc = structuredClone(bIndArchive);
+  staleAnaArc.project.annualData.cpAnalysis[0].value.updatedAt = '2026-02-01T00:00:00Z';
+  const staleAnaImp = prepareCompleteAdministrationProjectImport(bIndState, staleAnaArc, {
+    mode: 'CONTINUE_EDITING', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  assert.equal(evalWorkflow(staleAnaImp.state, staleAnaImp.yearPlanId).stepStates.tp.isStale, true);
+
+  const staleTpArc = structuredClone(bIndArchive);
+  staleTpArc.project.annualData.tp[0].value.updatedAt = '2026-02-01T00:00:00Z';
+  const staleTpImp = prepareCompleteAdministrationProjectImport(bIndState, staleTpArc, {
+    mode: 'CONTINUE_EDITING', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  const staleTpWf = evalWorkflow(staleTpImp.state, staleTpImp.yearPlanId);
+  assert.equal(staleTpWf.stepStates.atp.isStale, true);
+  assert.equal(staleTpWf.kktpState.isStale, true);
+
+  // Test D: Source DRAFT / needsReview on CP, CPAnalysis, TP, ATP never auto-promoted to SIAP across COPY & RESTORE
+  for (const field of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
+    const draftArc = structuredClone(bIndArchive);
+    draftArc.project.annualData[field][0].value.workflowStatus = 'DRAFT';
+    const draftCopy = prepareCompleteAdministrationProjectImport(bIndState, draftArc, {
+      mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2',
+    });
+    assert.equal(draftCopy.state.annualData[field].find(e => e.yearPlanId === draftCopy.yearPlanId)!.value.workflowStatus, 'DRAFT',
+      `COPY must never promote DRAFT ${field} to SIAP`);
+    const draftWf = evalWorkflow(draftCopy.state, draftCopy.yearPlanId);
+    const stepKey = field === 'cpAnalysis' ? 'cp-analysis' : field;
+    assert.notEqual(draftWf.stepStates[stepKey].status, 'COMPLETE', `Workflow must not mark DRAFT ${field} COMPLETE`);
+  }
+
+  // Test F: Stale substanceReviews[].fingerprint & stale reviewedTpFingerprint must NOT be falsely repaired on import
+  const staleRevArc = structuredClone(bIndArchive);
+  staleRevArc.project.annualData.tp[0].value.substanceReviews![0].fingerprint = 'tampered-old-fingerprint';
+  const staleRevImp = prepareCompleteAdministrationProjectImport(bIndState, staleRevArc, {
+    mode: 'CONTINUE_EDITING', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  const srTp = staleRevImp.state.annualData.tp.find(e => e.yearPlanId === staleRevImp.yearPlanId)!.value;
+  assert.notEqual(srTp.workflowStatus, 'SIAP', 'Stale substanceReviews fingerprint must NOT be repaired to pass SIAP');
+
+  const staleMapRevArc = structuredClone(bIndArchive);
+  staleMapRevArc.project.annualData.atpUnitMappings![0].value.units[1].materials[0].titleHistory![0].reviewedTpFingerprint = 'stale-review-fp';
+  const staleMapRevImp = prepareCompleteAdministrationProjectImport(bIndState, staleMapRevArc, {
+    mode: 'CONTINUE_EDITING', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: '2026-11-16',
+  });
+  const srMap = staleMapRevImp.state.annualData.atpUnitMappings!.find(e => e.yearPlanId === staleMapRevImp.yearPlanId)!.value;
+  const srTp2 = staleMapRevImp.state.annualData.tp.find(e => e.yearPlanId === staleMapRevImp.yearPlanId)!.value;
+  assert.equal(hasTeacherMaterialSupport(srMap.units[1], srMap.units[1].materials[0], srTp2), false,
+    'Stale reviewedTpFingerprint must NOT be repaired by import');
+
+  // Test G: Substantive TP/ATP edits post-import detected by readiness validator
+  const editedTp = structuredClone(cTp);
+  editedTp.items[0].statement = 'Peserta didik merancang pidato ilmiah bertema lingkungan.';
+  assert.equal(resolveATPUnitMappingReadiness(cMap, cAtp, editedTp).canProceed, false);
+
+  // Test N: Legacy project without complete lineage metadata (missing basedOnCpUpdatedAt / basedOnTpUpdatedAt / basedOnTpFingerprint) not promoted to SIAP
+  const legacyNoLineage = structuredClone(bIndArchive);
+  delete legacyNoLineage.project.annualData.cpAnalysis[0].value.basedOnCpUpdatedAt;
+  delete legacyNoLineage.project.annualData.atp[0].value.basedOnTpUpdatedAt;
+  delete legacyNoLineage.project.annualData.atpUnitMappings![0].value.basedOnTpFingerprint;
+  const noLineageImp = prepareCompleteAdministrationProjectImport(bIndState, legacyNoLineage, {
+    mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2',
+  });
+  const nlAna = noLineageImp.state.annualData.cpAnalysis.find(e => e.yearPlanId === noLineageImp.yearPlanId)!.value;
+  const nlAtp = noLineageImp.state.annualData.atp.find(e => e.yearPlanId === noLineageImp.yearPlanId)!.value;
+  assert.notEqual(nlAna.workflowStatus, 'SIAP');
+  assert.notEqual(nlAtp.workflowStatus, 'SIAP');
+
+  // Scenario C (Complete ZIP invalid timestamp): produces clear diagnostic and never passes SIAP silently
+  const invalidZipArc = structuredClone(bIndArchive);
+  invalidZipArc.project.annualData.tp[0].value.basedOnAnalysisUpdatedAt = 'not-a-valid-date';
+  const invalidZipImp = prepareCompleteAdministrationProjectImport(bIndState, invalidZipArc, {
+    mode: 'COPY', targetProfileId: 'p2', targetSchoolId: 's2',
+  });
+  const ivZipTp = invalidZipImp.state.annualData.tp.find(e => e.yearPlanId === invalidZipImp.yearPlanId)!.value;
+  assert.notEqual(ivZipTp.workflowStatus, 'SIAP');
+  assert.ok(invalidZipImp.warnings.some(w => w.includes('tidak valid')), JSON.stringify(invalidZipImp.warnings));
+  assert.notEqual(evalWorkflow(invalidZipImp.state, invalidZipImp.yearPlanId).stepStates.tp.status, 'COMPLETE');
+
+  console.log('PASS: Bahasa Indonesia Kelas 4 Fase B A-N regression suite passed.');
+}
+

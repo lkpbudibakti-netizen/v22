@@ -2,6 +2,7 @@ import { ATPUnitMappingData, ATPData, TPData, AcademicSetting, Step07ReadinessIs
 import { validateATPUnitMappingCanonical, ATPUnitMappingValidationResult } from './atpUnitMappingValidationService';
 import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
 import { isUpstreamStale } from './workflowEngine';
+import { isValidLineageTimestamp } from './cpWorkflowService';
 
 export interface MappingReadiness {
   canSaveDraft: boolean;
@@ -89,7 +90,10 @@ export function resolveATPUnitMappingReadiness(
       blockers.push('Substansi ATP berubah sejak pemetaan terakhir disimpan (stale).');
     }
   } else if (mapping && atp?.updatedAt && mapping.basedOnAtpUpdatedAt) {
-    if (isUpstreamStale(atp.updatedAt, mapping.basedOnAtpUpdatedAt)) {
+    if (!isValidLineageTimestamp(mapping.basedOnAtpUpdatedAt) || !isValidLineageTimestamp(atp.updatedAt)) {
+      isStale = true;
+      blockers.push('Timestamp rujukan ATP pada pemetaan tidak valid.');
+    } else if (isUpstreamStale(atp.updatedAt, mapping.basedOnAtpUpdatedAt)) {
       isStale = true;
       blockers.push('Alur ATP telah diperbarui sejak pemetaan terakhir disimpan (stale).');
     }
@@ -100,7 +104,10 @@ export function resolveATPUnitMappingReadiness(
       blockers.push('Substansi TP berubah sejak pemetaan terakhir disimpan (stale).');
     }
   } else if (mapping && tp?.updatedAt && mapping.basedOnTpUpdatedAt) {
-    if (isUpstreamStale(tp.updatedAt, mapping.basedOnTpUpdatedAt)) {
+    if (!isValidLineageTimestamp(mapping.basedOnTpUpdatedAt) || !isValidLineageTimestamp(tp.updatedAt)) {
+      isStale = true;
+      blockers.push('Timestamp rujukan TP pada pemetaan tidak valid.');
+    } else if (isUpstreamStale(tp.updatedAt, mapping.basedOnTpUpdatedAt)) {
       isStale = true;
       blockers.push('Tujuan Pembelajaran (TP) telah diperbarui sejak pemetaan terakhir disimpan (stale).');
     }

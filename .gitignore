@@ -9,3 +9,4 @@ tmp/ci-runner-*/
 .env*
 !.env.example
 tmp/print-audit/
+tmp/blank-export-audit/

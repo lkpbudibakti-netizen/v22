@@ -184,7 +184,7 @@ export function suggestMappingCopyedit(title: string): string {
   return cleaned ? cleaned[0].toLocaleUpperCase('id') + cleaned.slice(1) : cleaned;
 }
 
-function reviewedTpFingerprint(ids: string[], tp: TPData): string {
+export function reviewedTpFingerprint(ids: string[], tp: TPData): string {
   return JSON.stringify(tp.items.filter(t => ids.includes(t.id)).map(t => ({ id: t.id, statement: t.statement, competence: t.competence, contentScope: t.contentScope })).sort((a,b)=>a.id.localeCompare(b.id)));
 }
 function mappingProposition(text:string):string {

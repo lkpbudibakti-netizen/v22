@@ -26,7 +26,7 @@ import { validateAcademicSettingReadiness } from './academicSettingReadiness';
 import { resolveCurriculumContext, resolveSubjectInput } from '../data/curriculum/resolver';
 import { ResolvedCurriculumContext } from '../data/curriculum/types';
 import { getPhaseFromGrade } from '../data/curriculumDefaults';
-import { validateKKTPData, resolveCriterionTPReference, resolveATPItemTPReferences, validateTPDataWorkflow, validateCPAnalysisDataWorkflow, validateATPDataWorkflow, validateCPDataWorkflow } from './cpWorkflowService';
+import { validateKKTPData, resolveCriterionTPReference, resolveATPItemTPReferences, validateTPDataWorkflow, validateCPAnalysisDataWorkflow, validateATPDataWorkflow, validateCPDataWorkflow, isValidLineageTimestamp } from './cpWorkflowService';
 import { loadStorageV5, getSemesterDataV5 } from './storageV5';
 import { getSubjectJP, resolveSemesterCapacityV5 } from './jpEngine';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
@@ -206,9 +206,11 @@ export function isUpstreamStale(
   downstreamReferenceUpdatedAt?: string,
   thresholdMs: number = 1000
 ): boolean {
-  if (!upstreamUpdatedAt || !downstreamReferenceUpdatedAt) return false;
-  const upstreamTime = new Date(upstreamUpdatedAt).getTime();
-  const refTime = new Date(downstreamReferenceUpdatedAt).getTime();
+  if (!isValidLineageTimestamp(upstreamUpdatedAt) || !isValidLineageTimestamp(downstreamReferenceUpdatedAt)) {
+    return false;
+  }
+  const upstreamTime = new Date(upstreamUpdatedAt!).getTime();
+  const refTime = new Date(downstreamReferenceUpdatedAt!).getTime();
   return upstreamTime > refTime + thresholdMs;
 }
 
@@ -375,7 +377,9 @@ export function validateWorkflowDependencies(
 
     // 1. CP
     const cpValidation = cp ? validateCPDataWorkflow(cp, academicSetting) : undefined;
-    const isCPCanonicalSiap = Boolean(cp && cpValidation?.isSiap);
+    const isCPExplicitlyUnconfirmed =
+      cp?.workflowStatus === 'DRAFT' || cp?.workflowStatus === 'PERLU_DILENGKAPI' || cp?.workflowStatus === 'BELUM_DIMULAI';
+    const isCPCanonicalSiap = Boolean(cp && cpValidation?.isSiap && !isCPExplicitlyUnconfirmed);
     const hasCPContent = Boolean(
       (cp?.generalDescription && cp.generalDescription.trim().length > 10) ||
       (cp?.elements && cp.elements.length > 0)
@@ -394,14 +398,16 @@ export function validateWorkflowDependencies(
       isBlocked: !stepStates.academic.isComplete,
       isComplete: isCPCanonicalSiap,
       isStale: false,
-      reason: !isCPCanonicalSiap && hasCPContent && cpValidation?.issues[0]
-        ? cpValidation.issues[0]
+      reason: !isCPCanonicalSiap && hasCPContent
+        ? (cpValidation?.issues[0] || (isCPExplicitlyUnconfirmed ? `Capaian Pembelajaran (CP) berstatus ${cp?.workflowStatus} dan memerlukan konfirmasi.` : undefined))
         : undefined,
     };
 
     // 2. CP Analysis (Explicit Canonical Dependency of TP)
     const cpAnalysisValidation = validateCPAnalysisDataWorkflow(cpAnalysis, cp);
-    const isAnalysisCanonicalSiap = cpAnalysisValidation.isSiap;
+    const isAnalysisExplicitlyUnconfirmed =
+      cpAnalysis?.workflowStatus === 'DRAFT' || cpAnalysis?.workflowStatus === 'PERLU_DILENGKAPI' || cpAnalysis?.workflowStatus === 'BELUM_DIMULAI';
+    const isAnalysisCanonicalSiap = cpAnalysisValidation.isSiap && !isAnalysisExplicitlyUnconfirmed;
     const isAnalysisStale =
       !!cpAnalysis?.items?.length &&
       (isUpstreamStale(cp?.updatedAt, cpAnalysis?.basedOnCpUpdatedAt) || Boolean(cpAnalysis?.needsReview));
@@ -425,8 +431,8 @@ export function validateWorkflowDependencies(
         ? 'Memerlukan Capaian Pembelajaran (CP) yang berstatus SIAP terlebih dahulu'
         : isAnalysisStale
         ? cpAnalysis?.reviewReason || 'CP berubah setelah referensi Analisis CP; tinjau terhadap CP aktif.'
-        : !isAnalysisCanonicalSiap && analysisItems.length > 0 && cpAnalysisValidation.issues[0]
-        ? cpAnalysisValidation.issues[0]
+        : !isAnalysisCanonicalSiap && analysisItems.length > 0
+        ? (cpAnalysisValidation.issues[0] || (isAnalysisExplicitlyUnconfirmed ? `Analisis CP berstatus ${cpAnalysis?.workflowStatus} dan memerlukan konfirmasi.` : undefined))
         : undefined,
       missingDependencies: !isCPComplete ? ['Capaian Pembelajaran (CP) SIAP'] : undefined,
     };
@@ -463,7 +469,9 @@ export function validateWorkflowDependencies(
     const tpValidation = !isTPBlocked && tp && tpItems.length > 0
       ? validateTPDataWorkflow(tp, cp, cpAnalysis, academicSetting)
       : null;
-    const isTPDataValid = !!(tpValidation && tpValidation.isSiap);
+    const isTPExplicitlyUnconfirmed =
+      tp?.workflowStatus === 'DRAFT' || tp?.workflowStatus === 'PERLU_DILENGKAPI' || tp?.workflowStatus === 'BELUM_DIMULAI';
+    const isTPDataValid = !!(tpValidation && tpValidation.isSiap && !isTPExplicitlyUnconfirmed);
 
     stepStates.tp = {
       id: 'tp',
@@ -485,8 +493,8 @@ export function validateWorkflowDependencies(
             : 'Memerlukan Analisis CP yang lengkap dan siap terlebih dahulu sebagai rujukan resmi TP')
         : isTPStale
         ? tp?.reviewReason || 'Referensi Analisis CP atau CP pada TP sudah lama; daftar TP perlu diselaraskan.'
-        : !isTPDataValid && tpItems.length > 0 && tpValidation?.issues?.[0]
-        ? tpValidation.issues[0]
+        : !isTPDataValid && tpItems.length > 0
+        ? (tpValidation?.issues?.[0] || (isTPExplicitlyUnconfirmed ? `Tujuan Pembelajaran (TP) berstatus ${tp?.workflowStatus} dan memerlukan konfirmasi.` : undefined))
         : undefined,
       missingDependencies: isTPBlocked ? ['Analisis CP'] : undefined,
     };
@@ -613,6 +621,20 @@ export function validateWorkflowDependencies(
           module: 'KKTP',
           code: 'AMBIGUOUS_CRITERIA_REFERENCE',
           message: ref.issue || `Kriteria KKTP '${crit.id}' memiliki referensi TP yang ambigu.`,
+          targetId: crit.id,
+        });
+      }
+
+      if (
+        (typeof crit.basedOnTpUpdatedAt === 'string' && crit.basedOnTpUpdatedAt.trim() && !isValidLineageTimestamp(crit.basedOnTpUpdatedAt)) ||
+        (typeof crit.updatedAt === 'string' && crit.updatedAt.trim() && !isValidLineageTimestamp(crit.updatedAt))
+      ) {
+        hasOrphanCriterion = true;
+        issues.push({
+          severity: 'WARNING',
+          module: 'KKTP',
+          code: 'INVALID_LINEAGE_TIMESTAMP',
+          message: `Timestamp lineage pada kriteria KKTP '${crit.id}' tidak valid.`,
           targetId: crit.id,
         });
       }
@@ -809,7 +831,10 @@ export function validateWorkflowDependencies(
 
     try {
       const v5State = loadStorageV5();
-      const currentYearPlanId = v5State.activeYearPlanId;
+      const currentYearPlanId =
+        (academicSetting?.id && v5State.yearPlans.some((y) => y.id === academicSetting.id) ? academicSetting.id : undefined) ||
+        (academicSetting?.id ? v5State.semesterPlans.find((sp) => sp.id === academicSetting.id)?.yearPlanId : undefined) ||
+        v5State.activeYearPlanId;
 
       // 1. Resolve standard mapping & plan data
       const currentMapping = atpUnitMapping || (currentYearPlanId ? (v5State.annualData.atpUnitMappings || []).find((e) => e.yearPlanId === currentYearPlanId)?.value : undefined);

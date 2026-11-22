@@ -13,6 +13,7 @@ import type {
   CPData,
   CPElem,
   LearningPlan,
+  MappingChangeRecord,
   SemesterPlan,
   TPData,
   TPItem,
@@ -47,9 +48,12 @@ import { resolveSemesterJPFromState } from './semesterJPResolver';
 import { validateLearningMeetingScheduleData } from './learningMeetingScheduleService';
 import { validateCalendarCompleteness } from './jpEngine';
 import { validateSubjectWeeklySchedule } from './subjectScheduleService';
-import { validateCPDataWorkflow, validateCPAnalysisDataWorkflow, validateTPDataWorkflow, validateATPDataWorkflow } from './cpWorkflowService';
+import { validateCPDataWorkflow, validateCPAnalysisDataWorkflow, validateTPDataWorkflow, validateATPDataWorkflow, isValidLineageTimestamp } from './cpWorkflowService';
 import { resolveATPUnitMappingReadiness } from './atpMappingReadinessService';
-import { computeAtpSubstantiveFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
+import { computeAtpSubstantiveFingerprint, computeMappingFingerprint, computeStep07VerifiedFingerprint, computeTpSubstantiveFingerprint, matchesSubstantiveFingerprint } from './atpMappingActionApplyService';
+import { reviewedTpFingerprint } from './mappingAlignmentService';
+import { tpSubstanceFingerprint } from './tpSemanticFidelity';
+import { step07PersistedKey } from './step07AutoExecutionPolicy';
 import { isValidDocumentDate } from './documentDateService';
 import { buildImportedProjectExportContext, importedProjectExportReadiness } from './identityOnlyProjectExport';
 import { generateZipBundle } from './documentEngine';
@@ -239,7 +243,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   const remap = (node: any, key = ''): any => {
     if (externalProjectFields.has(key)) return cloneProject(node);
     if (typeof node === 'string') {
-      const isReference = key === 'id' || /Ids?$/.test(key) || ['tps', 'atp', 'tp'].includes(key);
+      const isReference = key === 'id' || /Ids?$/.test(key) || ['tps', 'atp', 'tp', 'undoOf'].includes(key);
       if (isReference && idMap.has(node)) return idMap.get(node);
       if (/Fingerprint$/i.test(key)) {
         try { return JSON.stringify(remap(JSON.parse(node))); } catch { return node; }
@@ -331,18 +335,91 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   const analysis = imported.annualData.cpAnalysis[0]?.value;
   const tp = imported.annualData.tp[0]?.value;
   const atp = imported.annualData.atp[0]?.value;
+  const sourceCp = source.annualData.cp[0]?.value;
+  const sourceAnalysis = source.annualData.cpAnalysis[0]?.value;
   const sourceMapping = source.annualData.atpUnitMappings?.[0]?.value;
   const sourceTp = source.annualData.tp[0]?.value;
   const sourceAtp = source.annualData.atp[0]?.value;
   const sourceReadiness = resolveATPUnitMappingReadiness(sourceMapping, sourceAtp, sourceTp);
-  // UUID remapping changes sort order inside fingerprints. Rebase only proven-fresh source snapshots.
-  if (mapping && sourceMapping) {
+  // UUID remapping changes JSON-serialized IDs inside review fingerprints. Rebase only proven-fresh source snapshots.
+  if (tp?.substanceReviews?.length && sourceTp?.substanceReviews?.length && analysis && sourceAnalysis) {
+    tp.substanceReviews = tp.substanceReviews.map((review, index) => {
+      const sourceReview = sourceTp.substanceReviews![index];
+      if (!sourceReview) return review;
+      const sourceAnalysisItem = sourceAnalysis.items.find(item => item.id === sourceReview.analysisId);
+      const targetAnalysisItem = analysis.items.find(item => item.id === review.analysisId);
+      const getAssoc = (tpDoc: TPData, analysisItemId: string) =>
+        (tpDoc.items || []).filter(item =>
+          (item.cpAnalysisItemIds && item.cpAnalysisItemIds.length > 0 ? item.cpAnalysisItemIds : item.cpAnalysisId ? [item.cpAnalysisId] : []).includes(analysisItemId));
+      const sourceAssoc = getAssoc(sourceTp, sourceReview.analysisId);
+      const targetAssoc = getAssoc(tp, review.analysisId);
+      if (sourceAnalysisItem && targetAnalysisItem && sourceReview.fingerprint === tpSubstanceFingerprint(sourceAssoc, sourceAnalysisItem)) {
+        return { ...review, fingerprint: tpSubstanceFingerprint(targetAssoc, targetAnalysisItem) };
+      }
+      return { ...review, fingerprint: sourceReview.fingerprint };
+    });
+  }
+  if (mapping && sourceMapping && tp && sourceTp) {
+    const rebaseHistoryFingerprints = (targetList?: MappingChangeRecord[], sourceList?: MappingChangeRecord[]) => {
+      if (!targetList?.length || !sourceList?.length) return;
+      targetList.forEach((record, index) => {
+        const sourceRecord = sourceList[index];
+        if (!sourceRecord?.reviewedTpFingerprint) return;
+        if (sourceRecord.reviewedTpIds?.length && sourceRecord.reviewedTpFingerprint === reviewedTpFingerprint(sourceRecord.reviewedTpIds, sourceTp)) {
+          record.reviewedTpFingerprint = reviewedTpFingerprint(record.reviewedTpIds || [], tp);
+        } else {
+          record.reviewedTpFingerprint = sourceRecord.reviewedTpFingerprint;
+        }
+      });
+    };
+    const rebaseUnitsHistory = (targetUnits?: typeof mapping.units, sourceUnits?: typeof sourceMapping.units) => {
+      if (!targetUnits?.length || !sourceUnits?.length) return;
+      targetUnits.forEach((unit, unitIndex) => {
+        const sourceUnit = sourceUnits[unitIndex];
+        if (!sourceUnit) return;
+        rebaseHistoryFingerprints(unit.actionHistory, sourceUnit.actionHistory);
+        rebaseHistoryFingerprints(unit.titleHistory, sourceUnit.titleHistory);
+        unit.materials.forEach((material, matIndex) => {
+          const sourceMaterial = sourceUnit.materials[matIndex];
+          if (!sourceMaterial) return;
+          rebaseHistoryFingerprints(material.titleHistory, sourceMaterial.titleHistory);
+        });
+      });
+    };
+    rebaseUnitsHistory(mapping.units, sourceMapping.units);
+    // UUID remapping changes sort order inside fingerprints. Rebase only proven-fresh source snapshots
+    // BEFORE recomputing step07PersistedKey (which embeds mapping fields + beforeUnits).
     if (matchesSubstantiveFingerprint(sourceMapping.basedOnTpFingerprint, computeTpSubstantiveFingerprint(sourceTp))) {
       mapping.basedOnTpFingerprint = computeTpSubstantiveFingerprint(tp);
     }
     if (matchesSubstantiveFingerprint(sourceMapping.basedOnAtpFingerprint, computeAtpSubstantiveFingerprint(sourceAtp))) {
       mapping.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
     }
+    if (mapping.step07AutoRepair && sourceMapping.step07AutoRepair && atp && sourceAtp) {
+      const sourceRepair = sourceMapping.step07AutoRepair;
+      rebaseUnitsHistory(mapping.step07AutoRepair.beforeUnits, sourceRepair.beforeUnits);
+      mapping.step07AutoRepair.verifiedFingerprint =
+        sourceRepair.verifiedFingerprint === computeStep07VerifiedFingerprint(sourceMapping.units, sourceAtp, sourceTp)
+          ? computeStep07VerifiedFingerprint(mapping.units, atp, tp)
+          : sourceRepair.verifiedFingerprint;
+      mapping.step07AutoRepair.resultFingerprint =
+        sourceRepair.resultFingerprint === computeMappingFingerprint(sourceMapping.units, sourceAtp, sourceTp)
+          ? computeMappingFingerprint(mapping.units, atp, tp)
+          : sourceRepair.resultFingerprint;
+      mapping.step07AutoRepair.expectedStoredFingerprint =
+        sourceRepair.expectedStoredFingerprint === step07PersistedKey(sourceMapping, sourceAtp, sourceTp)
+          ? step07PersistedKey(mapping, atp, tp)
+          : sourceRepair.expectedStoredFingerprint;
+    }
+  } else if (mapping && sourceMapping) {
+    if (matchesSubstantiveFingerprint(sourceMapping.basedOnTpFingerprint, computeTpSubstantiveFingerprint(sourceTp))) {
+      mapping.basedOnTpFingerprint = computeTpSubstantiveFingerprint(tp);
+    }
+    if (matchesSubstantiveFingerprint(sourceMapping.basedOnAtpFingerprint, computeAtpSubstantiveFingerprint(sourceAtp))) {
+      mapping.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
+    }
+  }
+  if (mapping && sourceMapping) {
     const before = validateATPUnitMappingCanonical(sourceMapping, sourceAtp, sourceTp);
     const after = validateATPUnitMappingCanonical(mapping, atp, tp);
     if (before.isValid !== after.isValid || before.isComplete !== after.isComplete) {
@@ -350,15 +427,37 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
     }
   }
   if (options.workMode !== 'production') {
-  if (cp) { const check = validateCPDataWorkflow(cp, year); cp.workflowStatus = check.status; warnings.push(...check.issues); }
-  if (analysis) { const check = validateCPAnalysisDataWorkflow(analysis, cp); analysis.workflowStatus = check.status; warnings.push(...check.issues); }
+  if (cp) {
+    const check = validateCPDataWorkflow(cp, year);
+    cp.workflowStatus = check.status === 'SIAP' && sourceCp?.workflowStatus !== 'SIAP'
+      ? sourceCp?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
+  if (analysis) {
+    const check = validateCPAnalysisDataWorkflow(analysis, cp);
+    analysis.workflowStatus = check.status === 'SIAP' && sourceAnalysis?.workflowStatus !== 'SIAP'
+      ? sourceAnalysis?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
   if (tp) {
     const check = validateTPDataWorkflow(tp, cp, analysis);
     tp.workflowStatus = check.status === 'SIAP' && sourceTp?.workflowStatus !== 'SIAP'
       ? sourceTp?.workflowStatus || 'DRAFT' : check.status;
     warnings.push(...check.issues);
   }
-  if (atp) { const check = validateATPDataWorkflow(atp, tp, undefined, cp, analysis); atp.workflowStatus = check.status; warnings.push(...check.issues); }
+  if (atp) {
+    const check = validateATPDataWorkflow(atp, tp, undefined, cp, analysis);
+    atp.workflowStatus = check.status === 'SIAP' && sourceAtp?.workflowStatus !== 'SIAP'
+      ? sourceAtp?.workflowStatus || 'DRAFT' : check.status;
+    warnings.push(...check.issues);
+  }
+  } else {
+    // Even in production mode, invalid timestamp strings must surface clear diagnostics
+    // and never masquerade as confirmed SIAP data.
+    if (cp) warnings.push(...validateCPDataWorkflow(cp, year).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (analysis) warnings.push(...validateCPAnalysisDataWorkflow(analysis, cp).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (tp) warnings.push(...validateTPDataWorkflow(tp, cp, analysis).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
+    if (atp) warnings.push(...validateATPDataWorkflow(atp, tp, undefined, cp, analysis).issues.filter((m) => m.includes('Timestamp') && m.includes('tidak valid')));
   }
   if (modernMode) {
     for (const key of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
@@ -620,6 +719,13 @@ export function importAdministrationProjectIntoState(
     };
   }
 
+  normalizeLegacyAnnualLineage(
+    params.package,
+    context,
+    annualResult,
+    semesterResults.flatMap((result) => result.assessmentCriteria)
+  );
+
   nextState.yearPlans.push(context.yearPlan);
   nextState.workspaces.push(context.workspace);
   nextState.semesterPlans.push(...Array.from(context.semesterPlansByNumber.values()));
@@ -773,14 +879,171 @@ function buildAnnualData(
   assertSingleAnnualEntity(pkg.annual.tp, 'annual.tp', context);
   assertSingleAnnualEntity(pkg.annual.atp, 'annual.atp', context);
 
-  const cp = pkg.annual.cp[0] ? remapCP(pkg.annual.cp[0], context) : undefined;
-  const cpAnalysis = pkg.annual.cpAnalysis?.[0]
-    ? remapCPAnalysis(pkg.annual.cpAnalysis[0], context)
+  const sourceCp = pkg.annual.cp[0];
+  const sourceAnalysis = pkg.annual.cpAnalysis?.[0];
+  const cp = sourceCp ? remapCP(sourceCp, context) : undefined;
+  const cpAnalysis = sourceAnalysis
+    ? remapCPAnalysis(sourceAnalysis, context)
     : undefined;
-  const tp = pkg.annual.tp[0] ? remapTP(pkg.annual.tp[0], context) : undefined;
+  const tp = pkg.annual.tp[0] ? remapTP(pkg.annual.tp[0], context, sourceAnalysis, cpAnalysis) : undefined;
   const atp = pkg.annual.atp[0] ? remapATP(pkg.annual.atp[0], context) : undefined;
 
   return { cp, cpAnalysis, tp, atp };
+}
+
+function normalizeLegacyAnnualLineage(
+  pkg: AdministrationProjectPackage,
+  context: ImportContext,
+  annual: {
+    cp?: CPData;
+    cpAnalysis?: CPAnalysisData;
+    tp?: TPData;
+    atp?: ATPData;
+  },
+  criteria: AssessmentCriterion[]
+): void {
+  const hasRaw = (value?: string): boolean => typeof value === 'string' && value.trim().length > 0;
+  const hasInvalid = (value?: string): boolean => hasRaw(value) && !isValidLineageTimestamp(value);
+  const fallbackAnchor = isValidLineageTimestamp(pkg.header.exportedAt)
+    ? pkg.header.exportedAt!.trim()
+    : context.now;
+
+  const { cp, cpAnalysis, tp, atp } = annual;
+
+  // Guard 1: Invalid non-empty timestamps are preserved untouched and never disguised as confirmed SIAP.
+  if (cp && hasInvalid(cp.updatedAt)) {
+    cp.workflowStatus = 'PERLU_DILENGKAPI';
+  }
+  if (cpAnalysis && (hasInvalid(cpAnalysis.updatedAt) || hasInvalid(cpAnalysis.basedOnCpUpdatedAt))) {
+    cpAnalysis.workflowStatus = 'PERLU_DILENGKAPI';
+    cpAnalysis.needsReview = true;
+    cpAnalysis.reviewReason ||= 'Timestamp lineage Analisis CP tidak valid.';
+  }
+  if (
+    tp &&
+    (hasInvalid(tp.updatedAt) || hasInvalid(tp.basedOnCpUpdatedAt) || hasInvalid(tp.basedOnAnalysisUpdatedAt))
+  ) {
+    tp.workflowStatus = 'PERLU_DILENGKAPI';
+    tp.needsReview = true;
+    tp.reviewReason ||= 'Timestamp lineage TP tidak valid.';
+  }
+  if (atp && (hasInvalid(atp.updatedAt) || hasInvalid(atp.basedOnTpUpdatedAt))) {
+    atp.workflowStatus = 'PERLU_DILENGKAPI';
+    atp.needsReview = true;
+    atp.reviewReason ||= 'Timestamp lineage ATP tidak valid.';
+  }
+
+  // Guard 2: Deterministically resolve missing `updatedAt` using verified downstream lineage references
+  // (only when source relationships are proven valid & non-conflicting); never fabricate `basedOn*UpdatedAt`.
+  if (cp && !hasRaw(cp.updatedAt)) {
+    const cpStructValid = validateCPDataWorkflow(cp).isSiap;
+    const anaRef =
+      cpAnalysis &&
+      cpAnalysis.workflowStatus === 'SIAP' &&
+      !cpAnalysis.needsReview &&
+      isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt) &&
+      validateCPAnalysisDataWorkflow(cpAnalysis, { ...cp, updatedAt: cpAnalysis.basedOnCpUpdatedAt }).isSiap
+        ? cpAnalysis.basedOnCpUpdatedAt!.trim()
+        : undefined;
+    const tpCpRef =
+      tp &&
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      isValidLineageTimestamp(tp.basedOnCpUpdatedAt)
+        ? tp.basedOnCpUpdatedAt!.trim()
+        : undefined;
+    const noReverseConflict =
+      !anaRef || !tpCpRef || Date.parse(tpCpRef) <= Date.parse(anaRef) + 1000;
+
+    if (cpStructValid && anaRef && noReverseConflict) {
+      cp.updatedAt = anaRef;
+    } else if (cpStructValid && !cpAnalysis && tpCpRef) {
+      cp.updatedAt = tpCpRef;
+    } else {
+      cp.updatedAt = fallbackAnchor;
+    }
+  }
+
+  if (cpAnalysis && !hasRaw(cpAnalysis.updatedAt)) {
+    const anaValidVsCp =
+      cpAnalysis.workflowStatus === 'SIAP' &&
+      !cpAnalysis.needsReview &&
+      validateCPAnalysisDataWorkflow(cpAnalysis, cp).isSiap;
+    const tpAnaRef =
+      tp &&
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt)
+        ? tp.basedOnAnalysisUpdatedAt!.trim()
+        : undefined;
+    const consistentWithCpRef =
+      !tpAnaRef ||
+      !isValidLineageTimestamp(cpAnalysis.basedOnCpUpdatedAt) ||
+      Date.parse(tpAnaRef) >= Date.parse(cpAnalysis.basedOnCpUpdatedAt!) - 1000;
+
+    cpAnalysis.updatedAt =
+      anaValidVsCp && tpAnaRef && consistentWithCpRef ? tpAnaRef : fallbackAnchor;
+  }
+
+  if (tp && !hasRaw(tp.updatedAt)) {
+    const tpValid =
+      tp.workflowStatus === 'SIAP' &&
+      !tp.needsReview &&
+      validateTPDataWorkflow(tp, cp, cpAnalysis).isSiap;
+    const atpRef =
+      atp &&
+      atp.workflowStatus === 'SIAP' &&
+      !atp.needsReview &&
+      isValidLineageTimestamp(atp.basedOnTpUpdatedAt) &&
+      validateATPDataWorkflow(
+        { ...atp, updatedAt: atp.basedOnTpUpdatedAt },
+        { ...tp, updatedAt: atp.basedOnTpUpdatedAt },
+        undefined,
+        cp,
+        cpAnalysis
+      ).isSiap
+        ? atp.basedOnTpUpdatedAt!.trim()
+        : undefined;
+    const critRefs = criteria
+      .filter((crit) => !crit.needsReview && isValidLineageTimestamp(crit.basedOnTpUpdatedAt))
+      .map((crit) => crit.basedOnTpUpdatedAt!.trim());
+    const candidates = [atpRef, ...critRefs].filter((val): val is string => Boolean(val));
+    const latestCandidate =
+      candidates.length > 0
+        ? candidates.reduce((best, curr) => (Date.parse(curr) > Date.parse(best) ? curr : best))
+        : undefined;
+    const consistentWithUpstream =
+      !latestCandidate ||
+      ((!isValidLineageTimestamp(tp.basedOnCpUpdatedAt) ||
+        Date.parse(latestCandidate) >= Date.parse(tp.basedOnCpUpdatedAt!) - 1000) &&
+        (!isValidLineageTimestamp(tp.basedOnAnalysisUpdatedAt) ||
+          Date.parse(latestCandidate) >= Date.parse(tp.basedOnAnalysisUpdatedAt!) - 1000));
+
+    tp.updatedAt =
+      tpValid && latestCandidate && consistentWithUpstream ? latestCandidate : fallbackAnchor;
+  }
+
+  if (atp && !hasRaw(atp.updatedAt)) {
+    const atpValid =
+      atp.workflowStatus === 'SIAP' &&
+      !atp.needsReview &&
+      isValidLineageTimestamp(atp.basedOnTpUpdatedAt) &&
+      validateATPDataWorkflow(atp, tp, undefined, cp, cpAnalysis).isSiap;
+    atp.updatedAt = atpValid ? atp.basedOnTpUpdatedAt!.trim() : fallbackAnchor;
+  }
+
+  for (const criterion of criteria) {
+    if (hasInvalid(criterion.updatedAt) || hasInvalid(criterion.basedOnTpUpdatedAt)) {
+      criterion.needsReview = true;
+      continue;
+    }
+    if (!hasRaw(criterion.updatedAt)) {
+      criterion.updatedAt =
+        (isValidLineageTimestamp(criterion.basedOnTpUpdatedAt)
+          ? criterion.basedOnTpUpdatedAt!.trim()
+          : undefined) || fallbackAnchor;
+    }
+  }
 }
 
 function buildSemesterData(
@@ -858,7 +1121,7 @@ function remapCP(source: PortableCPData, context: ImportContext): CPData {
     next.id = newElementId;
     return next;
   });
-  cp.updatedAt = context.now;
+  cp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return cp;
 }
 
@@ -879,11 +1142,16 @@ function remapCPAnalysis(source: PortableCPAnalysisData, context: ImportContext)
     next.elementId = remapOptional(item.elementId, context.cpElementIdMap, context, 'annual.cpAnalysis.items.elementId');
     return next;
   });
-  cpAnalysis.updatedAt = context.now;
+  cpAnalysis.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return cpAnalysis;
 }
 
-function remapTP(source: PortableTPData, context: ImportContext): TPData {
+function remapTP(
+  source: PortableTPData,
+  context: ImportContext,
+  sourceAnalysis?: PortableCPAnalysisData,
+  remappedAnalysis?: CPAnalysisData
+): TPData {
   const tp = clone(source) as TPData;
   context.tpDataIdMap.set(source.id, newId('tpd'));
   tp.id = context.tpDataIdMap.get(source.id)!;
@@ -905,7 +1173,33 @@ function remapTP(source: PortableTPData, context: ImportContext): TPData {
     );
     return next;
   });
-  tp.updatedAt = context.now;
+  if (Array.isArray(source.substanceReviews)) {
+    const getAssoc = (tpDoc: { items?: TPItem[] }, analysisItemId: string) =>
+      (tpDoc.items || []).filter(item =>
+        (item.cpAnalysisItemIds && item.cpAnalysisItemIds.length > 0 ? item.cpAnalysisItemIds : item.cpAnalysisId ? [item.cpAnalysisId] : []).includes(analysisItemId));
+    tp.substanceReviews = source.substanceReviews.map((review, index) => {
+      const mappedAnalysisId = remapOptional(
+        review.analysisId,
+        context.cpAnalysisItemIdMap,
+        context,
+        `annual.tp.substanceReviews[${index}].analysisId`
+      ) || review.analysisId;
+      const sourceAnalysisItem = sourceAnalysis?.items.find(item => item.id === review.analysisId);
+      const targetAnalysisItem = remappedAnalysis?.items.find(item => item.id === mappedAnalysisId);
+      const sourceAssoc = getAssoc(source, review.analysisId);
+      const targetAssoc = getAssoc(tp, mappedAnalysisId);
+      const fingerprint =
+        sourceAnalysisItem && targetAnalysisItem && review.fingerprint === tpSubstanceFingerprint(sourceAssoc, sourceAnalysisItem)
+          ? tpSubstanceFingerprint(targetAssoc, targetAnalysisItem)
+          : review.fingerprint;
+      return {
+        ...review,
+        analysisId: mappedAnalysisId,
+        fingerprint,
+      };
+    });
+  }
+  tp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return tp;
 }
 
@@ -915,12 +1209,12 @@ function remapATP(source: PortableATPData, context: ImportContext): ATPData {
   atp.id = context.atpDataIdMap.get(source.id)!;
   atp.academicSettingId = context.yearPlan.id;
   atp.workspaceId = context.workspace.id;
-  atp.tpId = remapOptional(source.tpId, context.tpItemIdMap, context, 'annual.atp.tpId');
+  atp.tpId = remapOptional(source.tpId, context.tpDataIdMap, context, 'annual.atp.tpId');
   atp.tpDataId = remapOptional(source.tpDataId, context.tpDataIdMap, context, 'annual.atp.tpDataId');
   atp.items = (source.items || []).map((item, index) =>
     remapATPItem(item, context, `annual.atp.items[${index}]`)
   );
-  atp.updatedAt = context.now;
+  atp.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : undefined;
   return atp;
 }
 
@@ -930,6 +1224,7 @@ function remapATPItem(source: ATPItem, context: ImportContext, path: string): AT
   context.atpItemIdMap.set(source.id, newItemId);
   item.id = newItemId;
   item.tpId = requireMapped(source.tpId, context.tpItemIdMap, context, `${path}.tpId`);
+  item.linkedTpIds = remapOptionalArray(source.linkedTpIds, context.tpItemIdMap, context, `${path}.linkedTpIds`);
   return item;
 }
 
@@ -994,7 +1289,7 @@ function remapAssessmentCriterion(
   criterion.academicSettingId = context.yearPlan.id;
   criterion.workspaceId = context.workspace.id;
   criterion.tpId = requireMapped(source.tpId, context.tpItemIdMap, context, `${path}.tpId`);
-  criterion.updatedAt = context.now;
+  criterion.updatedAt = typeof source.updatedAt === 'string' && source.updatedAt.trim() ? source.updatedAt : '';
   return criterion;
 }
 
@@ -1007,7 +1302,7 @@ function remapAssessmentPlan(source: PortableAssessmentPlan, context: ImportCont
   plan.criterionIds = remapRequiredArray(source.criterionIds, context.criterionIdMap, context, `${path}.criterionIds`);
   plan.learningPlanIds = remapOptionalArray(source.learningPlanIds, context.learningPlanIdMap, context, `${path}.learningPlanIds`);
   plan.confirmedAt = undefined;
-  plan.updatedAt = context.now;
+  plan.updatedAt = source.updatedAt || context.now;
   return plan;
 }
 
@@ -1041,7 +1336,7 @@ function remapAssessmentPackage(
       `${path}.blueprintItems[${index}].criterionId`
     ),
   }));
-  assessmentPackage.updatedAt = context.now;
+  assessmentPackage.updatedAt = source.updatedAt || context.now;
   return assessmentPackage;
 }
 
