@@ -1,0 +1,530 @@
+{
+  "schemaVersion": "1.0",
+  "subjectCode": "PAI",
+  "subjectName": "Pendidikan Agama Islam dan Budi Pekerti",
+  "academicYearFrom": "2026/2027",
+  "regulationSourceId": "DEC-BKPDM-020-2026",
+  "verifiedOn": "2026-11-12",
+  "verificationMethod": "Manual visual transcription and comparison of decree PDF pages 6–9; guide CP section checked as corroboration. No automated claim of OCR accuracy.",
+  "primarySource": {
+    "title": "Keputusan Kepala BKPDM Nomor 020 Tahun 2026",
+    "url": "https://kurikulum.kemendikdasmen.go.id/service/download.php?kategori=rujukan&id=142",
+    "sha256": "598278746b0f62333fdcab520d5dd4c1a9650c94bd3906acff4254100976552b",
+    "bytes": 8510107,
+    "pages": 79,
+    "accessStatus": "FETCHED",
+    "textAuthority": true
+  },
+  "supportingSource": {
+    "title": "Panduan Mata Pelajaran Pendidikan Agama Islam dan Budi Pekerti",
+    "url": "https://kurikulum.kemendikdasmen.go.id/file/panduan/dokumen/Panduan%20Mata%20Pelajaran%20Pendidikan%20Agama%20Islam%20dan%20Budi%20Pekerti.pdf",
+    "sha256": "ef79015c9d797b769e1fba2a7a7f4dbcc6e1d0c972c038a43f3d9c33b012cfbd",
+    "bytes": 4855803,
+    "pages": 200,
+    "accessStatus": "FETCHED",
+    "textAuthority": false
+  },
+  "phases": [
+    {
+      "phase": "A",
+      "level": "SD",
+      "entryId": "cp26-sd-fase-a-pai",
+      "action": "VERIFY_AND_CORRECT",
+      "sourcePages": {
+        "pdf": [
+          6,
+          7
+        ],
+        "printed": [
+          6,
+          7
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          17
+        ],
+        "printed": [
+          11
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "1.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            6
+          ],
+          "printedPages": [
+            6
+          ],
+          "contentSha256": "d6f03765dd7a350c67263a4124910d48e870791126757af10ed7bdcf3826e8b7"
+        },
+        {
+          "number": "1.2",
+          "name": "Akidah",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "f48b55a855811251cc5ce843ac2d0a6e846e655772b393f72d6441d6f7c9d563"
+        },
+        {
+          "number": "1.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "caed4bc418acb81df33a810fd28d1dff39c3811ad6af1e4a173d7615060a402f"
+        },
+        {
+          "number": "1.4",
+          "name": "Fikih",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "26c07878229eb639fb21301582a71d0107e058d438c2a0bb166747ddac20069d"
+        },
+        {
+          "number": "1.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "714dac573f52f185a6052a1933c1414cb345e1b507eff22f4b8b3361a4678970"
+        }
+      ]
+    },
+    {
+      "phase": "B",
+      "level": "SD",
+      "entryId": "cp26-sd-fase-b-pai",
+      "action": "ADD",
+      "sourcePages": {
+        "pdf": [
+          7
+        ],
+        "printed": [
+          7
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          17,
+          18
+        ],
+        "printed": [
+          11,
+          12
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "2.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "3e70904fde5880e6e75d37a3b733c3583a3c72611fd53d8853ee211a27de240d"
+        },
+        {
+          "number": "2.2",
+          "name": "Akidah",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "6edf31a4608afef4009b96c2af32f358a051a8d51dd720926fd136d28ecaf89f"
+        },
+        {
+          "number": "2.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "46d7ca5d8283e6390594191076c91ea3bcef053644bf7982599d668e9ecc9c78"
+        },
+        {
+          "number": "2.4",
+          "name": "Fikih",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "1d1c18ac01a4684b849c869df9f88789759b625713a5ff85c62ba5ea3a84b31f"
+        },
+        {
+          "number": "2.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "d6c74570bd7f66954231ee8a7e131090b5e3b1adfd922927e5d15eaa67944fc2"
+        }
+      ]
+    },
+    {
+      "phase": "C",
+      "level": "SD",
+      "entryId": "cp26-sd-fase-c-pai",
+      "action": "ADD",
+      "sourcePages": {
+        "pdf": [
+          7,
+          8
+        ],
+        "printed": [
+          7,
+          8
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          18
+        ],
+        "printed": [
+          12
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "3.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "37a001a5ebbe5f3d11bdb493d941e6242422e88345933393aedb058d907cb639"
+        },
+        {
+          "number": "3.2",
+          "name": "Akidah",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "b772f1c7e433c5527998dbdfbe7a403678bb9df22671862e136f4d6b4fad259b"
+        },
+        {
+          "number": "3.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            7
+          ],
+          "printedPages": [
+            7
+          ],
+          "contentSha256": "c66d2149ecd2841d58129249186c9211cfb90c864b917455fbf1d763b7a08f3e"
+        },
+        {
+          "number": "3.4",
+          "name": "Fikih",
+          "pdfPages": [
+            7,
+            8
+          ],
+          "printedPages": [
+            7,
+            8
+          ],
+          "contentSha256": "f22dac22844bc50fdcc6d84c0a331934d9a5b118421268b983d09d8fb422ecff"
+        },
+        {
+          "number": "3.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "18758f4db3a8932317db4b4c2db215fc45c23dec3f48a7736843ee1a97a89246"
+        }
+      ]
+    },
+    {
+      "phase": "D",
+      "level": "SMP",
+      "entryId": "cp26-smp-fase-d-pai",
+      "action": "VERIFY_AND_CORRECT",
+      "sourcePages": {
+        "pdf": [
+          8
+        ],
+        "printed": [
+          8
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          18,
+          19
+        ],
+        "printed": [
+          12,
+          13
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "4.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "5f867b3c3a869ad78c0822ff823c66266b2f8969b442ac7343aed151c45bc01e"
+        },
+        {
+          "number": "4.2",
+          "name": "Akidah",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "028195f067611807b8bd1e4a651b3571caba82f5d05d8cb3b117153516e3420d"
+        },
+        {
+          "number": "4.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "4b84a104d78046819c5e0a6b42ce539fc7be3dfe710bc251c71ae0cacc3d6158"
+        },
+        {
+          "number": "4.4",
+          "name": "Fikih",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "85d0c3cb2d7b8664b4a8516870624686db7efae80dc76cc3e08faf5c6c3693a5"
+        },
+        {
+          "number": "4.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "d2ed8e0048f52a885e9d3f4a4ae90de23c39ebb9e8641d018c9ce2666c0ee2b6"
+        }
+      ]
+    },
+    {
+      "phase": "E",
+      "level": "SMA",
+      "entryId": "cp26-sma-fase-e-pai",
+      "action": "VERIFY_AND_CORRECT",
+      "sourcePages": {
+        "pdf": [
+          8
+        ],
+        "printed": [
+          8
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          19
+        ],
+        "printed": [
+          13
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "5.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "067d8e32cbc57e38a44d0677525fc925c965e4c1ad8ca15dfd2718e87d3c65b5"
+        },
+        {
+          "number": "5.2",
+          "name": "Akidah",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "49e97883c343ec67a5f45dc29bddc4bd46c2bc00c3a250bfc7a9da305ddfca00"
+        },
+        {
+          "number": "5.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "54fbd4d1faac24bc5eaf17fc2c2424326f71c9d58f2469944b801b37e269beb4"
+        },
+        {
+          "number": "5.4",
+          "name": "Fikih",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "c70e6ba6e3ec4ba3d7730b50dce45a4f5c337bceb49a7accff69aaebc17bcd5e"
+        },
+        {
+          "number": "5.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            8
+          ],
+          "printedPages": [
+            8
+          ],
+          "contentSha256": "c6549ddd92aa3f316ab6c5c3f7f567138fdc0685973eae6ec09201ecceb6c80b"
+        }
+      ]
+    },
+    {
+      "phase": "F",
+      "level": "SMA",
+      "entryId": "cp26-sma-fase-f-pai",
+      "action": "ADD",
+      "sourcePages": {
+        "pdf": [
+          9
+        ],
+        "printed": [
+          9
+        ]
+      },
+      "supportingPages": {
+        "pdf": [
+          19,
+          20
+        ],
+        "printed": [
+          13,
+          14
+        ]
+      },
+      "verified": true,
+      "elements": [
+        {
+          "number": "6.1",
+          "name": "Al-Qur’an Hadis",
+          "pdfPages": [
+            9
+          ],
+          "printedPages": [
+            9
+          ],
+          "contentSha256": "26742c84e09d7779d82a9ae64306fdd44c6883a021d5b953991cbbf93b16785e"
+        },
+        {
+          "number": "6.2",
+          "name": "Akidah",
+          "pdfPages": [
+            9
+          ],
+          "printedPages": [
+            9
+          ],
+          "contentSha256": "671d89b2f218b84d3a25cce13637f84781389d7ae85c00fcdb9bbc02d433b933"
+        },
+        {
+          "number": "6.3",
+          "name": "Akhlak",
+          "pdfPages": [
+            9
+          ],
+          "printedPages": [
+            9
+          ],
+          "contentSha256": "be919fbd34526b0a05a3dc64411d285675c387cf4a643788f3ce30885fd58115"
+        },
+        {
+          "number": "6.4",
+          "name": "Fikih",
+          "pdfPages": [
+            9
+          ],
+          "printedPages": [
+            9
+          ],
+          "contentSha256": "1523932bb40dd11ce70359a6414c4e5bcd73e0a8f8fd6a86de160d339e2ecb17"
+        },
+        {
+          "number": "6.5",
+          "name": "Sejarah Peradaban Islam",
+          "pdfPages": [
+            9
+          ],
+          "printedPages": [
+            9
+          ],
+          "contentSha256": "0b5ffebf1c8d1165ae8792a0938e9685c8f90cbf4226504211b15d2bf1e5a2f4"
+        }
+      ]
+    }
+  ],
+  "status": "VERIFIED_AGAINST_PRIMARY",
+  "editorialDifferences": [
+    "B 2.5: decree saw. / Makkah.; guide SAW. / Makkah..",
+    "C 3.2: decree qadā’ / guide qadāʾ (hamza character).",
+    "C 3.3: decree non-muslim / guide non muslim.",
+    "C 3.5: decree saw. / guide SAW.",
+    "E 5.5: decree Islam / guide islam."
+  ],
+  "normalization": "Join line wraps; remove layout-only word-break hyphens and italic formatting; preserve spelling, punctuation and transliteration of the primary decree. Element name follows primary Al-Qur’an Hadis, not the package’s generic Al-Qur'an dan Hadis."
+}

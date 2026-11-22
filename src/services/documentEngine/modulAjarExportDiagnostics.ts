@@ -24,6 +24,7 @@ export function recordModulAjarExportDiagnostic(
   snapshot: DocumentSnapshot,
   format: 'docx' | 'pdf',
 ) {
+  if (context.skipExportDiagnostics) return;
   const meetings = projection.meetings || [];
   lastDiagnostic = {
     buildSha: APP_BUILD_SHA, buildId: APP_BUILD_ID, buildDirty: APP_BUILD_DIRTY,

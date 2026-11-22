@@ -61,6 +61,7 @@ export interface DocumentGenerationContext {
   learningPlanPresentation?: 'MODUL_AJAR' | 'RPM';
   documentMode?: DocumentMode; // 'data' | 'blank'
   snapshot?: DocumentSnapshot; // Preserved frozen snapshot for historical documents
+  skipExportDiagnostics?: boolean; // Headless jobs must not write browser diagnostics.
   skipDownload?: boolean; // When true, generates document and returns blob without triggering browser saveAs
   effectiveWeeksCount?: number; // for PROMES (default 18 weeks/semester)
   cpAnalysis?: import('../../types').CPAnalysisData;

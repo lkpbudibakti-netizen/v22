@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import type {ATPUnitMappingData,ATPData,TPData,Step07AutoRequest} from '../../src/types';
+import type {Step07RepairOptions} from '../../src/services/step07AutoRepairService';
+import {deriveMappingAtpIds} from '../../src/services/atpMappingLineageService';
+import {sanitizeMappingAnalysisResult} from '../../server/mappingAnalysis';
+import {createReadyV21WorkflowFixture} from '../fixtures/v21ReadyWorkflowFixture';
+import {saveStorageV5,getATPUnitMappingV5,saveATPUnitMappingV5} from '../../src/services/storageV5';
+import {resolveStep07CheckpointContext} from '../../src/services/step07CheckpointService';
+export const rawMappingFixture=JSON.parse(readFileSync('scripts/fixtures/pjokClass6RealProjectEvidence.json','utf8')) as {mapping:ATPUnitMappingData;atp:ATPData;tp:TPData};
+export const memory=new Map<string,string>(),locks=new Set<string>();
+(globalThis as any).localStorage={getItem:(k:string)=>memory.get(k)||null,setItem:(k:string,v:string)=>memory.set(k,v),removeItem:(k:string)=>memory.delete(k)};
+Object.defineProperty(navigator,'locks',{configurable:true,value:{request:async(key:string,o:any,cb:any)=>{if(locks.has(key)&&o.ifAvailable)return cb(null);while(locks.has(key))await new Promise(r=>setTimeout(r,1));locks.add(key);try{return await cb({name:key});}finally{locks.delete(key);}}}});
+export function fixture(){return structuredClone(rawMappingFixture);}
+export type Fixture=ReturnType<typeof fixture>;
+export function seed(f=fixture()){memory.clear();const s=createReadyV21WorkflowFixture();s.annualData.tp=[{yearPlanId:'y',value:f.tp}];s.annualData.atp=[{yearPlanId:'y',value:f.atp}];s.annualData.atpUnitMappings=[{yearPlanId:'y',value:f.mapping}];saveStorageV5(s);return f;}
+export function completeMapping(f:Fixture){const m=structuredClone(f.mapping);for(const u of m.units){for(const [i,mat]of u.materials.entries()){mat.linkedTpIds=[...new Set([...mat.linkedTpIds,...(i===0?u.linkedTpIds:[])])];if(!mat.linkedTpIds.length)mat.linkedTpIds=[u.linkedTpIds[0] || f.tp.items[0].id];mat.linkedAtpItemIds=deriveMappingAtpIds(mat.linkedTpIds,f.atp,f.tp).atpItemIds;}u.linkedTpIds=[...new Set(u.materials.flatMap(x=>x.linkedTpIds))];u.linkedAtpItemIds=deriveMappingAtpIds(u.linkedTpIds,f.atp,f.tp).atpItemIds;}return m;}
+/** Mock chooses canonical IDs; no assertion of live pedagogical accuracy. */
+export function provider(f:Fixture,calls:Step07AutoRequest[]=[],limit=200):Step07RepairOptions['analyze'] {return async(m,r)=>{assert.equal(r.phase,'PROPOSE','VERIFY must never be requested');calls.push(structuredClone(r));const desired=completeMapping({...f,mapping:m}),reference=completeMapping(fixture());for(const u of desired.units)for(const [i,mat]of u.materials.entries()){const original=m.units.find(v=>v.id===u.id)!.materials.find(v=>v.id===mat.id)!;if(!original.linkedTpIds.length){const ref=reference.units.find(v=>v.id===u.id)?.materials.find(v=>v.id===mat.id);if(ref)mat.linkedTpIds=[...new Set([...ref.linkedTpIds,...(i===0?u.linkedTpIds:[])])];mat.linkedAtpItemIds=deriveMappingAtpIds(mat.linkedTpIds,f.atp,f.tp).atpItemIds;}}const actions=desired.units.flatMap(u=>u.materials.flatMap(mat=>{const before=m.units.find(x=>x.id===u.id)!.materials.find(x=>x.id===mat.id)!;return JSON.stringify(before.linkedTpIds)===JSON.stringify(mat.linkedTpIds)&&JSON.stringify(before.linkedAtpItemIds)===JSON.stringify(mat.linkedAtpItemIds)?[]:[{id:'map-'+mat.id,type:'LINK_TP',targetUnitId:u.id,targetMaterialId:mat.id,before:mat.title,linkedTpIds:mat.linkedTpIds,reason:'Mock AI: materi berada dalam cakupan kompetensi gerak pada Bab PJOK ini.'}];})).slice(0,limit);return sanitizeMappingAnalysisResult({alignmentProposals:actions},{currentMapping:m,atpData:f.atp,tpData:f.tp,step07Auto:r});};}
+export function options(f:Fixture,extra:Partial<Step07RepairOptions>={}):Step07RepairOptions {const m=getATPUnitMappingV5('y')!;return {mapping:m,persistedMapping:m,atp:f.atp,tp:f.tp,checkpointContext:resolveStep07CheckpointContext('y'),analyze:provider(f),isCurrent:()=>true,save:m=>{saveATPUnitMappingV5('y',m);return true;},...extra};}
+export function emptyLineage(m:ATPUnitMappingData,from=0){for(const u of m.units.slice(from)){u.linkedTpIds=[];u.linkedAtpItemIds=[];for(const mat of u.materials){mat.linkedTpIds=[];mat.linkedAtpItemIds=[];}}return m;}

@@ -27,14 +27,19 @@ export function sourceIdentityExportIssue(type: DocumentType, context: Partial<D
     if (type === 'PROTA') sources[type] = () => buildProtaProjection(context as DocumentGenerationContext).rows;
     if (type === 'JURNAL') sources[type] = () => buildJurnalProjection(context as DocumentGenerationContext).rows;
   }
+  if (containsSourceIdentity(sources[type]?.(), tokens)) return 'Isi dokumen masih menyebut identitas asal di dalam teks sumber. Tinjau teks tersebut secara eksplisit; substansi tidak diganti otomatis.';
+}
+
+export function containsSourceIdentity(value: unknown, tokens: string[], includeMetadata = false): boolean {
   const normalize = (text: string) => text.normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('id');
   const patterns = tokens.map(token => new RegExp(`(^|[^\\p{L}\\p{N}])${normalize(token).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u'));
   const containsIdentity = (value: unknown): boolean => {
     if (typeof value === 'string') return patterns.some(pattern => pattern.test(normalize(value)));
     if (Array.isArray(value)) return value.some(containsIdentity);
     if (value && typeof value === 'object') return Object.entries(value).some(([key, child]) =>
-      !['source', 'evidence', 'regulationSources', 'curriculumLock'].includes(key) && !/Ids?$/.test(key) && containsIdentity(child));
+      (includeMetadata || (!['source', 'evidence', 'regulationSources', 'curriculumLock'].includes(key) && !/Ids?$/.test(key))) &&
+      containsIdentity(child));
     return false;
   };
-  if (containsIdentity(sources[type]?.())) return 'Isi dokumen masih menyebut identitas asal di dalam teks sumber. Tinjau teks tersebut secara eksplisit; substansi tidak diganti otomatis.';
+  return containsIdentity(value);
 }

@@ -255,6 +255,12 @@ type ZipWorkItem = AnnualZipWorkItem;
  * Data exports package one academic year: annual documents plus canonical semester folders.
  * Every file sits directly in the general-administration or semester folder under one readable root.
  */
+// JSZip reads Blob input through FileReader, which is unavailable in Node.
+async function zipDocumentData(blob: Blob): Promise<Blob | Uint8Array> {
+  if (typeof FileReader !== 'undefined' || !(blob instanceof Blob)) return blob;
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
 export async function generateZipBundle(
   typesOrOptions: DocumentType[] | ZipExportOptions,
   rawContext: DocumentGenerationContext,
@@ -403,7 +409,7 @@ export async function generateZipBundle(
             item.instanceTitle
           );
           const pdfFileName = getUniqueZipFileName(targetFolder, candidatePdfName);
-          targetFolder.file(pdfFileName, pdfResult.blob);
+          targetFolder.file(pdfFileName, await zipDocumentData(pdfResult.blob));
           filesGenerated.push(pdfFileName);
           pdfCount++;
           pdfSuccess = true;
@@ -441,7 +447,7 @@ export async function generateZipBundle(
             item.instanceTitle
           );
           const docxFileName = getUniqueZipFileName(targetFolder, candidateDocxName);
-          targetFolder.file(docxFileName, docxResult.blob);
+          targetFolder.file(docxFileName, await zipDocumentData(docxResult.blob));
           filesGenerated.push(docxFileName);
           docxCount++;
           docxSuccess = true;
