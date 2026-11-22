@@ -7,7 +7,7 @@ import { getCurriculumDocumentTypes } from '../src/services/curriculumRouter';
 import { generateZipBundle, validateDocumentRequirements } from '../src/services/documentEngine';
 import { buildAnnualZipWorkItems, resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
 import { resolveEffectiveContext } from '../src/services/documentEngine/snapshot';
-import { containsSourceIdentity } from '../src/services/documentEngine/sourceIdentityGuard';
+import { orderZipContainsSourceIdentity } from './administrationOrderZipIdentity';
 import type { DocumentType, ZipExportItemStatus } from '../src/services/documentEngine/types';
 import { buildImportedProjectExportContext } from '../src/services/identityOnlyProjectExport';
 import {
@@ -87,12 +87,6 @@ export async function processAdministrationOrder(input: AdministrationOrderInput
     const tokens = [...(year.identityOnlyImport?.sourceIdentityTokens || []), archive.project.profiles[0].nuptk,
       sourceSchool.village, sourceSchool.district, sourceSchool.regency, sourceSchool.province]
       .filter((value): value is string => typeof value === 'string' && !!value.trim() && !targetValues.has(normalize(value)));
-    if (containsSourceIdentity([year.subject, year.grade, year.classSection, year.academicYear,
-      context.academicSetting.planningReferenceNotice, prepared.state.annualData, prepared.state.semesterData], tokens, true)) {
-      validation.findings.push(productionFinding(stage, 'Identitas sumber', 'BLOCKER_PAKET',
-        'Data yang akan diekspor masih memuat identitas asal. Tinjau substansi proyek sebelum diproses kembali.'));
-    }
-
     const { semesters, issues } = resolveAnnualZipContexts(context);
     for (const issue of issues) validation.findings.push(productionFinding(stage, 'Semester', 'BLOCKER_PAKET', issue));
     if (required.includes('MODUL_AJAR')) {
@@ -136,10 +130,13 @@ export async function processAdministrationOrder(input: AdministrationOrderInput
       validation.findings.push(productionFinding(stage, 'Paket administrasi', 'BLOCKER_PAKET', 'Paket PDF dan DOCX belum lengkap.'));
       return { success: false, validation };
     }
-    return {
-      success: true, fileName: result.zipFileName,
-      zip: new Uint8Array(await result.zipBlob.arrayBuffer()), validation,
-    };
+    const zip = new Uint8Array(await result.zipBlob.arrayBuffer());
+    if (await orderZipContainsSourceIdentity(zip, tokens)) {
+      validation.findings.push(productionFinding(stage, 'Identitas sumber', 'BLOCKER_PAKET',
+        'Dokumen hasil ekspor masih memuat identitas asal.'));
+      return { success: false, validation };
+    }
+    return { success: true, fileName: result.zipFileName, zip, validation };
   } catch (error) {
     if (error instanceof ProductionExportError) validation.findings.push(...error.findings);
     else validation.findings.push(productionFinding(stage, 'Pesanan', 'BLOCKER_PAKET',

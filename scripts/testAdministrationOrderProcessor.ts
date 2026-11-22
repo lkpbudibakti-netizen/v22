@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { inflateSync } from 'node:zlib';
 import JSZip from 'jszip';
+import { orderZipContainsSourceIdentity } from '../server/administrationOrderZipIdentity';
 import { processAdministrationOrder, type AdministrationOrderInput } from '../server/administrationOrderProcessor';
 import { prepareCompleteAdministrationProjectImport } from '../src/services/administrationProjectImportService';
 import { createCompleteProjectZip, readCompleteProjectZip } from '../src/services/completeProjectZipService';
@@ -76,6 +77,7 @@ function pdfText(bytes: Uint8Array): string {
 test('dua pelanggan paralel mendapat ZIP PDF/DOCX dengan identitas masing-masing dan tanpa akses storage', async () => {
   assert.equal(typeof window, 'undefined');
   assert.equal(typeof document, 'undefined');
+  assert.equal(typeof FileReader, 'undefined');
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('localStorage diakses'); } });
   const other = {
@@ -84,13 +86,17 @@ test('dua pelanggan paralel mendapat ZIP PDF/DOCX dengan identitas masing-masing
     school: { ...customer.school, name: 'SEKOLAH_PELANGGAN_BETA', npsn: '77777777' },
   };
   const before = JSON.stringify(archive);
+  const withMetadata = structuredClone(archive);
+  withMetadata.project.annualData.cp[0].value.source!.id = 'GURU_ASAL_TEST';
   try {
     const results = await Promise.all([
       processAdministrationOrder({ project: zip, customer }),
-      processAdministrationOrder({ project: archive, customer: other }),
+      processAdministrationOrder({ project: withMetadata, customer: other }),
     ]);
     for (const [i, result] of results.entries()) {
       assert(result.success, JSON.stringify(result.validation));
+      assert.equal(result.validation.documents.length, 20);
+      assert(result.validation.documents.every(item => item.status === 'SUCCESS' && item.filesGenerated?.length === 2));
       const expected = i === 0 ? customer : other;
       const unexpected = i === 0 ? other : customer;
       const output = await JSZip.loadAsync(result.zip, { checkCRC32: true });
@@ -101,6 +107,12 @@ test('dua pelanggan paralel mendapat ZIP PDF/DOCX dengan identitas masing-masing
         assert.equal(entries.length, result.validation.documents.length);
         assert(entries.some(entry => entry.name.includes('Semester_1/')));
         assert(entries.some(entry => entry.name.includes('Semester_2/')));
+        if (i === 0) {
+          const singleFormat = new JSZip();
+          for (const entry of entries) singleFormat.file(entry.name, await entry.async('uint8array'));
+          const formatZip = await singleFormat.generateAsync({ type: 'uint8array' });
+          assert(await orderZipContainsSourceIdentity(formatZip, [expected.school.name]), format);
+        }
         const bodies: string[] = [];
         for (const entry of entries) {
           const bytes = await entry.async('uint8array');
@@ -133,7 +145,16 @@ test('identitas lama dalam substansi memblokir pesanan', async () => {
   project.project.annualData.cp[0].value.generalDescription += ' GURU_ASAL_TEST';
   const result = await processAdministrationOrder({ project, customer });
   assert(!result.success && !('zip' in result));
-  assert(result.validation.findings.some(finding => finding.object === 'Identitas sumber'));
+  assert(result.validation.findings.some(finding => finding.problem.includes('identitas asal')));
+});
+
+test('identitas di metadata yang tercetak tetap memblokir paket', async () => {
+  const project = structuredClone(archive);
+  project.project.annualData.cp[0].value.source!.title = 'SEKOLAH_ASAL_TEST';
+  const result = await processAdministrationOrder({ project, customer });
+  assert(!result.success && !('zip' in result));
+  assert(result.validation.findings.some(finding => finding.stage === 'ZIP' && finding.object === 'Identitas sumber'),
+    JSON.stringify(result.validation));
 });
 
 test('dokumen wajib yang belum lengkap memblokir paket', async () => {

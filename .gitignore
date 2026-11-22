@@ -4,6 +4,7 @@ dist/
 coverage/
 artifacts/ci/
 tmp/ci-runner-*/
+tmp/headless-baseline-*/
 .DS_Store
 *.log
 .env*
