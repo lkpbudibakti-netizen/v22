@@ -1,0 +1,1159 @@
+{
+  "schema_version": "2.4.0",
+  "status": "review_audit_v5_seluruh_halaman_ditinjau_visual_overview_belum_final",
+  "sumber": {
+    "regulasi": "Keputusan Kepala BSKAP Nomor 046/H/KR/2025",
+    "lampiran": "II",
+    "file": "1753929861_manage_file.pdf",
+    "sha256_pdf": "f8e5f478de4dc1790bfc800104135f992c8fe6cb2d8f770f46b616932a2aec34"
+  },
+  "cakupan": {
+    "jenjang": "SMP/MTs",
+    "fase_kelas": {
+      "D": [
+        7,
+        8,
+        9
+      ]
+    },
+    "catatan": "Mata pelajaran yang mempunyai bagian CP Fase D pada Lampiran II, termasuk Prakarya empat aspek dan seni empat cabang."
+  },
+  "catatan_validasi": "V5: seluruh 41 halaman referensi ditinjau melalui contact sheet visual; 96/96 blok redaksi cocok dengan teks PDF setelah normalisasi whitespace, Unicode dan zero-width space. Belum ada pemeriksaan tipografi detail per karakter; redaksi tidak diubah; status tetap REVIEW.",
+  "records": [
+    {
+      "id": "cp-046-2025-i-1-d",
+      "kode_bagian": "I.1",
+      "mata_pelajaran": "PENDIDIKAN AGAMA ISLAM DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 28,
+        "akhir_terdeteksi": 29
+      },
+      "elemen": [
+        {
+          "id": "I.1-D-4.1",
+          "nomor": "4.1",
+          "nama": "Al-Qur’an Hadis",
+          "teks": "Memahami ayat Al-Qur’an dan hadis tentang pentingnya iman, takwa, toleransi, cinta tanah air, semangat keilmuan dan sabar dalam menghadapi musibah dan ujian.",
+          "subelemen": []
+        },
+        {
+          "id": "I.1-D-4.2",
+          "nomor": "4.2",
+          "nama": "Akidah",
+          "teks": "Memahami rukun iman dan hal-hal yang dapat meneguhkan iman.",
+          "subelemen": []
+        },
+        {
+          "id": "I.1-D-4.3",
+          "nomor": "4.3",
+          "nama": "Akhlak",
+          "teks": "Memahami ikhlas, bersyukur kepada Allah Swt., cinta rasul, husnuzan, kasih sayang kepada sesama dan lingkungan alam.",
+          "subelemen": []
+        },
+        {
+          "id": "I.1-D-4.4",
+          "nomor": "4.4",
+          "nama": "Fikih",
+          "teks": "Memahami ketentuan sujud, salat, kewajiban terhadap jenazah, haji dan umrah, penyembelihan hewan, kurban, akikah, dan rukhsah dalam perspektif mazhab fikih.",
+          "subelemen": []
+        },
+        {
+          "id": "I.1-D-4.5",
+          "nomor": "4.5",
+          "nama": "Sejarah Peradaban Islam",
+          "teks": "Memahami peradaban Bani Umayyah, Abbasiyyah, Fatimiyah, Turki Usmani, Syafawi, dan Mughal.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut.  \n4.1.​\nAl-Qur’an Hadis​\nMemahami ayat Al-Qur’an dan hadis tentang \n \n\n \npentingnya iman, takwa, toleransi, cinta tanah \nair, \nsemangat \nkeilmuan \ndan \nsabar \ndalam \nmenghadapi musibah dan ujian.  \n4.2.​\nAkidah​\nMemahami rukun iman dan hal-hal yang dapat \nmeneguhkan iman. \n4.3.​\nAkhlak​\nMemahami ikhlas, bersyukur kepada Allah Swt., \ncinta rasul, husnuzan, kasih sayang kepada \nsesama dan lingkungan alam. \n4.4.​\nFikih​\nMemahami ketentuan sujud, salat, kewajiban \nterhadap \njenazah, \nhaji \ndan \numrah, \npenyembelihan hewan, kurban, akikah, dan \nrukhsah dalam perspektif mazhab fikih. \n4.5.​\nSejarah Peradaban Islam​\nMemahami \nperadaban \nBani \nUmayyah, \nAbbasiyyah, Fatimiyah, Turki Usmani, Syafawi, \ndan Mughal.",
+      "sha256_teks_sumber_ekstraksi": "eea8c1eb087f078aa2d04bd21fda30bcf8c28b6411b037b342a568de837d34ce",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-i-2-d",
+      "kode_bagian": "I.2",
+      "mata_pelajaran": "PENDIDIKAN AGAMA KRISTEN DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 38,
+        "akhir_terdeteksi": 39
+      },
+      "elemen": [
+        {
+          "id": "I.2-D-4.1",
+          "nomor": "4.1",
+          "nama": "Elemen Allah Berkarya",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "I.2-D-4.1.1",
+              "nomor": "4.1.1",
+              "nama": "Subelemen Allah Pencipta",
+              "teks": "Memahami karya Allah dalam hidup manusia yang mengubah masa depan manusia dan dunia, karya Allah melalui berbagai perubahan yang dihadirkan gereja, perkembangan iptek, dan memanfaatkan iptek secara bertanggung jawab."
+            },
+            {
+              "id": "I.2-D-4.1.2",
+              "nomor": "4.1.2",
+              "nama": "Subelemen Allah Pemelihara",
+              "teks": "Memahami Allah memelihara seluruh ciptaan-Nya dan kehidupan manusia yang dinamis ada dalam pemeliharaan-Nya, dan pemeliharaan Allah memberi inspirasi dalam kehidupan."
+            },
+            {
+              "id": "I.2-D-4.1.3",
+              "nomor": "4.1.3",
+              "nama": "Subelemen Allah Penyelamat",
+              "teks": "Memahami teladan Yesus Kristus dalam hidup beriman."
+            },
+            {
+              "id": "I.2-D-4.1.4",
+              "nomor": "4.1.4",
+              "nama": "Subelemen Allah Pembaru",
+              "teks": "Memahami karya Roh Kudus memimpin hidup orang beriman dalam menghadapi berbagai tantangan."
+            }
+          ]
+        },
+        {
+          "id": "I.2-D-4.2",
+          "nomor": "4.2",
+          "nama": "Elemen Manusia dan Nilai- nilai Kristiani",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "I.2-D-4.2.1",
+              "nomor": "4.2.1",
+              "nama": "Subelemen Hakikat Manusia",
+              "teks": "Memahami pergaulan remaja masa kini dan menjalaninya dengan meneladani hidup Yesus Kristus."
+            },
+            {
+              "id": "I.2-D-4.2.2",
+              "nomor": "4.2.2",
+              "nama": "Subelemen Nilai-Nilai Kristiani",
+              "teks": "Memahami prinsip rendah hati, penguasaan diri, dan peduli terhadap sesama, makna persahabatan dalam kehidupan sehari-hari."
+            }
+          ]
+        },
+        {
+          "id": "I.2-D-4.3",
+          "nomor": "4.3",
+          "nama": "Elemen Gereja dan Masyarakat Majemuk",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "I.2-D-4.3.1",
+              "nomor": "4.3.1",
+              "nama": "Subelemen Tugas Panggilan Gereja",
+              "teks": "Memahami makna kehadiran gereja dalam pelayanan yang membawa pembaruan bagi dunia secara keseluruhan."
+            },
+            {
+              "id": "I.2-D-4.3.2",
+              "nomor": "4.3.2",
+              "nama": "Subelemen Masyarakat Majemuk",
+              "teks": "Memahami model dialog dan kerjasama antarumat beragama dalam rangka penguatan moderasi beragama."
+            }
+          ]
+        },
+        {
+          "id": "I.2-D-4.4",
+          "nomor": "4.4",
+          "nama": "Elemen Alam dan Lingkungan Hidup",
+          "teks": "",
+          "subelemen": [
+            {
+              "id": "I.2-D-4.4.1",
+              "nomor": "4.4.1",
+              "nama": "Subelemen Alam Ciptaan Allah",
+              "teks": "Memahami bahwa pemeliharaan Allah terus berlangsung terhadap alam dan manusia di segala situasi."
+            },
+            {
+              "id": "I.2-D-4.4.2",
+              "nomor": "4.4.2",
+              "nama": "Subelemen Tanggung Jawab Manusia Terhadap Alam",
+              "teks": "Memahami bahwa manusia diberi tugas oleh Allah untuk mengolah serta memelihara alam dan lingkungan hidup."
+            }
+          ]
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/Program Paket B)​\nPada akhir Fase D murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nElemen Allah Berkarya \n4.1.1.​\nSubelemen Allah Pencipta​\nMemahami karya Allah dalam hidup \nmanusia yang mengubah masa depan \nmanusia \ndan \ndunia, \nkarya \nAllah \nmelalui \nberbagai \nperubahan \nyang \ndihadirkan \ngereja, \nperkembangan \niptek, dan memanfaatkan iptek secara \nbertanggung jawab. \n4.1.2.​\nSubelemen Allah Pemelihara​\nMemahami Allah memelihara seluruh \nciptaan-Nya dan kehidupan manusia \nyang \ndinamis \nada \ndalam \npemeliharaan-Nya, dan pemeliharaan \nAllah \nmemberi \ninspirasi \ndalam \nkehidupan. \n4.1.3.​\nSubelemen Allah Penyelamat​\nMemahami \nteladan \nYesus \nKristus \ndalam hidup beriman. \n4.1.4.​\nSubelemen Allah Pembaru​\nMemahami \nkarya \nRoh \nKudus \nmemimpin \nhidup \norang \nberiman \ndalam \nmenghadapi \nberbagai \ntantangan. \n \n\n \n4.2.​\nElemen Manusia dan Nilai- nilai Kristiani \n4.2.1.​\nSubelemen Hakikat Manusia​\nMemahami pergaulan remaja masa \nkini \ndan \nmenjalaninya \ndengan \nmeneladani hidup Yesus Kristus. \n4.2.2.​\nSubelemen Nilai-Nilai Kristiani​\nMemahami \nprinsip \nrendah \nhati, \npenguasaan diri, dan peduli terhadap \nsesama, makna persahabatan dalam \nkehidupan sehari-hari. \n4.3.​\nElemen Gereja dan Masyarakat Majemuk \n4.3.1.​\nSubelemen Tugas Panggilan Gereja​\nMemahami makna kehadiran gereja \ndalam \npelayanan \nyang \nmembawa \npembaruan \nbagi \ndunia \nsecara \nkeseluruhan. \n4.3.2.​\nSubelemen Masyarakat Majemuk​\nMemahami \nmodel \ndialog \ndan \nkerjasama antarumat beragama dalam \nrangka \npenguatan \nmoderasi \nberagama. \n4.4.​\nElemen Alam dan Lingkungan Hidup \n4.4.1.​\nSubelemen Alam Ciptaan Allah​\nMemahami bahwa pemeliharaan Allah \nterus berlangsung terhadap alam dan \nmanusia di segala situasi. \n4.4.2.​\nSubelemen Tanggung Jawab Manusia \nTerhadap Alam​\nMemahami \nbahwa \nmanusia \ndiberi \ntugas oleh Allah untuk mengolah serta \nmemelihara \nalam \ndan \nlingkungan \nhidup.",
+      "sha256_teks_sumber_ekstraksi": "00f6b0bceb04522127ea8c09b46681feaff1648cfb28daef6d442ed55c18824d",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-i-3-d",
+      "kode_bagian": "I.3",
+      "mata_pelajaran": "PENDIDIKAN AGAMA KATOLIK DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 49,
+        "akhir_terdeteksi": 50
+      },
+      "elemen": [
+        {
+          "id": "I.3-D-4.1",
+          "nomor": "4.1",
+          "nama": "Pribadi Peserta Didik",
+          "teks": "Memahami manusia sebagai citra Allah yang unik, sebagai laki-laki dan perempuan; memahami kemampuan dan keterbatasan; memahami diri yang tumbuh dan berkembang karena peran keluarga, teman, satuan pendidikan, dan gereja.",
+          "subelemen": []
+        },
+        {
+          "id": "I.3-D-4.2",
+          "nomor": "4.2",
+          "nama": "Yesus Kristus",
+          "teks": "Memahami pribadi Yesus yang berbelas kasih, pengampun, dan pendoa; memahami pribadi dan karya Yesus sebagai pemenuhan janji Allah, yang mewartakan kerajaan Allah melalui sabda, perbuatan, dan mukjizat-Nya; memahami Yesus yang memanggil dan mengutus para murid-Nya; memahami sengsara, wafat, dan kebangkitan Yesus, peristiwa Yesus naik ke surga; memahami Yesus yang mengutus Roh Kudus, Roh Kudus memberi kekuatan bagi para murid dan umat manusia.",
+          "subelemen": []
+        },
+        {
+          "id": "I.3-D-4.3",
+          "nomor": "4.3",
+          "nama": "Gereja",
+          "teks": "Memahami gereja sebagai komunitas, karya pelayanan (Kerygma, Liturgia, Martyria, Koinonia, dan Diakonia), gereja sebagai sakramen; memahami sakramen-sakramen inisiasi yaitu baptis, ekaristi, dan krisma; memahami sakramen tobat dan sakramen pengurapan orang sakit; memahami makna sakramen perkawinan, sakramen imamat dalam membangun masa depan.",
+          "subelemen": []
+        },
+        {
+          "id": "I.3-D-4.4",
+          "nomor": "4.4",
+          "nama": "Masyarakat",
+          "teks": "Memahami kebebasan sebagai anak-anak Allah dan sabda bahagia dalam upaya membangun kehidupan bersama; memahami Allah sebagai sumber keselamatan sejati dan menanggapinya dengan beriman, hidup dalam kebersamaan dengan jemaat serta mengikuti teladan Bunda Maria; memahami hak dan kewajiban anggota gereja dan masyarakat; memahami pentingnya menghargai keluhuran martabat manusia dengan mengembangkan budaya kehidupan, keadilan dan kejujuran; memahami alam sebagai rumah kita bersama (Ensiklik Laudato Si); memahami sikap gereja Katolik terhadap agama dan kepercayaan lain (Nostra Aetate), membangun kebersamaan dengan semua orang.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut \n4.1.​\nPribadi Peserta Didik​\nMemahami manusia sebagai citra Allah yang \nunik, \nsebagai \nlaki-laki \ndan \nperempuan; \nmemahami \nkemampuan \ndan \nketerbatasan; \nmemahami diri yang tumbuh dan berkembang \nkarena \nperan \nkeluarga, \nteman, \nsatuan \npendidikan, dan gereja. \n4.2.​\nYesus Kristus​\nMemahami pribadi Yesus yang berbelas kasih, \npengampun, dan pendoa; memahami pribadi dan \nkarya Yesus sebagai pemenuhan janji Allah, yang \nmewartakan \nkerajaan \nAllah \nmelalui \nsabda, \nperbuatan, dan mukjizat-Nya; memahami Yesus \nyang memanggil dan mengutus para murid-Nya; \nmemahami sengsara, wafat, dan kebangkitan \nYesus, peristiwa Yesus naik ke surga; memahami \n \n\n \nYesus yang mengutus Roh Kudus, Roh Kudus \nmemberi kekuatan bagi para murid dan umat \nmanusia. \n4.3.​\nGereja​\nMemahami gereja sebagai komunitas, karya \npelayanan (Kerygma, Liturgia, Martyria, Koinonia, \ndan \nDiakonia), \ngereja \nsebagai \nsakramen; \nmemahami sakramen-sakramen inisiasi yaitu \nbaptis, \nekaristi, \ndan \nkrisma; \nmemahami \nsakramen tobat dan sakramen pengurapan \norang \nsakit; \nmemahami \nmakna \nsakramen \nperkawinan, \nsakramen \nimamat \ndalam \nmembangun masa depan. \n4.4.​\nMasyarakat​\nMemahami kebebasan sebagai anak-anak Allah \ndan sabda bahagia dalam upaya membangun \nkehidupan bersama; memahami Allah sebagai \nsumber keselamatan sejati dan menanggapinya \ndengan beriman, hidup dalam kebersamaan \ndengan jemaat serta mengikuti teladan Bunda \nMaria; memahami hak dan kewajiban anggota \ngereja dan masyarakat; memahami pentingnya \nmenghargai \nkeluhuran \nmartabat \nmanusia \ndengan mengembangkan budaya kehidupan, \nkeadilan dan kejujuran; memahami alam sebagai \nrumah kita bersama (Ensiklik Laudato Si); \nmemahami sikap gereja Katolik terhadap agama \ndan \nkepercayaan \nlain \n(Nostra \nAetate), \nmembangun kebersamaan dengan semua orang.",
+      "sha256_teks_sumber_ekstraksi": "81cec1c24d9b36bc00b5fbc0292af92deebca1a1e32183d68efbd2315b41c605",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-i-4-d",
+      "kode_bagian": "I.4",
+      "mata_pelajaran": "PENDIDIKAN AGAMA HINDU DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 57,
+        "akhir_terdeteksi": 58
+      },
+      "elemen": [
+        {
+          "id": "I.4-D-4.1",
+          "nomor": "4.1",
+          "nama": "Kitab Suci Weda",
+          "teks": "Memahami Upaweda, Wedangga, dan Nibhanda.",
+          "subelemen": []
+        },
+        {
+          "id": "I.4-D-4.2",
+          "nomor": "4.2",
+          "nama": "Sraddha dan Bhakti",
+          "teks": "Memahami Atman, Asta Aiswarya, dan Catur Marga.",
+          "subelemen": []
+        },
+        {
+          "id": "I.4-D-4.3",
+          "nomor": "4.3",
+          "nama": "Susila",
+          "teks": "Memahami Tri Hita Karana, Catur Purusa Artha, serta Panca Yama Brata dan Panca Niyama Brata.",
+          "subelemen": []
+        },
+        {
+          "id": "I.4-D-4.4",
+          "nomor": "4.4",
+          "nama": "Acara",
+          "teks": "Memahami Upakara, Dharma Gita, serta Budaya Hidup Bersih dan Sehat menurut Weda.",
+          "subelemen": []
+        },
+        {
+          "id": "I.4-D-4.5",
+          "nomor": "4.5",
+          "nama": "Sejarah Agama Hindu",
+          "teks": "Memahami Sejarah Perkembangan Agama Hindu di Asia.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut.  \n4.1.​\nKitab Suci Weda​\nMemahami Upaweda, Wedangga, dan Nibhanda. \n4.2.​\nSraddha dan Bhakti​\nMemahami Atman, Asta Aiswarya, dan Catur \nMarga. \n4.3.​\nSusila​\nMemahami Tri Hita Karana, Catur Purusa Artha, \nserta Panca Yama Brata dan Panca Niyama \nBrata. \n \n\n \n4.4.​\nAcara​\nMemahami Upakara, Dharma Gita, serta Budaya \nHidup Bersih dan Sehat menurut Weda. \n4.5.​\nSejarah Agama Hindu​\nMemahami Sejarah Perkembangan Agama Hindu \ndi Asia.",
+      "sha256_teks_sumber_ekstraksi": "2e01dc94c9f6e943307733e2729f97fd3772eba8cbb7648856848470299eda28",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-i-5-d",
+      "kode_bagian": "I.5",
+      "mata_pelajaran": "PENDIDIKAN AGAMA BUDDHA DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 65,
+        "akhir_terdeteksi": 66
+      },
+      "elemen": [
+        {
+          "id": "I.5-D-4.1",
+          "nomor": "4.1",
+          "nama": "Sejarah",
+          "teks": "Memahami sifat-sifat Buddha Sakyamuni, para penyokong Buddha, siswa-siswa utama, tokoh Buddhis inspiratif, peristiwa monumental setelah Buddha Sakyamuni Parinibbana, untuk diteladan dan dilestarikan dalam kehidupan sehari-hari dengan bijaksana dalam berperilaku terhadap diri sendiri, sesama manusia, masyarakat, dan lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "I.5-D-4.2",
+          "nomor": "4.2",
+          "nama": "Ritual",
+          "teks": "Memahami meditasi hidup berkesadaran, budaya menghormat (pūja), hari raya agama Buddha, tempat-tempat ziarah Agama Buddha, melakukan ziarah ke tempat suci Agama Buddha, kunjungan ke tempat ibadah agama dan kepercayaan lain, menghargai tradisi Agama Buddha di Indonesia, dan melakukan dialog kerukunan umat beragama.",
+          "subelemen": []
+        },
+        {
+          "id": "I.5-D-4.3",
+          "nomor": "4.3",
+          "nama": "Etika",
+          "teks": "Memahami nilai-nilai ajaran moralitas, jalan Bodhisattva yaitu Paññadika Bodhisattva, Saddhadika Bodhisattva, Viriyadika Bodhisattva; hukum karma dan kelahiran kembali, hak dan kewajiban moral terhadap sesama dan lingkungan, untuk mewujudkan kehidupan yang harmonis sebagai warga negara dalam menentukan sikap terhadap kesetaraan gender, pergaulan dan permasalahan remaja di lingkungan sekitar melalui pembelajaran ramah anak serta mencerminkan kehidupan yang moderat.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut: \n4.1.​\nSejarah ​\nMemahami sifat-sifat Buddha Sakyamuni, para \npenyokong Buddha, siswa-siswa utama, tokoh \nBuddhis inspiratif, peristiwa monumental setelah \nBuddha \nSakyamuni \nParinibbana, \nuntuk \nditeladan dan dilestarikan dalam kehidupan \nsehari-hari dengan bijaksana dalam berperilaku \nterhadap \ndiri \nsendiri, \nsesama \nmanusia, \nmasyarakat, dan lingkungan sekitar. \n4.2.​\nRitual ​\nMemahami \nmeditasi \nhidup \nberkesadaran, \nbudaya menghormat (pūja), hari raya agama \nBuddha, tempat-tempat ziarah Agama Buddha, \nmelakukan \nziarah \nke \ntempat \nsuci \nAgama \nBuddha, kunjungan ke tempat ibadah agama \ndan kepercayaan lain, menghargai tradisi Agama \nBuddha di Indonesia, dan melakukan dialog \nkerukunan umat beragama. \n4.3.​\nEtika​\nMemahami nilai-nilai ajaran moralitas, jalan \nBodhisattva \nyaitu \nPaññadika \nBodhisattva, \nSaddhadika Bodhisattva, Viriyadika Bodhisattva; \nhukum karma dan kelahiran kembali, hak dan \nkewajiban \nmoral \nterhadap \nsesama \ndan \n \n\n \nlingkungan, untuk mewujudkan kehidupan yang \nharmonis \nsebagai \nwarga \nnegara \ndalam \nmenentukan sikap terhadap kesetaraan gender, \npergaulan \ndan \npermasalahan \nremaja \ndi \nlingkungan sekitar melalui pembelajaran ramah \nanak \nserta \nmencerminkan kehidupan yang \nmoderat.",
+      "sha256_teks_sumber_ekstraksi": "96ffb18cb2c82772ac5a1dfd1310896eb29c6bafcd9302b9211d3732b36289a3",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-i-6-d",
+      "kode_bagian": "I.6",
+      "mata_pelajaran": "PENDIDIKAN AGAMA KHONGHUCU DAN BUDI PEKERTI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 74,
+        "akhir_terdeteksi": 75
+      },
+      "elemen": [
+        {
+          "id": "I.6-D-4.1",
+          "nomor": "4.1",
+          "nama": "Sejarah Suci",
+          "teks": "Memahami rangkaian wahyu dalam agama Khonghucu dari nabi purba, raja suci sampai dengan Nabi Kŏngzĭ (孔子), keteladanan murid-murid Nabi Kŏngzĭ (孔子) dan orang-orang besar, serta perkembangan kehidupan beragama dan bernegara di Indonesia.",
+          "subelemen": []
+        },
+        {
+          "id": "I.6-D-4.2",
+          "nomor": "4.2",
+          "nama": "Kitab Suci",
+          "teks": "Memahami teks kitab Sìshū (四书) dan Wŭjīng (五 经) serta Xiàojīng (孝经) sebagai sumber pengetahuan yang melandasi sejarah suci, keimanan, tata ibadah dan keteladanan perilaku Jūnzĭ (君子).",
+          "subelemen": []
+        },
+        {
+          "id": "I.6-D-4.3",
+          "nomor": "4.3",
+          "nama": "Keimanan",
+          "teks": "Memahami Tiān (天), kenabian Nabi Kŏngzĭ (孔 子), dan watak sejati (xìng 性).",
+          "subelemen": []
+        },
+        {
+          "id": "I.6-D-4.4",
+          "nomor": "4.4",
+          "nama": "Tata Ibadah",
+          "teks": "Memahami ritual keagamaan kepada Tiān (天), dì (地) dan rén (人) dalam agama Khonghucu.",
+          "subelemen": []
+        },
+        {
+          "id": "I.6-D-4.5",
+          "nomor": "4.5",
+          "nama": "Perilaku Jūnzĭ (君子)",
+          "teks": "Memahami berperilaku sesuai dengan predikat yang diembannya baik sebagai diri pribadi, bagian dari keluarga, masyarakat, bangsa, negara dan dunia dengan berpedoman pada dìziguī (弟子规), wŭcháng (五常) dan delapan kebajikan (bādé 八德).",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut: \n4.1.​\nSejarah Suci​\nMemahami \nrangkaian \nwahyu dalam agama \nKhonghucu dari nabi purba, raja suci sampai \ndengan \nNabi \nKŏngzĭ \n(孔子), \nketeladanan \nmurid-murid Nabi Kŏngzĭ (孔子) dan orang-orang \nbesar, serta perkembangan kehidupan beragama \ndan bernegara di Indonesia. \n4.2.​\nKitab Suci​\nMemahami teks kitab Sìshū (四书) dan Wŭjīng (五\n经) \nserta \nXiàojīng \n(孝经) \nsebagai \nsumber \npengetahuan \nyang \nmelandasi \nsejarah \nsuci, \nkeimanan, tata ibadah dan keteladanan perilaku \nJūnzĭ (君子). \n4.3.​\nKeimanan​\nMemahami Tiān (天), kenabian Nabi Kŏngzĭ (孔\n子), dan watak sejati (xìng 性). \n4.4.​\nTata Ibadah​\nMemahami ritual keagamaan kepada Tiān (天), dì  \n(地) dan rén (人) dalam agama Khonghucu. \n4.5.​\nPerilaku Jūnzĭ (君子)​\n \n\n \nMemahami berperilaku sesuai dengan predikat \nyang diembannya baik sebagai diri pribadi, \nbagian \ndari \nkeluarga, \nmasyarakat, \nbangsa, \nnegara dan dunia dengan berpedoman pada \ndìziguī (弟子规), wŭcháng (五常) dan delapan \nkebajikan (bādé 八德).",
+      "sha256_teks_sumber_ekstraksi": "ba9f387bba991d4e65dc4bab2fe8d887d19ad859b8ea40d49b086c036cc57dc9",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-ii-d",
+      "kode_bagian": "II",
+      "mata_pelajaran": "PENDIDIKAN PANCASILA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 85,
+        "akhir_terdeteksi": 86
+      },
+      "elemen": [
+        {
+          "id": "II-D-4.1",
+          "nomor": "4.1",
+          "nama": "Pancasila",
+          "teks": "Memahami sejarah kelahiran Pancasila; memahami kedudukan Pancasila sebagai dasar negara, pandangan hidup bangsa, dan ideologi negara serta penerapannya dalam kehidupan sehari-hari; memahami makna keterkaitan Pancasila dengan Undang-Undang Dasar Negara Republik Indonesia Tahun 1945, Bhinneka Tunggal Ika, dan Negara Kesatuan Republik Indonesia.",
+          "subelemen": []
+        },
+        {
+          "id": "II-D-4.2",
+          "nomor": "4.2",
+          "nama": "Undang-Undang Dasar Negara Republik Indonesia Tahun 1945",
+          "teks": "Menerapkan norma dan aturan; memahami tata urutan peraturan perundang-undangan yang berlaku di Indonesia; menggunakan hak dan menerapkan kewajiban sebagai warga negara; memahami sejarah, fungsi, dan kedudukan Undang-Undang Dasar Negara Republik Indonesia Tahun 1945; mempraktikkan kemerdekaan berpendapat sebagai warga negara dalam era keterbukaan informasi.",
+          "subelemen": []
+        },
+        {
+          "id": "II-D-4.3",
+          "nomor": "4.3",
+          "nama": "Bhinneka Tunggal Ika",
+          "teks": "Mengidentifikasi keberagaman suku bangsa, agama dan kepercayaan, ras, dan antargolongan dalam bingkai Bhinneka Tunggal Ika dan menerima keberagaman dalam kehidupan bermasyarakat; memahami pentingnya pelestarian tradisi, kearifan lokal, dan budaya daerah sebagai identitas nasional; menumbuhkan sikap tanggung jawab dan berperan aktif melestarikan praktik tradisi, kearifan lokal, dan budaya daerah dalam masyarakat global.",
+          "subelemen": []
+        },
+        {
+          "id": "II-D-4.4",
+          "nomor": "4.4",
+          "nama": "Negara Kesatuan Republik Indonesia",
+          "teks": "Memahami Proklamasi Kemerdekaan Republik Indonesia; memahami wilayah Negara Kesatuan Republik Indonesia dalam konteks wawasan nusantara; berpartisipasi aktif untuk menjaga keutuhan wilayah Negara Kesatuan Republik Indonesia.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut: \n4.1.​\nPancasila​\nMemahami \nsejarah \nkelahiran \nPancasila; \nmemahami kedudukan Pancasila sebagai dasar \nnegara, pandangan hidup bangsa, dan ideologi \nnegara serta penerapannya dalam kehidupan \nsehari-hari; \nmemahami \nmakna \nketerkaitan \nPancasila dengan Undang-Undang Dasar Negara \nRepublik \nIndonesia \nTahun 1945, Bhinneka \nTunggal Ika, dan Negara Kesatuan Republik \nIndonesia. \n4.2.​\nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia Tahun 1945​\nMenerapkan norma dan aturan; memahami tata \nurutan peraturan perundang-undangan yang \nberlaku di Indonesia; menggunakan hak dan \nmenerapkan kewajiban sebagai warga negara; \nmemahami sejarah, fungsi, dan kedudukan \nUndang-Undang \nDasar \nNegara \nRepublik \nIndonesia \nTahun \n1945; \nmempraktikkan \nkemerdekaan berpendapat sebagai warga negara \ndalam era keterbukaan informasi. \n4.3.​\nBhinneka Tunggal Ika​\nMengidentifikasi \nkeberagaman suku bangsa, \n \n\n \nagama dan kepercayaan, ras, dan antargolongan \ndalam \nbingkai \nBhinneka \nTunggal \nIka dan \nmenerima \nkeberagaman \ndalam \nkehidupan \nbermasyarakat; \nmemahami \npentingnya \npelestarian tradisi, kearifan lokal, dan budaya \ndaerah \nsebagai \nidentitas \nnasional; \nmenumbuhkan \nsikap \ntanggung \njawab \ndan \nberperan aktif melestarikan praktik tradisi, \nkearifan \nlokal, \ndan \nbudaya \ndaerah \ndalam \nmasyarakat global. \n4.4.​\nNegara Kesatuan Republik Indonesia​\nMemahami Proklamasi Kemerdekaan Republik \nIndonesia; memahami wilayah Negara Kesatuan \nRepublik Indonesia dalam konteks wawasan \nnusantara; berpartisipasi aktif untuk menjaga \nkeutuhan wilayah Negara Kesatuan Republik \nIndonesia.",
+      "sha256_teks_sumber_ekstraksi": "c91143d2076b42b5003ac9fc49db3d0ac1bb3d5ac021912a442719ebd65a7e42",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-iii-1-d",
+      "kode_bagian": "III.1",
+      "mata_pelajaran": "BAHASA INDONESIA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 96,
+        "akhir_terdeteksi": 97
+      },
+      "elemen": [
+        {
+          "id": "III.1-D-4.1",
+          "nomor": "4.1",
+          "nama": "Menyimak",
+          "teks": "Menganalisis gagasan, pandangan, arahan, dan/atau pesan dari teks nonsastra berbentuk teks aural (teks yang dibacakan dan/atau didengarkan); dan menganalisis unsur intrinsik teks sastra berbentuk teks aural.",
+          "subelemen": []
+        },
+        {
+          "id": "III.1-D-4.2",
+          "nomor": "4.2",
+          "nama": "Membaca dan Memirsa",
+          "teks": "Menganalisis informasi berupa gagasan, pandangan, arahan, dan/atau pesan dari berbagai tipe teks berwujud teks visual dan/atau audiovisual untuk menemukan makna yang tersurat dan tersirat; menginterpretasi informasi untuk mengungkapkan kepedulian dan/atau pendapat pro/kontra dari berbagai tipe teks berwujud teks visual dan/atau audiovisual; dan mengevaluasi kualitas dan/atau kredibilitas dari berbagai tipe teks berwujud teks visual dan/atau audiovisual menggunakan sumber informasi lain.",
+          "subelemen": []
+        },
+        {
+          "id": "III.1-D-4.3",
+          "nomor": "4.3",
+          "nama": "Berbicara dan Mempresentasikan",
+          "teks": "Mempresentasikan gagasan, pandangan, arahan, dan/atau pesan untuk tujuan pengajuan usul dan pemberian solusi dalam bentuk monolog, dialog logis, dan/atau berbagai tipe teks secara kritis dan kreatif; dan menyajikan ungkapan kepedulian dari berbagai tipe teks dan/atau teks multimodal.",
+          "subelemen": []
+        },
+        {
+          "id": "III.1-D-4.4",
+          "nomor": "4.4",
+          "nama": "Menulis",
+          "teks": "Menulis gagasan, pandangan, arahan, pesan, pengalaman, dan/atau imajinasi dalam berbagai tipe teks secara logis, kritis, kreatif, menarik, dan/atau indah; menulis ungkapan kepedulian dan/atau pendapat pro/kontra dalam berbagai tipe teks berbentuk teks multimodal; dan menggunakan kosakata baru yang memiliki makna denotatif, konotatif, dan kiasan untuk menulis.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nMenyimak​\nMenganalisis \ngagasan, \npandangan, \narahan, \n \n\n \ndan/atau pesan dari teks nonsastra berbentuk \nteks aural (teks yang dibacakan dan/atau \ndidengarkan); dan menganalisis unsur intrinsik \nteks sastra berbentuk teks aural. \n4.2.​\nMembaca dan Memirsa​\nMenganalisis \ninformasi \nberupa \ngagasan, \npandangan, \narahan, \ndan/atau \npesan \ndari \nberbagai tipe teks berwujud teks visual dan/atau \naudiovisual untuk menemukan makna yang \ntersurat dan tersirat; menginterpretasi informasi \nuntuk mengungkapkan kepedulian dan/atau \npendapat pro/kontra dari berbagai tipe teks \nberwujud teks visual dan/atau audiovisual; dan \nmengevaluasi kualitas dan/atau kredibilitas dari \nberbagai tipe teks berwujud teks visual dan/atau \naudiovisual \nmenggunakan sumber informasi \nlain.  \n4.3.​\nBerbicara dan Mempresentasikan​\nMempresentasikan gagasan, pandangan, arahan, \ndan/atau pesan untuk tujuan pengajuan usul \ndan pemberian solusi dalam bentuk monolog, \ndialog logis, dan/atau berbagai tipe teks secara \nkritis dan kreatif; dan menyajikan ungkapan \nkepedulian dari berbagai tipe teks dan/atau teks \nmultimodal. \n4.4.​\nMenulis​\nMenulis gagasan, pandangan, arahan, pesan, \npengalaman, dan/atau imajinasi dalam berbagai \ntipe teks secara logis, kritis, kreatif, menarik, \ndan/atau indah; menulis ungkapan kepedulian \ndan/atau pendapat pro/kontra dalam berbagai \ntipe \nteks \nberbentuk \nteks multimodal; dan \nmenggunakan kosakata baru yang memiliki \nmakna denotatif, konotatif, dan kiasan untuk \nmenulis.",
+      "sha256_teks_sumber_ekstraksi": "a136e436e8b4c6ef4c6f514049498a20200f1c0294677690f94e16054a7d6aa9",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-iv-1-d",
+      "kode_bagian": "IV.1",
+      "mata_pelajaran": "MATEMATIKA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 116,
+        "akhir_terdeteksi": 118
+      },
+      "elemen": [
+        {
+          "id": "IV.1-D-4.1",
+          "nomor": "4.1",
+          "nama": "Bilangan",
+          "teks": "Membaca, menulis, dan membandingkan bilangan bulat, bilangan rasional, bilangan desimal, bilangan berpangkat bulat dan akar, bilangan dalam notasi ilmiah; menerapkan operasi aritmatika pada bilangan real, dan memberikan estimasi/perkiraan dalam menyelesaikan masalah (termasuk berkaitan dengan literasi finansial). Murid dapat menggunakan rasio (skala, proporsi, dan laju perubahan) dalam penyelesaian masalah.",
+          "subelemen": []
+        },
+        {
+          "id": "IV.1-D-4.2",
+          "nomor": "4.2",
+          "nama": "Aljabar",
+          "teks": "Mengenali, memprediksi dan menggeneralisasi pola dalam bentuk susunan benda dan bilangan; Menyatakan suatu situasi ke dalam bentuk aljabar; menggunakan sifat-sifat operasi (komutatif, asosiatif, dan distributif) untuk menghasilkan bentuk aljabar yang ekuivalen. Murid dapat memahami relasi dan fungsi (domain, kodomain, range) serta menyajikannya dalam bentuk diagram panah, tabel, himpunan pasangan berurutan, dan grafik; membedakan beberapa fungsi non linear dari fungsi linear secara grafik; menyelesaikan persamaan dan pertidaksamaan linear satu variabel; menyajikan, menganalisis, dan menyelesaikan masalah dengan menggunakan relasi, fungsi dan persamaan linear; serta menyelesaikan sistem persaman linear dua variabel melalui beberapa cara untuk penyelesaian masalah.",
+          "subelemen": []
+        },
+        {
+          "id": "IV.1-D-4.3",
+          "nomor": "4.3",
+          "nama": "Pengukuran",
+          "teks": "Menentukan keliling, luas, panjang busur, sudut dan luas juring lingkaran, serta menyelesaikan masalah yang terkait; menjelaskan cara untuk menentukan luas permukaan dan volume bangun ruang (prisma, tabung, bola, limas dan kerucut) dan menyelesaikan masalah yang terkait; dan menjelaskan pengaruh perubahan secara proporsional dari bangun datar dan bangun ruang terhadap ukuran panjang, besar sudut, luas, dan/atau volume.",
+          "subelemen": []
+        },
+        {
+          "id": "IV.1-D-4.4",
+          "nomor": "4.4",
+          "nama": "Geometri",
+          "teks": "Membuat jaring-jaring bangun ruang (prisma, tabung, limas dan kerucut) dan membuat bangun ruang dari jaring-jaringnya. Murid dapat menggunakan hubungan antar-sudut yang terbentuk oleh dua garis yang berpotongan, dan oleh dua garis sejajar yang dipotong sebuah garis transversal untuk menyelesaikan masalah (termasuk menentukan jumlah besar sudut dalam sebuah segitiga, menentukan besar sudut yang belum diketahui pada sebuah segitiga); menjelaskan sifat-sifat kekongruenan dan kesebangunan pada segitiga dan segiempat, dan menggunakannya untuk menyelesaikan masalah; menunjukkan kebenaran teorema Pythagoras dan menggunakannya dalam menyelesaikan masalah (termasuk pengenalan bilangan irasional dan jarak antara dua titik pada bidang koordinat Kartesius). Murid dapat melakukan transformasi tunggal (refleksi, translasi, rotasi, dan dilatasi) titik, garis, dan bangun datar pada bidang koordinat Kartesius dan menggunakannya untuk menyelesaikan masalah.",
+          "subelemen": []
+        },
+        {
+          "id": "IV.1-D-4.5",
+          "nomor": "4.5",
+          "nama": "Analisis Data dan Peluang",
+          "teks": "Merumuskan pertanyaan, mengumpulkan, menyajikan, dan menganalisis data untuk menjawab pertanyaan dari situasi atau masalah; menggunakan diagram batang dan diagram lingkaran untuk menyajikan dan menginterpretasi data; mengambil sampel yang mewakili suatu populasi untuk mendapatkan data yang terkait dengan diri dan lingkungan mereka; menentukan dan menafsirkan rerata (mean), median, modus, dan jangkauan (range) dari data tersebut untuk menyelesaikan masalah (termasuk membandingkan suatu data terhadap kelompoknya, membandingkan dua kelompok data, memprediksi, membuat keputusan); menyelidiki kemungkinan adanya perubahan pengukuran pusat tersebut akibat perubahan data. Murid dapat menjelaskan dan menggunakan pengertian peluang dan frekuensi relatif untuk menentukan frekuensi harapan satu kejadian pada suatu percobaan sederhana (semua hasil percobaan dapat muncul secara merata).",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut \n4.1.​\nBilangan​\nMembaca, \nmenulis, \ndan \nmembandingkan \nbilangan \nbulat, \nbilangan rasional, bilangan \ndesimal, bilangan berpangkat bulat dan akar, \nbilangan \ndalam \nnotasi \nilmiah; menerapkan \noperasi aritmatika pada bilangan real, dan \nmemberikan \nestimasi/perkiraan \ndalam \nmenyelesaikan masalah (termasuk berkaitan \ndengan literasi finansial). ​\nMurid \ndapat \nmenggunakan \nrasio \n(skala, \nproporsi, \ndan \nlaju \nperubahan) \ndalam \npenyelesaian masalah. \n4.2.​\nAljabar​\nMengenali, memprediksi dan menggeneralisasi \npola dalam bentuk susunan benda dan bilangan; \nMenyatakan suatu situasi ke dalam bentuk \naljabar; \nmenggunakan \nsifat-sifat \noperasi \n(komutatif, \nasosiatif, \ndan \ndistributif) untuk \nmenghasilkan bentuk aljabar yang ekuivalen.​\nMurid \ndapat \nmemahami \nrelasi dan fungsi \n(domain, kodomain, range) serta menyajikannya \ndalam bentuk diagram panah, tabel, himpunan \npasangan berurutan, dan grafik; membedakan \nbeberapa fungsi non linear dari fungsi linear \nsecara grafik; menyelesaikan persamaan dan \npertidaksamaan \nlinear \nsatu \nvariabel; \nmenyajikan, menganalisis, dan menyelesaikan \nmasalah dengan menggunakan relasi, fungsi dan \npersamaan linear; serta menyelesaikan sistem \n \n\n \npersaman linear dua variabel melalui beberapa \ncara untuk penyelesaian masalah. \n4.3.​\nPengukuran​\nMenentukan keliling, luas, panjang busur, sudut \ndan luas juring lingkaran, serta menyelesaikan \nmasalah yang terkait; menjelaskan cara untuk \nmenentukan \nluas \npermukaan \ndan \nvolume \nbangun ruang (prisma, tabung, bola, limas dan \nkerucut) \ndan \nmenyelesaikan \nmasalah \nyang \nterkait; dan menjelaskan pengaruh perubahan \nsecara proporsional dari bangun datar dan \nbangun ruang terhadap ukuran panjang, besar \nsudut, luas, dan/atau volume. \n4.4.​\nGeometri​\nMembuat jaring-jaring bangun ruang (prisma, \ntabung, limas dan kerucut) dan membuat \nbangun ruang dari jaring-jaringnya. ​\nMurid \ndapat \nmenggunakan \nhubungan \nantar-sudut yang terbentuk oleh dua garis yang \nberpotongan, dan oleh dua garis sejajar yang \ndipotong \nsebuah \ngaris \ntransversal \nuntuk \nmenyelesaikan masalah (termasuk menentukan \njumlah besar sudut dalam sebuah segitiga, \nmenentukan besar sudut yang belum diketahui \npada sebuah segitiga); menjelaskan sifat-sifat \nkekongruenan dan kesebangunan pada segitiga \ndan segiempat, dan menggunakannya untuk \nmenyelesaikan \nmasalah; \nmenunjukkan \nkebenaran \nteorema \nPythagoras \ndan \nmenggunakannya dalam menyelesaikan masalah \n(termasuk pengenalan bilangan irasional dan \njarak antara dua titik pada bidang koordinat \nKartesius).​\nMurid dapat melakukan transformasi tunggal \n(refleksi, translasi, rotasi, dan dilatasi) titik, \ngaris, dan bangun datar pada bidang koordinat \nKartesius \ndan \nmenggunakannya \nuntuk \n \n\n \nmenyelesaikan masalah. \n4.5.​\nAnalisis Data dan Peluang​\nMerumuskan \npertanyaan, \nmengumpulkan, \nmenyajikan, \ndan \nmenganalisis \ndata \nuntuk \nmenjawab pertanyaan dari situasi atau masalah; \nmenggunakan diagram batang dan diagram \nlingkaran \nuntuk \nmenyajikan \ndan \nmenginterpretasi data; mengambil sampel yang \nmewakili suatu populasi untuk mendapatkan \ndata yang terkait dengan diri dan lingkungan \nmereka; menentukan dan menafsirkan rerata \n(mean), median, modus, dan jangkauan (range) \ndari data tersebut untuk menyelesaikan masalah \n(termasuk membandingkan suatu data terhadap \nkelompoknya, membandingkan dua kelompok \ndata, \nmemprediksi, \nmembuat \nkeputusan); \nmenyelidiki kemungkinan adanya perubahan \npengukuran pusat tersebut akibat perubahan \ndata.​\nMurid dapat menjelaskan dan menggunakan \npengertian peluang dan frekuensi relatif untuk \nmenentukan frekuensi harapan satu kejadian \npada suatu percobaan sederhana (semua hasil \npercobaan dapat muncul secara merata).",
+      "sha256_teks_sumber_ekstraksi": "a6ed3dad354dd3aef7834b7235ffe4487bec5060527b8fa227c412050809efa1",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-v-1-d",
+      "kode_bagian": "V.1",
+      "mata_pelajaran": "BAHASA INGGRIS",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 135,
+        "akhir_terdeteksi": 136
+      },
+      "elemen": [
+        {
+          "id": "V.1-D-3.1",
+          "nomor": "3.1",
+          "nama": "Menyimak - Berbicara (Listening - Speaking)",
+          "teks": "Memahami alur informasi secara keseluruhan, gagasan utama dan informasi rinci dari teks lisan tentang topik sehari-hari atau yang sesuai dengan minat; menggunakan bahasa Inggris untuk mengungkapkan gagasan dan pengalaman dalam berbagai jenis teks secara lisan tentang topik yang dibahas dengan menggunakan kalimat sederhana dan majemuk baik formal maupun informal sesuai konteks. (Understand the entire flow of information, main ideas and details of oral texts about everyday topics or topics of interest; using English to express ideas and experiences in various types of texts orally about the topics discussed using simple and compound sentences, both formally and informally in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "V.1-D-3.2",
+          "nomor": "3.2",
+          "nama": "Membaca - Memirsa (Reading - Viewing)",
+          "teks": "Memahami alur informasi, informasi tersurat dan tersirat dari berbagai jenis teks tertulis atau teks multimodal tentang topik sehari-hari atau yang sesuai dengan minat dan meresponnya sesuai konteks. (Understand the entire flow of information, explicit and implicit information from various types of written or multimodal texts about everyday topics or topics of interest and respond in line with its context)",
+          "subelemen": []
+        },
+        {
+          "id": "V.1-D-3.3",
+          "nomor": "3.3",
+          "nama": "Menulis-Mempresentasikan (Writing - Presenting)",
+          "teks": "Mengomunikasikan gagasan dan pengalaman mereka dalam berbagai jenis teks secara tertulis atau teks multimodal tentang topik sehari-hari atau yang sesuai dengan minat dengan mulai menggunakan kalimat sederhana dan majemuk dengan struktur teks dan unsur kebahasaan yang tepat; mengungkapkan pendapat dan mempertahankan argumen tentang suatu isu terkait topik sehari-hari atau yang sesuai dengan minat. (Communicate their ideas and experiences in various types of texts, in written or multimodal texts, about everyday topics or topics of interest, by starting to use simple and compound sentences with appropriate text structures and language features; express their opinions and defend their arguments on issues related to daily topics or topics of interests)",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir fase D, murid memiliki kemampuan sebagai \nberikut. \n3.1.​\nMenyimak - Berbicara (Listening - Speaking)​\nMemahami alur informasi secara keseluruhan, \ngagasan utama dan informasi rinci dari teks \nlisan tentang topik sehari-hari atau yang  sesuai \ndengan minat; menggunakan bahasa Inggris \nuntuk \nmengungkapkan \ngagasan \ndan \npengalaman dalam berbagai jenis teks secara \nlisan \ntentang \ntopik \nyang \ndibahas \ndengan \nmenggunakan kalimat sederhana dan majemuk \nbaik formal maupun informal sesuai konteks.​\n(Understand the entire flow of information,  main \nideas and details of oral texts about everyday \ntopics or topics of interest; using English to \nexpress ideas and experiences in various types of \ntexts orally about the topics discussed using \nsimple and compound sentences, both formally \nand informally in line with its context) \n3.2.​\nMembaca - Memirsa (Reading - Viewing)​\nMemahami alur informasi, informasi tersurat \ndan tersirat dari berbagai jenis teks tertulis atau \nteks multimodal tentang topik sehari-hari atau \n \n\n \nyang sesuai dengan minat dan meresponnya \nsesuai konteks.​\n(Understand the entire flow of information, explicit \nand implicit information from various types of \nwritten or multimodal texts about everyday topics \nor topics of interest and respond in line with its \ncontext) \n3.3.​\nMenulis-Mempresentasikan (Writing - Presenting)​\nMengomunikasikan gagasan dan pengalaman \nmereka dalam  berbagai jenis teks secara tertulis \natau teks multimodal tentang topik sehari-hari \natau yang sesuai dengan minat  dengan mulai \nmenggunakan kalimat sederhana dan majemuk \ndengan struktur teks dan unsur kebahasaan \nyang \ntepat; \nmengungkapkan \npendapat \ndan  \nmempertahankan argumen tentang suatu isu \nterkait topik sehari-hari atau yang sesuai dengan \nminat. ​\n(Communicate their ideas and experiences in \nvarious types of texts, in written or multimodal \ntexts, about everyday topics or topics of interest, \nby starting to use simple and compound sentences \nwith appropriate text structures and language \nfeatures; express their opinions and defend their \narguments on issues related to daily topics or \ntopics of interests)",
+      "sha256_teks_sumber_ekstraksi": "7cd61533b979d03c450afb43a110eaada449b7011d6cf705e075047deea15519",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-vii-d",
+      "kode_bagian": "VII",
+      "mata_pelajaran": "ILMU PENGETAHUAN ALAM (IPA)",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 157,
+        "akhir_terdeteksi": 159
+      },
+      "elemen": [
+        {
+          "id": "VII-D-1.1",
+          "nomor": "1.1",
+          "nama": "Pemahaman IPA",
+          "teks": "Menelaah hasil identifikasi makhluk hidup sesuai dengan karakteristiknya; menganalisis klasifikasi, sifat, dan perubahan materi; menganalisis sistem organisasi kehidupan, fungsi, serta kelainan atau gangguan yang muncul pada sistem organ; menganalisis interaksi antar makhluk hidup dan lingkungannya dalam merancang upaya-upaya untuk mencegah dan mengatasi perubahan iklim; menganalisis pewarisan sifat; membuat bioteknologi konvensional di lingkungan sekitarnya; menerapkan pengukuran terhadap aspek fisis dalam kehidupan sehari-hari; menganalisis ragam gerak, gaya, dan tekanan; menganalisis hubungan usaha dan energi; menganalisis pengaruh kalor dan perpindahannya terhadap perubahan suhu; menganalisis gelombang dan pemanfaatannya dalam kehidupan sehari-hari; menganalisis gejala kemagnetan dan kelistrikan untuk menyelesaikan tantangan yang dihadapi dalam kehidupan sehari-hari termasuk pemanfaatan sumber energi listrik ramah lingkungan; menganalisis posisi relatif bumi-bulan-matahari dalam sistem tata surya untuk menjelaskan fenomena alam dan perubahan iklim; serta mengevaluasi keputusan yang tepat untuk menghindari zat aditif dan adiktif yang membahayakan dirinya dan lingkungan.",
+          "subelemen": []
+        },
+        {
+          "id": "VII-D-1.2",
+          "nomor": "1.2",
+          "nama": "Keterampilan Proses",
+          "teks": "Mampu menerapkan keterampilan proses yang meliputi: ● Mengamati Melakukan pengamatan terhadap fenomena dan peristiwa di sekitarnya dan mencatat hasil pengamatannya dengan memperhatikan karakteristik objek yang diamati. ● Mempertanyakan dan Memprediksi Mengidentifikasi pertanyaan yang dapat diselidiki secara ilmiah dan membuat prediksinya. ● Merencanakan dan Melakukan Penyelidikan Merencanakan dan melakukan langkah-langkah operasional untuk menjawab pertanyaan; murid menggunakan alat bantu pengukuran untuk mendapatkan data yang akurat dan memahami adanya potensi kekeliruan dalam penyelidikan. ● Memproses, Menganalisis Data dan Informasi Mengolah data dalam bentuk tabel, grafik, dan model serta menjelaskan hasil pengamatan dan pola atau hubungan pada data; murid mengumpulkan data dari penyelidikan yang dilakukannya, serta menggunakan pemahaman sains untuk mengidentifikasi hubungan dan menarik kesimpulan berdasarkan bukti. ● Mengevaluasi dan Refleksi Mengidentifikasi sumber ketidakpastian dan kemungkinan penjelasan alternatif dalam rangka mengevaluasi kesimpulan, serta menjelaskan cara spesifik untuk meningkatkan kualitas data. ● Mengomunikasikan Hasil Mengomunikasikan hasil penyelidikan secara sistematis dan utuh yang ditunjang dengan argumen dan bahasa yang sesuai konteks penyelidikan.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n1.1.​\nPemahaman IPA​\nMenelaah \nhasil \nidentifikasi \nmakhluk hidup \nsesuai dengan karakteristiknya; menganalisis \nklasifikasi, \nsifat, \ndan \nperubahan \nmateri; \nmenganalisis \nsistem \norganisasi \nkehidupan, \nfungsi, serta kelainan atau gangguan yang \nmuncul \npada \nsistem \norgan; \nmenganalisis \ninteraksi \nantar \nmakhluk \nhidup \ndan \nlingkungannya dalam merancang upaya-upaya \nuntuk mencegah dan mengatasi perubahan \niklim; menganalisis pewarisan sifat; membuat \nbioteknologi \nkonvensional \ndi \nlingkungan \nsekitarnya; menerapkan pengukuran terhadap \naspek \nfisis \ndalam \nkehidupan \nsehari-hari; \nmenganalisis ragam gerak, gaya, dan tekanan; \nmenganalisis \nhubungan \nusaha \ndan \nenergi; \nmenganalisis \npengaruh \nkalor \ndan \nperpindahannya \nterhadap \nperubahan \nsuhu; \nmenganalisis gelombang dan pemanfaatannya \ndalam \nkehidupan \nsehari-hari; \nmenganalisis \ngejala \nkemagnetan \ndan \nkelistrikan \nuntuk \nmenyelesaikan tantangan yang dihadapi dalam \nkehidupan sehari-hari termasuk pemanfaatan \nsumber \nenergi \nlistrik \nramah \nlingkungan; \nmenganalisis posisi relatif bumi-bulan-matahari \ndalam sistem tata surya untuk menjelaskan \nfenomena alam dan perubahan iklim; serta \nmengevaluasi \nkeputusan \nyang \ntepat \nuntuk \nmenghindari \nzat \naditif \ndan \nadiktif \nyang \n \n\n \nmembahayakan dirinya dan lingkungan. \n1.2.​\nKeterampilan Proses​\nMampu menerapkan keterampilan proses yang \nmeliputi: \n●​\nMengamati  \nMelakukan pengamatan terhadap fenomena \ndan peristiwa di sekitarnya dan mencatat \nhasil \npengamatannya \ndengan \nmemperhatikan karakteristik objek yang \ndiamati. \n●​\nMempertanyakan dan Memprediksi \nMengidentifikasi pertanyaan yang dapat \ndiselidiki \nsecara \nilmiah \ndan \nmembuat \nprediksinya. \n●​\nMerencanakan dan Melakukan Penyelidikan \nMerencanakan \ndan \nmelakukan \nlangkah-langkah \noperasional \nuntuk \nmenjawab pertanyaan; murid menggunakan \nalat bantu pengukuran untuk mendapatkan \ndata yang akurat dan memahami adanya \npotensi kekeliruan dalam penyelidikan. \n●​\nMemproses, \nMenganalisis \nData \ndan \nInformasi  \nMengolah data dalam bentuk tabel, grafik, \ndan \nmodel \nserta \nmenjelaskan \nhasil \npengamatan dan pola atau hubungan pada \ndata; \nmurid \nmengumpulkan \ndata \ndari \npenyelidikan \nyang \ndilakukannya, \nserta \nmenggunakan \npemahaman sains untuk \nmengidentifikasi hubungan dan menarik \nkesimpulan berdasarkan bukti. \n●​\nMengevaluasi dan Refleksi  \nMengidentifikasi sumber ketidakpastian dan \nkemungkinan penjelasan alternatif dalam \nrangka \nmengevaluasi \nkesimpulan, serta \nmenjelaskan \ncara \nspesifik \nuntuk \nmeningkatkan kualitas data.  \n \n\n \n●​\nMengomunikasikan Hasil  \nMengomunikasikan \nhasil \npenyelidikan \nsecara sistematis dan utuh yang ditunjang \ndengan argumen dan bahasa yang sesuai \nkonteks penyelidikan.",
+      "sha256_teks_sumber_ekstraksi": "8a4439034dbe24cccd1042a1a326bd84910ad62d7bfcb16588e6833e7d6d81cd",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xi-d",
+      "kode_bagian": "XI",
+      "mata_pelajaran": "INFORMATIKA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 182,
+        "akhir_terdeteksi": 183
+      },
+      "elemen": [
+        {
+          "id": "XI-D-1.1",
+          "nomor": "1.1",
+          "nama": "Berpikir Komputasional",
+          "teks": "Menerapkan berpikir komputasional untuk problem dalam kehidupan sehari-hari maupun dalam menghadapi masalah komputasi; memahami konsep himpunan data terstruktur dalam kehidupan sehari-hari; memahami konsep lembar kerja pengolah data; menerapkan berpikir komputasional dalam menyelesaikan persoalan yang mengandung himpunan data berstruktur sederhana dengan volume kecil; serta menuliskan sekumpulan instruksi dengan menggunakan sekumpulan kosakata terbatas atau simbol dalam format pseudocode.",
+          "subelemen": []
+        },
+        {
+          "id": "XI-D-1.2",
+          "nomor": "1.2",
+          "nama": "Literasi Digital",
+          "teks": "Memahami cara kerja dan penggunaan mesin pencari di internet; mengetahui kualitas informasi dan kredibilitas sumber informasi digital; mengenal ekosistem media pers digital; membedakan fakta, opini, dan hoaks; memahami pemanfaatan perangkat teknologi pengolah dokumen, lembar kerja, dan presentasi; mampu mendeskripsikan komponen, fungsi, dan cara kerja komputer; memahami konsep dan penerapan konektivitas jaringan lokal dan internet baik kabel maupun nirkabel; mengetahui jenis ruang publik virtual; memahami pemanfaatan perangkat teknologi digital untuk produksi dan diseminasi konten; memahami pentingnya menjaga rekam jejak digital, mengamalkan toleransi dan empati di dunia digital, memahami dampak perundungan digital, membuat kata sandi yang aman; memahami pengamanan perangkat dari berbagai jenis malware, memilah informasi yang bersifat privat dan publik, melindungi data pribadi dan identitas digital serta memiliki kesadaran penuh (mindfulness) dalam dunia digital.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII, dan XI \nSMP/MTs/Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut: \n1.1.​\nBerpikir Komputasional​\nMenerapkan \nberpikir \nkomputasional \nuntuk \nproblem dalam kehidupan sehari-hari maupun \ndalam \nmenghadapi \nmasalah \nkomputasi; \nmemahami konsep himpunan data terstruktur \ndalam kehidupan sehari-hari; memahami konsep \nlembar \nkerja \npengolah \ndata; \nmenerapkan \nberpikir komputasional dalam menyelesaikan \npersoalan yang mengandung himpunan data \nberstruktur sederhana dengan volume kecil; \n \n\n \nserta menuliskan sekumpulan instruksi dengan \nmenggunakan sekumpulan kosakata terbatas \natau simbol dalam format pseudocode. \n1.2.​\nLiterasi Digital​\nMemahami cara kerja dan penggunaan mesin \npencari \ndi \ninternet; \nmengetahui \nkualitas \ninformasi dan kredibilitas sumber informasi \ndigital; mengenal ekosistem media pers digital; \nmembedakan \nfakta, \nopini, \ndan \nhoaks; \nmemahami pemanfaatan perangkat teknologi \npengolah \ndokumen, \nlembar \nkerja, \ndan \npresentasi; mampu mendeskripsikan komponen, \nfungsi, dan cara kerja komputer; memahami \nkonsep dan penerapan konektivitas jaringan \nlokal dan internet baik kabel maupun nirkabel; \nmengetahui \njenis \nruang \npublik \nvirtual; \nmemahami pemanfaatan perangkat teknologi \ndigital untuk produksi dan diseminasi konten; \nmemahami pentingnya menjaga rekam jejak \ndigital, mengamalkan toleransi dan empati di \ndunia digital, memahami dampak perundungan \ndigital, \nmembuat \nkata \nsandi \nyang \naman; \nmemahami pengamanan perangkat dari berbagai \njenis malware, memilah informasi yang bersifat \nprivat dan publik, melindungi data pribadi dan \nidentitas digital serta memiliki kesadaran penuh \n(mindfulness) dalam dunia digital.",
+      "sha256_teks_sumber_ekstraksi": "7c955cea038fbeef5edb14dd49e3f2379bf16ded048aebe28a6b302f69e79e98",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xviii-1-d",
+      "kode_bagian": "XVIII.1",
+      "mata_pelajaran": "SENI MUSIK",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 241,
+        "akhir_terdeteksi": 241
+      },
+      "elemen": [
+        {
+          "id": "XVIII.1-D-4.1",
+          "nomor": "4.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengenali dan menerapkan unsur-unsur musik berupa nada, irama, dan melodi, dengan alat musik berbasis teknologi yang sesuai dengan kondisi setempat serta mengidentifikasi karakteristik musik dari berbagai genre dan era.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.1-D-4.2",
+          "nomor": "4.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Melakukan umpan balik kemampuan bermain musik, karya musik diri sendiri atau orang lain sesuai dengan genre menggunakan istilah musik yang tepat.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.1-D-4.3",
+          "nomor": "4.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Menerapkan seluruh proses berpraktik musik untuk perbaikan dan perkembangan keterampilan bermusik; menyajikan musik sederhana dari daerah setempat dan Nusantara; dan menyajikan karya-karya musik modern Indonesia dengan interpretasi dan ekspresi yang tepat, baik secara individu maupun berkelompok.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.1-D-4.4",
+          "nomor": "4.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Mengenali dan menghasilkan lagu sederhana dengan mengembangkan irama dan melodi menggunakan berbagai alat musik.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.1-D-4.5",
+          "nomor": "4.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Menunjukkan minat, empati, dan kepedulian terhadap isu-isu di lingkungan sekitar melalui kegiatan bermusik.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase \nD \n(Umumnya \nuntuk \nKelas \nVII, \nVIII \ndan \nIX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut: \n4.1.​\nMengalami (Experiencing)​\nMengenali \ndan \nmenerapkan \nunsur-unsur \nmusik \nberupa nada, irama, dan melodi, dengan  alat musik \nberbasis  \nteknologi yang sesuai dengan kondisi \nsetempat serta mengidentifikasi karakteristik musik \ndari berbagai genre dan era. \n4.2.​\nMerefleksikan (Reflecting)​\nMelakukan umpan balik kemampuan bermain musik, \nkarya musik diri sendiri atau orang lain sesuai dengan \ngenre menggunakan istilah musik yang tepat. \n4.3.​\nBerpikir dan Bekerja Artistik (Thinking and Working \nArtistically)​\nMenerapkan seluruh proses berpraktik musik untuk \nperbaikan dan perkembangan keterampilan bermusik; \nmenyajikan musik sederhana dari daerah setempat \ndan Nusantara; dan menyajikan karya-karya musik \nmodern Indonesia dengan interpretasi dan ekspresi \nyang tepat, baik secara individu maupun berkelompok. \n4.4.​\nMenciptakan (Creating)​\nMengenali dan menghasilkan lagu sederhana dengan \nmengembangkan irama dan melodi menggunakan \nberbagai alat musik. \n4.5.​\nBerdampak (Impacting)​\nMenunjukkan minat, empati, dan kepedulian terhadap \nisu-isu \ndi \nlingkungan \nsekitar \nmelalui \nkegiatan \nbermusik.",
+      "sha256_teks_sumber_ekstraksi": "8728fd7fbad95324ccb7458ad6353fa44c8d28903f8deb6efc2314b4e57dd833",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xviii-2-d",
+      "kode_bagian": "XVIII.2",
+      "mata_pelajaran": "SENI RUPA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 248,
+        "akhir_terdeteksi": 249
+      },
+      "elemen": [
+        {
+          "id": "XVIII.2-D-4.1",
+          "nomor": "4.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Menganalisis unsur rupa dan prinsip desain dalam benda-benda di sekitar/karya seni rupa.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.2-D-4.2",
+          "nomor": "4.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Merefleksikan dan mengapresiasi karya diri sendiri dan teman sekelas; membandingkan unsur rupa, prinsip desain, dan fungsi karya seni rupa menggunakan kosa kata seni rupa yang sesuai.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.2-D-4.3",
+          "nomor": "4.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Mengaplikasikan variasi teknik penggunaan alat dan bahan yang dimiliki untuk berkarya; mengeksplorasi alternatif/potensi alat dan bahan yang ada di lingkungan sekitar.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.2-D-4.4",
+          "nomor": "4.4",
+          "nama": "Menciptakan (Making/Creating)",
+          "teks": "Membuat karya seni rupa berdasarkan pengalaman dan/atau hasil pengamatan terhadap lingkungan sekitar, dengan mempertimbangkan fungsi, menggunakan gaya atau teknik yang telah dipelajari.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.2-D-4.5",
+          "nomor": "4.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Menghasilkan karya seni rupa untuk merespon pengalaman sehari-hari dan mengekspresikan perasaan atau minat.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII, dan IX \nSMP/MTs/Program Paket B) ​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nMengalami (Experiencing)​\nMenganalisis unsur rupa dan prinsip desain \ndalam benda-benda di sekitar/karya seni rupa. \n4.2.​\nMerefleksikan (Reflecting)​\nMerefleksikan dan mengapresiasi karya diri \nsendiri dan teman sekelas; membandingkan \nunsur rupa, prinsip desain, dan fungsi karya \nseni rupa menggunakan kosa kata seni rupa \nyang sesuai. \n4.3.​\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)​\n \n\n \nMengaplikasikan variasi teknik penggunaan alat \ndan \nbahan \nyang \ndimiliki \nuntuk \nberkarya; \nmengeksplorasi \nalternatif/potensi \nalat \ndan \nbahan yang ada di lingkungan sekitar. \n4.4.​\nMenciptakan (Making/Creating)​\nMembuat \nkarya \nseni \nrupa \nberdasarkan \npengalaman \ndan/atau \nhasil \npengamatan \nterhadap \nlingkungan \nsekitar, \ndengan \nmempertimbangkan fungsi, menggunakan gaya \natau teknik yang telah dipelajari. \n4.5.​\nBerdampak (Impacting)​\nMenghasilkan karya seni rupa  untuk merespon \npengalaman sehari-hari dan mengekspresikan \nperasaan atau minat.",
+      "sha256_teks_sumber_ekstraksi": "f1397418d16eac1ad5c85274fb4718215c6a27e7fda588c6653180e0cfe0a7f2",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xviii-3-d",
+      "kode_bagian": "XVIII.3",
+      "mata_pelajaran": "SENI TARI",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 258,
+        "akhir_terdeteksi": 259
+      },
+      "elemen": [
+        {
+          "id": "XVIII.3-D-4.1",
+          "nomor": "4.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengamati latar belakang, jenis, fungsi, dan nilai tari dalam konteks budaya.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.3-D-4.2",
+          "nomor": "4.2",
+          "nama": "Merefleksikan (Reflecting)",
+          "teks": "Mengelompokkan jenis, fungsi, dan nilai tari berdasarkan latar belakang budaya serta mengukur hasil pencapaian karya tari.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.3-D-4.3",
+          "nomor": "4.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Merancang konsep tari kreasi yang merefleksikan jenis, fungsi, dan nilai dari tari tradisi dengan mempertimbangkan unsur utama dan pendukung tari.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.3-D-4.4",
+          "nomor": "4.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Membuat gerak tari kreasi berdasarkan jenis dan fungsi dari tari tradisi dengan menerapkan desain lantai dan level.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.3-D-4.5",
+          "nomor": "4.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Menghargai dan mengajak orang lain untuk mencintai dan bangga terhadap tari tradisi melalui proses kreatif yang dilakukan.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII, dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nMengalami (Experiencing)​\nMengamati latar belakang, jenis, fungsi, dan \nnilai tari dalam konteks budaya. \n4.2.​\nMerefleksikan (Reflecting)​\nMengelompokkan jenis, fungsi, dan nilai tari \nberdasarkan \nlatar \nbelakang \nbudaya \nserta \nmengukur hasil pencapaian karya tari. \n \n\n \n4.3.​\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)​\nMerancang \nkonsep \ntari \nkreasi \nyang \nmerefleksikan jenis, fungsi, dan nilai dari tari \ntradisi dengan mempertimbangkan unsur utama \ndan pendukung tari. \n4.4.​\nMenciptakan (Creating)​\nMembuat gerak tari kreasi berdasarkan jenis dan \nfungsi dari tari tradisi dengan menerapkan \ndesain lantai dan level. \n4.5.​\nBerdampak (Impacting)​\nMenghargai dan mengajak orang lain untuk \nmencintai dan bangga terhadap tari tradisi \nmelalui proses kreatif yang dilakukan.",
+      "sha256_teks_sumber_ekstraksi": "ca6c099c566e00f0d56dc1f565e8472489118e02e8b926fe7947f636567d863a",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xviii-4-d",
+      "kode_bagian": "XVIII.4",
+      "mata_pelajaran": "SENI TEATER",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 266,
+        "akhir_terdeteksi": 267
+      },
+      "elemen": [
+        {
+          "id": "XVIII.4-D-4.1",
+          "nomor": "4.1",
+          "nama": "Mengalami (Experiencing)",
+          "teks": "Mengeksplorasi olah tubuh, mimik wajah, dan vokal sebagai dasar keaktoran murid; mengidentifikasi karakter melalui analisis karakteristik, dan sosiologis; membuat dan memainkan beragam karakter dengan imajinasi dan kreativitasnya dan mengenal bentuk-bentuk teater.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.4-D-4.2",
+          "nomor": "4.2",
+          "nama": "Merefleksikan (Reflection)",
+          "teks": "Menjelaskan pengalaman bermain peran dan dampaknya terhadap diri sendiri serta memberikan apresiasi dan umpan balik sesuai dengan pengalaman pribadi.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.4-D-4.3",
+          "nomor": "4.3",
+          "nama": "Berpikir dan Bekerja Artistik (Thinking and Working Artistically)",
+          "teks": "Mengeksplorasi dan merancang tata artistik panggung dengan mempertimbangkan elemen-elemen rupa yang sederhana dari bahan yang ada di lingkungan sekitar serta memanfaatkan teknologi digital.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.4-D-4.4",
+          "nomor": "4.4",
+          "nama": "Menciptakan (Creating)",
+          "teks": "Mengidentifikasi karakter dalam sebuah cerita dan menyusun alur cerita sederhana yang jelas dan mudah dipahami; memainkan lakon dengan satu gaya yang sederhana dan mudah dipelajari dan memainkan peran dalam sebuah pertunjukan sederhana di kelas atau satuan pendidikan.",
+          "subelemen": []
+        },
+        {
+          "id": "XVIII.4-D-4.5",
+          "nomor": "4.5",
+          "nama": "Berdampak (Impacting)",
+          "teks": "Membuat pertunjukan teater yang relevan dengan kehidupan murid.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir fase D, murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nMengalami (Experiencing)​\nMengeksplorasi olah tubuh, mimik wajah, dan \nvokal \nsebagai \ndasar \nkeaktoran \nmurid; \nmengidentifikasi \nkarakter \nmelalui \nanalisis \nkarakteristik, dan sosiologis; membuat dan \nmemainkan beragam karakter dengan imajinasi \ndan kreativitasnya dan mengenal bentuk-bentuk \nteater. \n4.2.​\nMerefleksikan (Reflection)​\nMenjelaskan pengalaman bermain peran dan \ndampaknya \nterhadap \ndiri \nsendiri \nserta \nmemberikan apresiasi dan umpan balik sesuai \ndengan pengalaman pribadi.  \n4.3.​\nBerpikir dan Bekerja Artistik (Thinking and \nWorking Artistically)​\nMengeksplorasi dan merancang tata artistik \npanggung \ndengan \nmempertimbangkan \nelemen-elemen rupa yang sederhana dari bahan \nyang \nada \ndi \nlingkungan \nsekitar \nserta \nmemanfaatkan teknologi digital. \n4.4.​\nMenciptakan (Creating)​\nMengidentifikasi karakter dalam sebuah cerita \ndan menyusun alur cerita sederhana yang jelas \ndan mudah dipahami; memainkan lakon dengan \nsatu gaya yang sederhana dan mudah dipelajari \ndan \nmemainkan \nperan \ndalam \nsebuah \npertunjukan sederhana di kelas atau satuan \npendidikan. \n4.5.​\nBerdampak (Impacting)​\nMembuat \npertunjukan \nteater \nyang \nrelevan \ndengan kehidupan murid.",
+      "sha256_teks_sumber_ekstraksi": "2a0b9930c687b1f8fd544e8ce04c9279612276f724a3875981452844098ed885",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xix-1-d",
+      "kode_bagian": "XIX.1",
+      "mata_pelajaran": "PRAKARYA BUDI DAYA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 272,
+        "akhir_terdeteksi": 272
+      },
+      "elemen": [
+        {
+          "id": "XIX.1-D-1.1",
+          "nomor": "1.1",
+          "nama": "Eksplorasi dan Observasi",
+          "teks": "Menjelaskan aspek- aspek penting budi daya berdasarkan hasil observasi; menjelaskan produk budi daya serta modifikasi bahan, alat, dan teknik bila diperlukan sesuai potensi lingkungan/kearifan lokal berdasarkan hasil eksplorasi.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.1-D-1.2",
+          "nomor": "1.2",
+          "nama": "Desain/Perencanaan",
+          "teks": "Menyusun rencana kegiatan budi daya serta modifikasi bahan, alat, dan teknik bila diperlukan, sesuai potensi lingkungan/kearifan lokal.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.1-D-1.3",
+          "nomor": "1.3",
+          "nama": "Produksi",
+          "teks": "Menghasilkan produk budi daya yang aman berdasarkan potensi lingkungan/kearifan lokal dengan modifikasi bahan, alat, dan teknik bila diperlukan, serta ditampilkan dalam kemasan sederhana.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.1-D-1.4",
+          "nomor": "1.4",
+          "nama": "Evaluasi dan Refleksi",
+          "teks": "Mengevaluasi dan merefleksikan proses serta produk budi daya yang dihasilkan.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n1.1.​\nEksplorasi dan Observasi​\nMenjelaskan aspek- aspek penting budi daya \nberdasarkan \nhasil \nobservasi; \nmenjelaskan  \nproduk budi daya serta modifikasi bahan, alat, \ndan \nteknik \nbila diperlukan sesuai potensi \nlingkungan/kearifan lokal berdasarkan hasil \neksplorasi. \n1.2.​\nDesain/Perencanaan​\nMenyusun rencana kegiatan budi daya serta \nmodifikasi \nbahan, \nalat, \ndan  \nteknik \nbila \ndiperlukan, sesuai potensi lingkungan/kearifan \nlokal. \n1.3.​\nProduksi​\nMenghasilkan produk budi daya yang aman \nberdasarkan potensi lingkungan/kearifan lokal \ndengan modifikasi bahan, alat, dan teknik bila \ndiperlukan, serta ditampilkan dalam kemasan  \nsederhana. \n1.4.​\nEvaluasi dan Refleksi​\nMengevaluasi dan  merefleksikan proses  serta  \nproduk budi daya yang dihasilkan.",
+      "sha256_teks_sumber_ekstraksi": "cccf0f00151b76a8381ad94fb4f25190a02745ba41903c9c96ac160e88a1bbbc",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xix-2-d",
+      "kode_bagian": "XIX.2",
+      "mata_pelajaran": "PRAKARYA KERAJINAN",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 277,
+        "akhir_terdeteksi": 277
+      },
+      "elemen": [
+        {
+          "id": "XIX.2-D-1.1",
+          "nomor": "1.1",
+          "nama": "Eksplorasi dan Observasi",
+          "teks": "Memahami proses observasi dan eksplorasi produk kerajinan berdasarkan karakteristik bentuk, bahan, alat, teknik, prosedur pembuatan sesuai potensi lingkungan/kearifan lokal",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.2-D-1.2",
+          "nomor": "1.2",
+          "nama": "Desain/Perencanaan",
+          "teks": "Merancang desain produk kerajinan menggunakan bahan, alat, teknik, dan prosedur pembuatan, dengan mempertimbangkan potensi lingkungan/kearifan lokal.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.2-D-1.3",
+          "nomor": "1.3",
+          "nama": "Produksi",
+          "teks": "Membuat produk kerajinan sesuai dengan rancangan serta menampilkan melalui displai produk yang sesuai.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.2-D-1.4",
+          "nomor": "1.4",
+          "nama": "Evaluasi dan Refleksi",
+          "teks": "Pada akhir fase D, murid mampu merefleksikan proses observasi, eksplorasi, desain, dan mengevaluasi produk kerajinan.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut:  \n1.1.​\nEksplorasi dan Observasi​\nMemahami proses observasi dan eksplorasi \nproduk \nkerajinan \nberdasarkan \nkarakteristik \nbentuk, \nbahan, \nalat, \nteknik, \nprosedur \npembuatan sesuai potensi lingkungan/kearifan \nlokal \n1.2.​\nDesain/Perencanaan​\nMerancang \ndesain \nproduk  \nkerajinan \nmenggunakan bahan, alat, teknik, dan prosedur \npembuatan,  dengan mempertimbangkan potensi \nlingkungan/kearifan lokal. \n1.3.​\nProduksi​\nMembuat \nproduk \nkerajinan \nsesuai \ndengan \nrancangan serta menampilkan melalui displai \nproduk  yang sesuai. \n1.4.​\nEvaluasi dan Refleksi​\nPada akhir fase D, murid mampu merefleksikan  \nproses  \nobservasi, \neksplorasi, \ndesain, \ndan \nmengevaluasi produk kerajinan.",
+      "sha256_teks_sumber_ekstraksi": "fde38f9e9ca7c4fe48b9d7b0c5fd67d85c0e9357f5e559467254f1999e411feb",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xix-3-d",
+      "kode_bagian": "XIX.3",
+      "mata_pelajaran": "PRAKARYA PENGOLAHAN",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 281,
+        "akhir_terdeteksi": 281
+      },
+      "elemen": [
+        {
+          "id": "XIX.3-D-1.1",
+          "nomor": "1.1",
+          "nama": "Observasi dan Eksplorasi",
+          "teks": "Mengidentifikasi dan mengomunikasikan karakteristik bahan, alat, teknik pengolahan, pengemasan, dan penyajian produk olahan pangan dan atau nonpangan sesuai potensi lingkungan.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.3-D-1.2",
+          "nomor": "1.2",
+          "nama": "Perencanaan",
+          "teks": "Merancang modifikasi bahan, alat, atau teknik pengolahan, pengemasan atau penyajian produk olahan pangan dan atau nonpangan.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.3-D-1.3",
+          "nomor": "1.3",
+          "nama": "Produksi",
+          "teks": "Membuat, mengemas, dan menyajikan produk olahan pangan dan atau nonpangan hasil rancangan modifikasi dengan menerapkan K3 (kesehatan dan keselamatan kerja).",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.3-D-1.4",
+          "nomor": "1.4",
+          "nama": "Refleksi dan Evaluasi",
+          "teks": "Mengevaluasi dan merefleksi setiap tahapan produksi olahan pangan dan atau nonpangan hasil modifikasi.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D  (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n1.1.​\nObservasi dan Eksplorasi​\nMengidentifikasi \ndan \nmengomunikasikan \nkarakteristik bahan, alat, teknik pengolahan, \npengemasan, \ndan penyajian produk olahan \npangan dan atau nonpangan sesuai potensi \nlingkungan. \n1.2.​\nPerencanaan​\nMerancang modifikasi bahan, alat, atau teknik \npengolahan, pengemasan atau penyajian produk \nolahan pangan dan atau nonpangan.  \n1.3.​\nProduksi​\nMembuat, mengemas, dan menyajikan produk \nolahan pangan dan atau nonpangan hasil \nrancangan modifikasi dengan menerapkan K3 \n(kesehatan dan keselamatan kerja). \n1.4.​\nRefleksi dan Evaluasi​\nMengevaluasi dan merefleksi setiap tahapan \nproduksi olahan pangan dan atau nonpangan \nhasil modifikasi.",
+      "sha256_teks_sumber_ekstraksi": "5041a58a4ddaeef501a04166af2ee6e81fe53f26d64fe584732870856138f94d",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xix-4-d",
+      "kode_bagian": "XIX.4",
+      "mata_pelajaran": "PRAKARYA REKAYASA",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 285,
+        "akhir_terdeteksi": 286
+      },
+      "elemen": [
+        {
+          "id": "XIX.4-D-1.1",
+          "nomor": "1.1",
+          "nama": "Observasi dan eksplorasi",
+          "teks": "Menganalisis aspek-aspek yang penting diobservasi dalam pengembangan produk rekayasa dan mengeksplorasi produk rekayasa teknologi tepat guna yang kreatif, inovatif, dan bernilai ergonomis berdasarkan karakteristik bahan, alat, teknik, atau prosedur pembuatan.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.4-D-1.2",
+          "nomor": "1.2",
+          "nama": "Desain/perencanaan",
+          "teks": "Merancang desain produk rekayasa teknologi tepat guna yang bernilai ergonomis melalui modifikasi bahan, alat, teknik, atau prosedur pembuatan dengan memperhatikan potensi dan dampak lingkungan yang siap dikembangkan menjadi model.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.4-D-1.3",
+          "nomor": "1.3",
+          "nama": "Produksi",
+          "teks": "Membuat model/prototipe produk rekayasa teknologi tepat guna yang bernilai ergonomis sesuai dengan kebutuhan lingkungan dan/atau kearifan lokal melalui modifikasi bentuk, alat, teknik, atau prosedur pembuatan serta berdampak pada lingkungan maupun kehidupan sehari-hari.",
+          "subelemen": []
+        },
+        {
+          "id": "XIX.4-D-1.4",
+          "nomor": "1.4",
+          "nama": "Refleksi dan Evaluasi",
+          "teks": "Merefleksikan proses dan hasil observasi, eksplorasi, desain, dan evaluasi produk berdasarkan fungsi dan nilai guna.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase \nD \n(Umumnya \nuntuk \nKelas \nVII, \nVIII, \ndan \nIX \nSMP/MTs/Program Paket B)​\nPada akhir fase D, murid memiliki kemampuan sebagai \nberikut. \n1.1.​\nObservasi dan eksplorasi​\nMenganalisis aspek-aspek yang penting diobservasi \ndalam \npengembangan \nproduk \nrekayasa \ndan \nmengeksplorasi produk rekayasa teknologi tepat guna \nyang \nkreatif, \ninovatif, \ndan \nbernilai \nergonomis \nberdasarkan karakteristik bahan, alat, teknik, atau \nprosedur pembuatan. \n1.2.​\nDesain/perencanaan​\nMerancang desain produk rekayasa teknologi tepat \n \n\n \nguna yang bernilai ergonomis melalui modifikasi \nbahan, alat, teknik, atau prosedur pembuatan dengan \nmemperhatikan potensi dan dampak lingkungan yang \nsiap dikembangkan menjadi model. \n1.3.​\nProduksi​\nMembuat model/prototipe produk rekayasa teknologi \ntepat guna yang bernilai ergonomis sesuai dengan \nkebutuhan \nlingkungan \ndan/atau \nkearifan \nlokal \nmelalui modifikasi bentuk, alat, teknik, atau prosedur \npembuatan \nserta \nberdampak \npada \nlingkungan \nmaupun kehidupan sehari-hari.  \n1.4.​\nRefleksi dan Evaluasi​\nMerefleksikan proses dan hasil observasi, eksplorasi, \ndesain, dan evaluasi produk berdasarkan fungsi dan \nnilai guna.",
+      "sha256_teks_sumber_ekstraksi": "e2e8b49388ea873a0b2ca14f3d40258e3bf9958f5a029d72218dcb41c568a114",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xxi-d",
+      "kode_bagian": "XXI",
+      "mata_pelajaran": "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 313,
+        "akhir_terdeteksi": 314
+      },
+      "elemen": [
+        {
+          "id": "XXI-D-4.1",
+          "nomor": "4.1",
+          "nama": "Terampil Bergerak",
+          "teks": "Menerapkan keterampilan gerak serta mentransfernya ke dalam berbagai situasi gerak; memperagakan strategi gerak yang dapat dimanfaatkan untuk meningkatkan capaian keterampilan gerak.",
+          "subelemen": []
+        },
+        {
+          "id": "XXI-D-4.2",
+          "nomor": "4.2",
+          "nama": "Belajar Melalui Gerak",
+          "teks": "Membuktikan strategi gerak yang paling efektif dalam situasi gerak yang berbeda; menginvestigasi modifikasi peraturan yang mendukung fair play dan partisipasi inklusif; menerapkan kepemimpinan, kolaborasi, dan pengambilan keputusan kelompok ketika berpartisipasi di dalam berbagai aktivitas jasmani.",
+          "subelemen": []
+        },
+        {
+          "id": "XXI-D-4.3",
+          "nomor": "4.3",
+          "nama": "Bergaya Hidup Aktif",
+          "teks": "Berpartisipasi dalam aktivitas jasmani dan menjelaskan reaksi tubuh terhadap berbagai tingkat intensitas yang berbeda; menjelaskan strategi peningkatan aktivitas jasmani dan pencegahan perilaku sedenter.",
+          "subelemen": []
+        },
+        {
+          "id": "XXI-D-4.4",
+          "nomor": "4.4",
+          "nama": "Memilih Hidup yang Menyehatkan",
+          "teks": "Menganalisis risiko kesehatan akibat gaya hidup dan merancang tindakan pencegahan melalui aktivitas jasmani berdasarkan rekomendasi otoritas kesehatan; merancang pola makan sehat berdasarkan analisis kandungan gizi sesuai kebutuhan aktivitas jasmani; serta mempraktikkan prosedur untuk menangani cedera yang berisiko terhadap kesehatan dan keselamatan berdasarkan prinsip pertolongan pertama.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX \nSMP/MTs/Program Paket B)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n4.1.​\nTerampil Bergerak​\nMenerapkan \nketerampilan \ngerak \nserta \nmentransfernya ke dalam berbagai situasi gerak; \nmemperagakan \nstrategi \ngerak \nyang \ndapat \ndimanfaatkan \nuntuk \nmeningkatkan \ncapaian \nketerampilan gerak.  \n4.2.​\nBelajar Melalui Gerak​\nMembuktikan strategi gerak yang paling efektif \ndalam \nsituasi \ngerak \nyang \nberbeda; \nmenginvestigasi \nmodifikasi \nperaturan \nyang \nmendukung fair play dan partisipasi inklusif; \nmenerapkan \nkepemimpinan, kolaborasi, dan \npengambilan \nkeputusan \nkelompok \nketika \nberpartisipasi \ndi \ndalam \nberbagai \naktivitas \njasmani. \n4.3.​\nBergaya Hidup Aktif​\nBerpartisipasi \ndalam \naktivitas \njasmani dan \nmenjelaskan reaksi tubuh terhadap berbagai \ntingkat intensitas yang berbeda; menjelaskan \nstrategi \npeningkatan \naktivitas \njasmani \ndan \npencegahan perilaku sedenter.  \n4.4.​\nMemilih Hidup yang Menyehatkan​\nMenganalisis risiko kesehatan akibat gaya hidup \ndan merancang tindakan pencegahan melalui \naktivitas \njasmani \nberdasarkan \nrekomendasi \notoritas kesehatan; merancang pola makan sehat \nberdasarkan analisis kandungan gizi sesuai \n \n\n \nkebutuhan \naktivitas \njasmani; \nserta \nmempraktikkan \nprosedur \nuntuk \nmenangani \ncedera yang berisiko terhadap kesehatan dan \nkeselamatan berdasarkan prinsip pertolongan \npertama.",
+      "sha256_teks_sumber_ekstraksi": "5c82ddd977c0da02d2ad138738bd64bde3583cd14dae089da4f015c5ed504a14",
+      "status_verifikasi": "REVIEW"
+    },
+    {
+      "id": "cp-046-2025-xxviii-d",
+      "kode_bagian": "XXVIII",
+      "mata_pelajaran": "KODING DAN KECERDASAN ARTIFISIAL",
+      "fase": "D",
+      "kelas": [
+        7,
+        8,
+        9
+      ],
+      "sumber_halaman_pdf": {
+        "awal": 344,
+        "akhir_terdeteksi": 344
+      },
+      "elemen": [
+        {
+          "id": "XXVIII-D-2.1",
+          "nomor": "2.1",
+          "nama": "Berpikir Komputasional",
+          "teks": "Menerapkan pengelolaan data, pemecahan masalah sederhana dalam kehidupan masyarakat secara sistematis, dan menuliskan instruksi.",
+          "subelemen": []
+        },
+        {
+          "id": "XXVIII-D-2.2",
+          "nomor": "2.2",
+          "nama": "Literasi Digital",
+          "teks": "Memproduksi dan mendiseminasi konten digital berupa audio, video, slide, dan infografis.",
+          "subelemen": []
+        },
+        {
+          "id": "XXVIII-D-2.3",
+          "nomor": "2.3",
+          "nama": "Literasi dan Etika Kecerdasan Artifisial",
+          "teks": "Memahami perbedaan cara manusia dan KA menggabungkan informasi dari beberapa perangkat penginderaan atau sensor, memahami bagaimana komputer memaknai informasi dari perangkat penginderaan atau sensor, memahami kualitas data, serta manfaat dan dampak KA pada kehidupan masyarakat. Memahami etika penggunaan KA dalam kehidupan sehari-hari seperti menjaga data pribadi dalam menggunakan KA, KA adalah sebagai alat bantu sehingga manusia tidak boleh tergantung dan percaya sepenuhnya pada KA karena KA masih sangat mungkin menghasilkan output yang salah, bias, atau melakukan halusinasi, serta menganalisis konten deep fake dalam bentuk gambar, audio, atau video.",
+          "subelemen": []
+        },
+        {
+          "id": "XXVIII-D-2.4",
+          "nomor": "2.4",
+          "nama": "Pemanfaatan dan Pengembangan Kecerdasan Artifisial",
+          "teks": "Menggunakan perangkat KA sederhana dengan kritis dan mampu menuliskan input bermakna ke dalam sistem KA.",
+          "subelemen": []
+        }
+      ],
+      "teks_sumber_ekstraksi": "Fase D (Umumnya untuk Kelas VII, VIII dan IX SMP/MTs)​\nPada akhir Fase D, murid memiliki kemampuan sebagai \nberikut. \n2.1.​\nBerpikir Komputasional​\nMenerapkan \npengelolaan \ndata, \npemecahan \nmasalah \nsederhana \ndalam \nkehidupan \nmasyarakat secara sistematis, dan menuliskan \ninstruksi. \n2.2.​\nLiterasi Digital​\nMemproduksi dan mendiseminasi konten digital \nberupa audio, video, slide, dan infografis. \n2.3.​\nLiterasi dan Etika Kecerdasan Artifisial​\nMemahami perbedaan cara manusia dan KA \nmenggabungkan \ninformasi \ndari \nbeberapa \nperangkat penginderaan atau sensor, memahami \nbagaimana komputer memaknai informasi dari \nperangkat penginderaan atau sensor, memahami \nkualitas data, serta manfaat dan dampak KA \npada kehidupan masyarakat. Memahami etika \npenggunaan KA dalam kehidupan sehari-hari \nseperti \nmenjaga \ndata \npribadi \ndalam \nmenggunakan KA, KA adalah sebagai alat bantu \nsehingga manusia tidak boleh tergantung dan \npercaya sepenuhnya pada KA karena KA masih \nsangat mungkin menghasilkan output yang \nsalah, bias, atau melakukan halusinasi,  serta \nmenganalisis konten deep fake dalam bentuk \ngambar, audio, atau video. \n2.4.​\nPemanfaatan dan Pengembangan Kecerdasan \nArtifisial​\nMenggunakan perangkat KA sederhana dengan \nkritis dan mampu menuliskan input bermakna \nke dalam sistem KA.",
+      "sha256_teks_sumber_ekstraksi": "6cbf1235fbef37d1a212e0853cf9c3ad72fdbf759c0c060f541b3e3e050ac87e",
+      "status_verifikasi": "REVIEW"
+    }
+  ],
+  "audit_report": "cp-smp-audit-v5.json"
+}

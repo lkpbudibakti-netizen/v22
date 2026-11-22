@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';
+import {ATPUnitMappingManager} from '../src/components/ATPUnitMappingManager';
+import {resolveATPUnitMappingReadiness,finalizeTeacherReviewedMapping} from '../src/services/atpMappingReadinessService';
+import {validateATPUnitMappingCanonical} from '../src/services/atpUnitMappingValidationService';
+import {getATPUnitMappingV5,saveATPUnitMappingV5} from '../src/services/storageV5';
+import {initializer,evaluateExpression} from './helpers/uiContractHarness';
+import {fixture,completeMapping,seed} from './helpers/step07MappingFixture';
+const f=fixture();f.mapping=completeMapping(f);f.mapping.step07AutoRepair!.outcome='TIMEOUT';f.mapping.step07AutoRepair!.verifiedFingerprint=undefined;seed(f);const noop=()=>{};
+assert(resolveATPUnitMappingReadiness(f.mapping,f.atp,f.tp).canProceed);assert.strictEqual(finalizeTeacherReviewedMapping(f.mapping,f.atp,f.tp),f.mapping);
+const html=renderToStaticMarkup(React.createElement(ATPUnitMappingManager,{...f,onSaveMapping:()=>true,onNextStep:noop,onBackToATP:noop}));assert(!html.match(/<button[^>]*id="btn-next-to-annual-planning"[^>]*>/)![0].includes('disabled'));assert(!html.includes('ACC penyelarasan judul/relasi ke draf dan catat bukti guru'));assert(!html.includes('SEMANTIC_EVIDENCE_MISSING'));
+const review=structuredClone(f.mapping);review.step07AutoRepair!.outcome='NEEDS_TEACHER_REVIEW';assert(renderToStaticMarkup(React.createElement(ATPUnitMappingManager,{...f,mapping:review,onSaveMapping:()=>true,onNextStep:noop,onBackToATP:noop})).includes('<strong>Selesai</strong>'));
+console.log('PASS 1: complete manual IDs enable Step08 despite TIMEOUT and absent certificate; no mandatory ACC form');
+let meta:any;const save=evaluateExpression(initializer('src/components/ATPUnitMappingManager.tsx','handleSave'),{buildCurrentMappingDraft:()=>f.mapping,finalizeTeacherReviewedMapping,atp:f.atp,tp:f.tp,academicSetting:undefined,resolveATPUnitMappingReadiness,validateATPUnitMappingCanonical,onSaveMapping:(m:any)=>{saveATPUnitMappingV5('y',m);return true;},setAutoRepair:(v:any)=>meta=v,setHasChanges:noop,setSaveSuccessNotice:noop,setSaveErrorNotice:noop,setLocalValidationNotice:noop,setTimeout:noop});assert(save());assert.equal(meta.outcome,'TIMEOUT');assert(resolveATPUnitMappingReadiness(getATPUnitMappingV5('y'),f.atp,f.tp).canProceed);
+console.log('PASS 2: actual manual Save preserves process metadata and reload readiness without AI, proof or ACC');
+f.mapping.units[0].materials[0].linkedTpIds=['fake'];assert(!resolveATPUnitMappingReadiness(f.mapping,f.atp,f.tp).canProceed);
+console.log('PASS 3: manual edits cannot bypass canonical references. Provider/browser not live tested.');

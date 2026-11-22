@@ -1,0 +1,1377 @@
+{
+  "description": "Curriculum-only replay from user PJOK Kelas 6 export; no profile, school, credentials or factual student data. Original Excel has 23 materials; saved project has 27 including prior additions.",
+  "importRows": [
+    {
+      "babOrder": 1,
+      "babTitle": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+      "materialOrder": 1,
+      "materialTitle": "Melempar dan menangkap bola"
+    },
+    {
+      "babOrder": 1,
+      "babTitle": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+      "materialOrder": 2,
+      "materialTitle": "Permainan Jaga Benteng"
+    },
+    {
+      "babOrder": 1,
+      "babTitle": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+      "materialOrder": 3,
+      "materialTitle": "Lari berantai"
+    },
+    {
+      "babOrder": 1,
+      "babTitle": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+      "materialOrder": 4,
+      "materialTitle": "Permainan Serang Gawang"
+    },
+    {
+      "babOrder": 2,
+      "babTitle": "Bab 2: Aktivitas Pola Gerak Dasar Permainan Net",
+      "materialOrder": 1,
+      "materialTitle": "Posisi kuda-kuda dan passing bawah"
+    },
+    {
+      "babOrder": 2,
+      "babTitle": "Bab 2: Aktivitas Pola Gerak Dasar Permainan Net",
+      "materialOrder": 2,
+      "materialTitle": "Passing atas dan bawah"
+    },
+    {
+      "babOrder": 2,
+      "babTitle": "Bab 2: Aktivitas Pola Gerak Dasar Permainan Net",
+      "materialOrder": 3,
+      "materialTitle": "Servis dan permainan net"
+    },
+    {
+      "babOrder": 3,
+      "babTitle": "Bab 3: Aktivitas Pola Gerak Dasar Permainan Lapangan",
+      "materialOrder": 1,
+      "materialTitle": "Melempar bola lambung"
+    },
+    {
+      "babOrder": 3,
+      "babTitle": "Bab 3: Aktivitas Pola Gerak Dasar Permainan Lapangan",
+      "materialOrder": 2,
+      "materialTitle": "Keterampilan permainan kasti atau rounders"
+    },
+    {
+      "babOrder": 4,
+      "babTitle": "Bab 4: Aktivitas Bela Diri",
+      "materialOrder": 1,
+      "materialTitle": "Sikap kuda-kuda"
+    },
+    {
+      "babOrder": 4,
+      "babTitle": "Bab 4: Aktivitas Bela Diri",
+      "materialOrder": 2,
+      "materialTitle": "Teknik tendangan"
+    },
+    {
+      "babOrder": 5,
+      "babTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+      "materialOrder": 1,
+      "materialTitle": "Berjalan dengan tangan"
+    },
+    {
+      "babOrder": 5,
+      "babTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+      "materialOrder": 2,
+      "materialTitle": "Lompat kelinci"
+    },
+    {
+      "babOrder": 5,
+      "babTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+      "materialOrder": 3,
+      "materialTitle": "Gerak dasar senam"
+    },
+    {
+      "babOrder": 6,
+      "babTitle": "Bab 6: Aktivitas Gerak Berirama",
+      "materialOrder": 1,
+      "materialTitle": "Ayunan lengan"
+    },
+    {
+      "babOrder": 6,
+      "babTitle": "Bab 6: Aktivitas Gerak Berirama",
+      "materialOrder": 2,
+      "materialTitle": "Langkah kaki"
+    },
+    {
+      "babOrder": 6,
+      "babTitle": "Bab 6: Aktivitas Gerak Berirama",
+      "materialOrder": 3,
+      "materialTitle": "Rangkaian gerak berirama"
+    },
+    {
+      "babOrder": 7,
+      "babTitle": "Bab 7: Aktivitas Permainan dan Olahraga Air",
+      "materialOrder": 1,
+      "materialTitle": "Adaptasi air dan pernapasan"
+    },
+    {
+      "babOrder": 7,
+      "babTitle": "Bab 7: Aktivitas Permainan dan Olahraga Air",
+      "materialOrder": 2,
+      "materialTitle": "Teknik dasar meluncur"
+    },
+    {
+      "babOrder": 8,
+      "babTitle": "Bab 8: Aktivitas Kebugaran untuk Kesehatan",
+      "materialOrder": 1,
+      "materialTitle": "Daya tahan jantung dan paru-paru"
+    },
+    {
+      "babOrder": 8,
+      "babTitle": "Bab 8: Aktivitas Kebugaran untuk Kesehatan",
+      "materialOrder": 2,
+      "materialTitle": "Latihan sirkuit"
+    },
+    {
+      "babOrder": 9,
+      "babTitle": "Bab 9: Mencegah Bahaya NAPZA",
+      "materialOrder": 1,
+      "materialTitle": "Pengertian NAPZA"
+    },
+    {
+      "babOrder": 9,
+      "babTitle": "Bab 9: Mencegah Bahaya NAPZA",
+      "materialOrder": 2,
+      "materialTitle": "Bahaya dan pencegahan penyalahgunaan NAPZA"
+    }
+  ],
+  "tp": {
+    "id": "tp-yp-1794141695393-ksxs0lt",
+    "academicSettingId": "y",
+    "updatedAt": "2026-11-08T12:42:42.019Z",
+    "workflowStatus": "SIAP",
+    "items": [
+      {
+        "id": "tp-item-1794141762016-1-rxjk",
+        "code": "E1-SKG-02",
+        "statement": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+        "competence": "menyesuaikan, mentransfer",
+        "contentScope": "keterampilan gerak, strategi gerak, berbagai situasi gerak",
+        "order": 1
+      },
+      {
+        "id": "tp-item-1794141762016-2-b41i",
+        "code": "E1-SKG-01",
+        "statement": "Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.",
+        "competence": "menginvestigasi",
+        "contentScope": "berbagai konsep gerak",
+        "order": 2
+      },
+      {
+        "id": "tp-item-1794141762016-3-6cdm",
+        "code": "E2-BMG-01",
+        "statement": "Peserta didik dapat menguji efektivitas penerapan strategi gerak, merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif, serta menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.",
+        "competence": "menguji, merancang, menjalankan peran",
+        "contentScope": "strategi gerak, peraturan alternatif, modifikasi permainan, fair play, partisipasi inklusif, peran kelompok/tim",
+        "order": 3
+      },
+      {
+        "id": "tp-item-1794141762016-4-bio5",
+        "code": "E3-BHA-01",
+        "statement": "Peserta didik mampu berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.",
+        "competence": "berpartisipasi, menjelaskan, mengidentifikasi",
+        "contentScope": "aktivitas jasmani, pengaruh aktivitas jasmani teratur terhadap kesehatan, rekomendasi aktivitas jasmani, pencegahan perilaku sedenter",
+        "order": 4
+      },
+      {
+        "id": "tp-item-1794141762016-5-omch",
+        "code": "E4-PHN-01",
+        "statement": "Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.",
+        "competence": "menghubungkan, menjelaskan, mempraktikkan",
+        "contentScope": "gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama",
+        "order": 5
+      }
+    ]
+  },
+  "atp": {
+    "id": "atp-yp-1794141695393-ksxs0lt",
+    "academicSettingId": "y",
+    "tpDataId": "tp-yp-1794141695393-ksxs0lt",
+    "updatedAt": "2026-11-08T12:47:57.599Z",
+    "workflowStatus": "SIAP",
+    "items": [
+      {
+        "id": "atp-item-1794142056668-0-bvix",
+        "stepNumber": 1,
+        "focus": "Peserta didik menginvestigasi berbagai konsep gerak untuk meningkatkan capaian keterampilan gerak.",
+        "linkedTpIds": [
+          "tp-item-1794141762016-2-b41i"
+        ]
+      },
+      {
+        "id": "atp-item-1794142056669-1-dbf6",
+        "stepNumber": 2,
+        "focus": "Peserta didik menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai dalam berbagai situasi gerak.",
+        "linkedTpIds": [
+          "tp-item-1794141762016-1-rxjk"
+        ]
+      },
+      {
+        "id": "atp-item-1794142056669-2-6295",
+        "stepNumber": 3,
+        "focus": "Peserta didik menguji efektivitas strategi gerak, merancang peraturan alternatif serta modifikasi permainan yang mendukung fair play dan partisipasi inklusif, dan menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.",
+        "linkedTpIds": [
+          "tp-item-1794141762016-3-6cdm"
+        ]
+      },
+      {
+        "id": "atp-item-1794142056669-3-mg8t",
+        "stepNumber": 4,
+        "focus": "Peserta didik berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.",
+        "linkedTpIds": [
+          "tp-item-1794141762016-4-bio5"
+        ]
+      },
+      {
+        "id": "atp-item-1794142056669-4-67ax",
+        "stepNumber": 5,
+        "focus": "Peserta didik menghubungkan gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.",
+        "linkedTpIds": [
+          "tp-item-1794141762016-5-omch"
+        ]
+      }
+    ]
+  },
+  "mapping": {
+    "id": "pjok-real-project-replay",
+    "academicSettingId": "y",
+    "atpId": "atp-yp-1794141695393-ksxs0lt",
+    "tpDataId": "tp-yp-1794141695393-ksxs0lt",
+    "updatedAt": "2026-11-10T06:55:42.904Z",
+    "units": [
+      {
+        "id": "unit-import-1794142086126-1-rtunb",
+        "title": "Bab 1: Aktivitas Pola Gerak Dasar Permainan Invasi",
+        "order": 1,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056669-2-6295"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-3-6cdm"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-1-1-8d10f",
+            "title": "Melempar dan menangkap bola",
+            "order": 1,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          },
+          {
+            "id": "mat-import-1794142086126-1-2-zlr1z",
+            "title": "Permainan Jaga Benteng",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-2-6295"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-1-3-r526l",
+            "title": "Lari berantai",
+            "order": 3,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          },
+          {
+            "id": "mat-import-1794142086126-1-4-3913e",
+            "title": "Permainan Serang Gawang",
+            "order": 4,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-2-6295"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ]
+          },
+          {
+            "id": "alignment-prop-11",
+            "title": "Merancang dan Memodifikasi Permainan untuk Fair Play dan Inklusivitas",
+            "order": 5,
+            "linkedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ],
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-2-6295"
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-11",
+            "at": "2026-11-08T12:54:19.764Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-1-rtunb",
+            "materialId": "alignment-prop-11",
+            "before": "",
+            "after": "Merancang dan Memodifikasi Permainan untuk Fair Play dan Inklusivitas",
+            "reason": "ATP 3 secara eksplisit meminta peserta didik untuk 'merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif'. Materi yang ada berfokus pada pelaksanaan permainan, bukan perancangan atau modifikasi aturan. Penambahan materi ini menutup kesenjangan tersebut.",
+            "reviewedTitle": "Merancang dan Memodifikasi Permainan untuk Fair Play dan Inklusivitas",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-3-6cdm\",\"statement\":\"Peserta didik dapat menguji efektivitas penerapan strategi gerak, merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif, serta menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.\",\"competence\":\"menguji, merancang, menjalankan peran\",\"contentScope\":\"strategi gerak, peraturan alternatif, modifikasi permainan, fair play, partisipasi inklusif, peran kelompok/tim\"}]"
+          },
+          {
+            "id": "action-prop-link-1-2-zlr1z",
+            "at": "2026-11-08T13:31:38.614Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-1-rtunb",
+            "materialId": "mat-import-1794142086126-1-2-zlr1z",
+            "before": "Permainan Jaga Benteng",
+            "after": "Permainan Jaga Benteng",
+            "reason": "Permainan Jaga Benteng merupakan permainan invasi tradisional yang menuntut peserta didik menguji efektivitas strategi penyerangan dan pertahanan kelompok serta menjalankan peran secara kolaboratif.",
+            "reviewedTitle": "Permainan Jaga Benteng",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-3-6cdm\",\"statement\":\"Peserta didik dapat menguji efektivitas penerapan strategi gerak, merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif, serta menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.\",\"competence\":\"menguji, merancang, menjalankan peran\",\"contentScope\":\"strategi gerak, peraturan alternatif, modifikasi permainan, fair play, partisipasi inklusif, peran kelompok/tim\"}]"
+          },
+          {
+            "id": "action-prop-link-1-4-3913e",
+            "at": "2026-11-08T13:31:38.614Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-1-rtunb",
+            "materialId": "mat-import-1794142086126-1-4-3913e",
+            "before": "Permainan Serang Gawang",
+            "after": "Permainan Serang Gawang",
+            "reason": "Permainan Serang Gawang menguji efektivitas penerapan strategi gerak invasi dan pembagian peran anggota tim dalam situasi kompetisi yang menjunjung sportivitas.",
+            "reviewedTitle": "Permainan Serang Gawang",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-3-6cdm"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-3-6cdm\",\"statement\":\"Peserta didik dapat menguji efektivitas penerapan strategi gerak, merancang peraturan alternatif dan modifikasi permainan yang mendukung fair play dan partisipasi inklusif, serta menjalankan berbagai peran untuk mencapai keberhasilan kelompok atau tim.\",\"competence\":\"menguji, merancang, menjalankan peran\",\"contentScope\":\"strategi gerak, peraturan alternatif, modifikasi permainan, fair play, partisipasi inklusif, peran kelompok/tim\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-2-0s0vi",
+        "title": "Bab 2: Aktivitas Pola Gerak Dasar Permainan Net",
+        "order": 2,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056668-0-bvix",
+          "atp-item-1794142056669-1-dbf6"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-2-b41i",
+          "tp-item-1794141762016-1-rxjk"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-2-1-41eqm",
+            "title": "Posisi kuda-kuda dan passing bawah",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056668-0-bvix"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-2-2-0hcj7",
+            "title": "Passing atas dan bawah",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-2-3-j53jm",
+            "title": "Servis dan permainan net",
+            "order": 3,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-link-bab2-mat1-tp2",
+            "at": "2026-11-08T13:12:37.042Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-2-0s0vi",
+            "materialId": "mat-import-1794142086126-2-1-41eqm",
+            "before": "Posisi kuda-kuda dan passing bawah",
+            "after": "Posisi kuda-kuda dan passing bawah",
+            "reason": "Materi posisi kuda-kuda dan passing bawah memfasilitasi peserta didik untuk menginvestigasi konsep gerak seperti posisi tubuh, ruang gerak, dan gaya perkenaan bola untuk mengoptimalkan keterampilan gerak dasar permainan net tanpa mengubah substansi materi.",
+            "reviewedTitle": "Posisi kuda-kuda dan passing bawah",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-2-b41i\",\"statement\":\"Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.\",\"competence\":\"menginvestigasi\",\"contentScope\":\"berbagai konsep gerak\"}]"
+          },
+          {
+            "id": "action-prop-link-bab2-mat3-tp1",
+            "at": "2026-11-08T13:12:37.042Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-2-0s0vi",
+            "materialId": "mat-import-1794142086126-2-3-j53jm",
+            "before": "Servis dan permainan net",
+            "after": "Servis dan permainan net",
+            "reason": "Materi servis dan permainan net melatih peserta didik menyesuaikan keterampilan gerak dan mentransfer strategi gerak penempatan bola dalam situasi permainan net yang dinamis.",
+            "reviewedTitle": "Servis dan permainan net",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          },
+          {
+            "id": "action-prop-link-2-2-0hcj7",
+            "at": "2026-11-08T13:31:38.614Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-2-0s0vi",
+            "materialId": "mat-import-1794142086126-2-2-0hcj7",
+            "before": "Passing atas dan bawah",
+            "after": "Passing atas dan bawah",
+            "reason": "Materi passing atas dan bawah secara langsung memfasilitasi peserta didik untuk menyesuaikan keterampilan gerak dan mentransfer strategi gerak dalam situasi permainan net bola voli.",
+            "reviewedTitle": "Passing atas dan bawah",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-3-d7taq",
+        "title": "Bab 3: Aktivitas Pola Gerak Dasar Permainan Lapangan",
+        "order": 3,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056668-0-bvix",
+          "atp-item-1794142056669-1-dbf6"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-2-b41i",
+          "tp-item-1794141762016-1-rxjk"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-3-1-3uv20",
+            "title": "Melempar bola lambung",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056668-0-bvix"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-3-2-vmmzj",
+            "title": "Keterampilan permainan kasti atau rounders",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-link-bab3-mat1-tp2",
+            "at": "2026-11-08T13:12:37.042Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-3-d7taq",
+            "materialId": "mat-import-1794142086126-3-1-3uv20",
+            "before": "Melempar bola lambung",
+            "after": "Melempar bola lambung",
+            "reason": "Materi melempar bola lambung mengajak peserta didik menganalisis dan menginvestigasi konsep gerak trajektori, sudut lemparan, dan gaya dorong untuk menghasilkan capaian lemparan yang tepat dalam permainan lapangan.",
+            "reviewedTitle": "Melempar bola lambung",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-2-b41i\",\"statement\":\"Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.\",\"competence\":\"menginvestigasi\",\"contentScope\":\"berbagai konsep gerak\"}]"
+          },
+          {
+            "id": "action-prop-link-bab3-mat2-tp1",
+            "at": "2026-11-08T13:12:37.042Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-3-d7taq",
+            "materialId": "mat-import-1794142086126-3-2-vmmzj",
+            "before": "Keterampilan permainan kasti atau rounders",
+            "after": "Keterampilan permainan kasti atau rounders",
+            "reason": "Materi keterampilan permainan kasti atau rounders menuntut penyesuaian keterampilan memukul, melempar, menangkap, dan mentransfer taktik penyerangan maupun pertahanan ke berbagai situasi permainan lapangan nyata.",
+            "reviewedTitle": "Keterampilan permainan kasti atau rounders",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-4-jk9r2",
+        "title": "Bab 4: Aktivitas Bela Diri",
+        "order": 4,
+        "linkedAtpItemIds": [],
+        "linkedTpIds": [],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-4-1-sz91x",
+            "title": "Sikap kuda-kuda",
+            "order": 1,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          },
+          {
+            "id": "mat-import-1794142086126-4-2-3dggm",
+            "title": "Teknik tendangan",
+            "order": 2,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-5-dg9vt",
+        "title": "Bab 5: Aktivitas Gerak Dominan Senam",
+        "order": 5,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056669-1-dbf6",
+          "atp-item-1794142056668-0-bvix"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-1-rxjk",
+          "tp-item-1794141762016-2-b41i"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-5-1-un8m8",
+            "title": "Menyesuaikan dan Mentransfer Keterampilan Berjalan dengan Tangan dalam Berbagai Situasi Gerak",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "originalTitle": "Berjalan dengan tangan",
+            "titleHistory": [
+              {
+                "id": "title-prop-edit-mat-un8m8-skg02",
+                "at": "2026-11-09T17:04:09.099Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-edit-mat-un8m8-skg02",
+                  "verdict": "SUPPORTED",
+                  "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'berbagai situasi gerak' dari TP E1-SKG-02, sambil tetap mempertahankan substansi inti 'Berjalan dengan tangan'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Berjalan dengan tangan",
+                      "competenceQuote": "menyesuaikan",
+                      "contextQuote": "Berjalan dengan tangan"
+                    },
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Berjalan dengan tangan",
+                      "competenceQuote": "mentransfer",
+                      "contextQuote": "Berjalan dengan tangan"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+                "unitId": "unit-import-1794142086126-5-dg9vt",
+                "materialId": "mat-import-1794142086126-5-1-un8m8",
+                "before": "Berjalan dengan tangan",
+                "after": "Menyesuaikan dan Mentransfer Keterampilan Berjalan dengan Tangan dalam Berbagai Situasi Gerak",
+                "reason": "Judul materi asli 'Berjalan dengan tangan' hanya mendeskripsikan gerakan tanpa secara eksplisit menunjukkan kompetensi TP E1-SKG-02. Perubahan ini mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'berbagai situasi gerak' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP."
+              }
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-5-2-3zqde",
+            "title": "Menyesuaikan dan Mentransfer Keterampilan Lompat Kelinci untuk Meningkatkan Capaian Gerak",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "originalTitle": "Lompat kelinci",
+            "titleHistory": [
+              {
+                "id": "title-prop-edit-mat-3zqde-skg02",
+                "at": "2026-11-09T17:04:09.250Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-edit-mat-3zqde-skg02",
+                  "verdict": "SUPPORTED",
+                  "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'meningkatkan capaian' dari TP E1-SKG-02, sambil tetap mempertahankan substansi inti 'Lompat kelinci'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Lompat kelinci",
+                      "competenceQuote": "menyesuaikan",
+                      "contextQuote": "Lompat Kelinci"
+                    },
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Lompat kelinci",
+                      "competenceQuote": "mentransfer",
+                      "contextQuote": "Lompat Kelinci"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+                "unitId": "unit-import-1794142086126-5-dg9vt",
+                "materialId": "mat-import-1794142086126-5-2-3zqde",
+                "before": "Lompat kelinci",
+                "after": "Menyesuaikan dan Mentransfer Keterampilan Lompat Kelinci untuk Meningkatkan Capaian Gerak",
+                "reason": "Judul materi asli 'Lompat kelinci' hanya mendeskripsikan gerakan tanpa secara eksplisit menunjukkan kompetensi TP E1-SKG-02. Perubahan ini mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'meningkatkan capaian' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP."
+              }
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-5-3-bvqri",
+            "title": "Menginvestigasi Konsep Gerak Dasar Senam untuk Meningkatkan Keterampilan",
+            "order": 3,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056668-0-bvix"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ],
+            "originalTitle": "Gerak dasar senam",
+            "titleHistory": [
+              {
+                "id": "title-prop-edit-mat-bvqri-skg01",
+                "at": "2026-11-09T17:04:09.401Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-edit-mat-bvqri-skg01",
+                  "verdict": "SUPPORTED",
+                  "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menginvestigasi' dan cakupan 'konsep gerak' serta 'meningkatkan keterampilan' dari TP E1-SKG-01, sambil tetap mempertahankan substansi inti 'Gerak dasar senam'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-2-b41i",
+                      "tpQuote": "Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.",
+                      "materialQuote": "Gerak dasar senam",
+                      "competenceQuote": "menginvestigasi",
+                      "contextQuote": "Gerak dasar senam"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+                "unitId": "unit-import-1794142086126-5-dg9vt",
+                "materialId": "mat-import-1794142086126-5-3-bvqri",
+                "before": "Gerak dasar senam",
+                "after": "Menginvestigasi Konsep Gerak Dasar Senam untuk Meningkatkan Keterampilan",
+                "reason": "Judul materi asli 'Gerak dasar senam' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi TP E1-SKG-01. Perubahan ini mengintegrasikan kompetensi 'menginvestigasi' dan cakupan 'berbagai konsep gerak' serta 'meningkatkan capaian keterampilan gerak' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP."
+              }
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-edit-mat-un8m8-skg02-0",
+            "at": "2026-11-09T17:04:09.100Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-edit-mat-un8m8-skg02",
+              "verdict": "SUPPORTED",
+              "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'berbagai situasi gerak' dari TP E1-SKG-02, sambil tetap mempertahankan substansi inti 'Berjalan dengan tangan'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Berjalan dengan tangan",
+                  "competenceQuote": "menyesuaikan",
+                  "contextQuote": "Berjalan dengan tangan"
+                },
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Berjalan dengan tangan",
+                  "competenceQuote": "mentransfer",
+                  "contextQuote": "Berjalan dengan tangan"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+            "unitId": "unit-import-1794142086126-5-dg9vt",
+            "materialId": "mat-import-1794142086126-5-1-un8m8",
+            "before": "Berjalan dengan tangan",
+            "after": "Menyesuaikan dan Mentransfer Keterampilan Berjalan dengan Tangan dalam Berbagai Situasi Gerak",
+            "reason": "Judul materi asli 'Berjalan dengan tangan' hanya mendeskripsikan gerakan tanpa secara eksplisit menunjukkan kompetensi TP E1-SKG-02. Perubahan ini mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'berbagai situasi gerak' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP.",
+            "reviewedTitle": "Menyesuaikan dan Mentransfer Keterampilan Berjalan dengan Tangan dalam Berbagai Situasi Gerak",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          },
+          {
+            "id": "action-prop-edit-mat-3zqde-skg02-1",
+            "at": "2026-11-09T17:04:09.250Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-edit-mat-3zqde-skg02",
+              "verdict": "SUPPORTED",
+              "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'meningkatkan capaian' dari TP E1-SKG-02, sambil tetap mempertahankan substansi inti 'Lompat kelinci'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Lompat kelinci",
+                  "competenceQuote": "menyesuaikan",
+                  "contextQuote": "Lompat Kelinci"
+                },
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Lompat kelinci",
+                  "competenceQuote": "mentransfer",
+                  "contextQuote": "Lompat Kelinci"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+            "unitId": "unit-import-1794142086126-5-dg9vt",
+            "materialId": "mat-import-1794142086126-5-2-3zqde",
+            "before": "Lompat kelinci",
+            "after": "Menyesuaikan dan Mentransfer Keterampilan Lompat Kelinci untuk Meningkatkan Capaian Gerak",
+            "reason": "Judul materi asli 'Lompat kelinci' hanya mendeskripsikan gerakan tanpa secara eksplisit menunjukkan kompetensi TP E1-SKG-02. Perubahan ini mengintegrasikan kompetensi 'menyesuaikan' dan 'mentransfer' serta cakupan 'keterampilan gerak' dan 'meningkatkan capaian' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP.",
+            "reviewedTitle": "Menyesuaikan dan Mentransfer Keterampilan Lompat Kelinci untuk Meningkatkan Capaian Gerak",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          },
+          {
+            "id": "action-prop-edit-mat-bvqri-skg01-2",
+            "at": "2026-11-09T17:04:09.401Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-edit-mat-bvqri-skg01",
+              "verdict": "SUPPORTED",
+              "reason": "Judul materi yang diusulkan secara eksplisit mengintegrasikan kompetensi 'menginvestigasi' dan cakupan 'konsep gerak' serta 'meningkatkan keterampilan' dari TP E1-SKG-01, sambil tetap mempertahankan substansi inti 'Gerak dasar senam'. Perubahan ini membuat tujuan pembelajaran materi menjadi sangat jelas dan selaras dengan TP.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-2-b41i",
+                  "tpQuote": "Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.",
+                  "materialQuote": "Gerak dasar senam",
+                  "competenceQuote": "menginvestigasi",
+                  "contextQuote": "Gerak dasar senam"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 5: Aktivitas Gerak Dominan Senam",
+            "unitId": "unit-import-1794142086126-5-dg9vt",
+            "materialId": "mat-import-1794142086126-5-3-bvqri",
+            "before": "Gerak dasar senam",
+            "after": "Menginvestigasi Konsep Gerak Dasar Senam untuk Meningkatkan Keterampilan",
+            "reason": "Judul materi asli 'Gerak dasar senam' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi TP E1-SKG-01. Perubahan ini mengintegrasikan kompetensi 'menginvestigasi' dan cakupan 'berbagai konsep gerak' serta 'meningkatkan capaian keterampilan gerak' ke dalam judul materi, sehingga aktivitas yang dilakukan peserta didik menjadi lebih jelas sesuai TP.",
+            "reviewedTitle": "Menginvestigasi Konsep Gerak Dasar Senam untuk Meningkatkan Keterampilan",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-2-b41i"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-2-b41i\",\"statement\":\"Peserta didik mampu menginvestigasi berbagai konsep gerak yang dapat diterapkan untuk meningkatkan capaian keterampilan gerak.\",\"competence\":\"menginvestigasi\",\"contentScope\":\"berbagai konsep gerak\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-6-tfts0",
+        "title": "Bab 6: Aktivitas Gerak Berirama",
+        "order": 6,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056669-1-dbf6"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-1-rxjk"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-6-1-3bzxx",
+            "title": "Menyesuaikan Ayunan Lengan dalam Gerak Berirama",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "originalTitle": "Ayunan lengan",
+            "titleHistory": [
+              {
+                "id": "title-prop-1-edit-mat-ayunan-lengan",
+                "at": "2026-11-10T06:55:41.880Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-1-edit-mat-ayunan-lengan",
+                  "verdict": "SUPPORTED",
+                  "reason": "Perubahan judul materi dari 'Ayunan lengan' menjadi 'Menyesuaikan Ayunan Lengan dalam Gerak Berirama' secara eksplisit mengintegrasikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02. Materi ini, yang berada dalam Bab 'Aktivitas Gerak Berirama', sangat relevan dengan penerapan dan penyesuaian gerakan dasar dalam konteks berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Ayunan lengan",
+                      "competenceQuote": "menyesuaikan",
+                      "contextQuote": "Ayunan Lengan"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+                "unitId": "unit-import-1794142086126-6-tfts0",
+                "materialId": "mat-import-1794142086126-6-1-3bzxx",
+                "before": "Ayunan lengan",
+                "after": "Menyesuaikan Ayunan Lengan dalam Gerak Berirama",
+                "reason": "Judul materi asli 'Ayunan lengan' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi. Perubahan ini menjadikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02 eksplisit dalam konteks ayunan lengan pada gerak berirama, sehingga selaras dengan capaian TP."
+              }
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-6-2-6w4xo",
+            "title": "Menyesuaikan Langkah Kaki dalam Gerak Berirama",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "originalTitle": "Langkah kaki",
+            "titleHistory": [
+              {
+                "id": "title-prop-2-edit-mat-langkah-kaki",
+                "at": "2026-11-10T06:55:42.042Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-2-edit-mat-langkah-kaki",
+                  "verdict": "SUPPORTED",
+                  "reason": "Perubahan judul materi dari 'Langkah kaki' menjadi 'Menyesuaikan Langkah Kaki dalam Gerak Berirama' secara eksplisit mengintegrasikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02. Materi ini, yang berada dalam Bab 'Aktivitas Gerak Berirama', sangat relevan dengan penerapan dan penyesuaian gerakan dasar dalam konteks berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Langkah kaki",
+                      "competenceQuote": "menyesuaikan",
+                      "contextQuote": "Langkah Kaki"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+                "unitId": "unit-import-1794142086126-6-tfts0",
+                "materialId": "mat-import-1794142086126-6-2-6w4xo",
+                "before": "Langkah kaki",
+                "after": "Menyesuaikan Langkah Kaki dalam Gerak Berirama",
+                "reason": "Judul materi asli 'Langkah kaki' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi. Perubahan ini menjadikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02 eksplisit dalam konteks langkah kaki pada gerak berirama, sehingga selaras dengan capaian TP."
+              }
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-6-3-a8qbu",
+            "title": "Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama",
+            "order": 3,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-1-dbf6"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "originalTitle": "Rangkaian gerak berirama",
+            "titleHistory": [
+              {
+                "id": "title-prop-3-edit-mat-rangkaian-gerak",
+                "at": "2026-11-10T06:55:42.211Z",
+                "kind": "CONTENT_CHANGE",
+                "approval": "AUTOMATIC",
+                "executionContext": "STEP07_AUTO_REPAIR",
+                "semanticVerification": {
+                  "actionId": "prop-3-edit-mat-rangkaian-gerak",
+                  "verdict": "SUPPORTED",
+                  "reason": "Perubahan judul materi dari 'Rangkaian gerak berirama' menjadi 'Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama' secara eksplisit mengintegrasikan kedua kompetensi utama dari TP E1-SKG-02, yaitu 'menyesuaikan keterampilan gerak' dan 'mentransfer strategi gerak'. Materi ini, yang secara inheren melibatkan kombinasi dan adaptasi gerakan, sangat relevan dengan kedua kompetensi tersebut dalam konteks gerak berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+                  "missingEvidence": [],
+                  "additionNecessary": false,
+                  "evidence": [
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Rangkaian gerak berirama",
+                      "competenceQuote": "menyesuaikan",
+                      "contextQuote": "Rangkaian Gerak Berirama"
+                    },
+                    {
+                      "tpId": "tp-item-1794141762016-1-rxjk",
+                      "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                      "materialQuote": "Rangkaian gerak berirama",
+                      "competenceQuote": "mentransfer",
+                      "contextQuote": "Rangkaian Gerak Berirama"
+                    }
+                  ]
+                },
+                "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+                "unitId": "unit-import-1794142086126-6-tfts0",
+                "materialId": "mat-import-1794142086126-6-3-a8qbu",
+                "before": "Rangkaian gerak berirama",
+                "after": "Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama",
+                "reason": "Materi 'Rangkaian gerak berirama' sudah mengacu pada kombinasi gerakan. Perubahan ini secara eksplisit menambahkan kompetensi 'menyesuaikan keterampilan gerak' dan 'mentransfer strategi gerak' dari TP E1-SKG-02, yang sangat relevan dengan penyusunan dan pelaksanaan rangkaian gerak untuk meningkatkan capaian."
+              }
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-1-edit-mat-ayunan-lengan-0",
+            "at": "2026-11-10T06:55:41.880Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-1-edit-mat-ayunan-lengan",
+              "verdict": "SUPPORTED",
+              "reason": "Perubahan judul materi dari 'Ayunan lengan' menjadi 'Menyesuaikan Ayunan Lengan dalam Gerak Berirama' secara eksplisit mengintegrasikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02. Materi ini, yang berada dalam Bab 'Aktivitas Gerak Berirama', sangat relevan dengan penerapan dan penyesuaian gerakan dasar dalam konteks berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Ayunan lengan",
+                  "competenceQuote": "menyesuaikan",
+                  "contextQuote": "Ayunan Lengan"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+            "unitId": "unit-import-1794142086126-6-tfts0",
+            "materialId": "mat-import-1794142086126-6-1-3bzxx",
+            "before": "Ayunan lengan",
+            "after": "Menyesuaikan Ayunan Lengan dalam Gerak Berirama",
+            "reason": "Judul materi asli 'Ayunan lengan' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi. Perubahan ini menjadikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02 eksplisit dalam konteks ayunan lengan pada gerak berirama, sehingga selaras dengan capaian TP.",
+            "reviewedTitle": "Menyesuaikan Ayunan Lengan dalam Gerak Berirama",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          },
+          {
+            "id": "action-prop-2-edit-mat-langkah-kaki-1",
+            "at": "2026-11-10T06:55:42.042Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-2-edit-mat-langkah-kaki",
+              "verdict": "SUPPORTED",
+              "reason": "Perubahan judul materi dari 'Langkah kaki' menjadi 'Menyesuaikan Langkah Kaki dalam Gerak Berirama' secara eksplisit mengintegrasikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02. Materi ini, yang berada dalam Bab 'Aktivitas Gerak Berirama', sangat relevan dengan penerapan dan penyesuaian gerakan dasar dalam konteks berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Langkah kaki",
+                  "competenceQuote": "menyesuaikan",
+                  "contextQuote": "Langkah Kaki"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+            "unitId": "unit-import-1794142086126-6-tfts0",
+            "materialId": "mat-import-1794142086126-6-2-6w4xo",
+            "before": "Langkah kaki",
+            "after": "Menyesuaikan Langkah Kaki dalam Gerak Berirama",
+            "reason": "Judul materi asli 'Langkah kaki' terlalu umum dan tidak secara eksplisit menunjukkan kompetensi. Perubahan ini menjadikan kompetensi 'menyesuaikan keterampilan gerak' dari TP E1-SKG-02 eksplisit dalam konteks langkah kaki pada gerak berirama, sehingga selaras dengan capaian TP.",
+            "reviewedTitle": "Menyesuaikan Langkah Kaki dalam Gerak Berirama",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          },
+          {
+            "id": "action-prop-3-edit-mat-rangkaian-gerak-2",
+            "at": "2026-11-10T06:55:42.211Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "AUTOMATIC",
+            "executionContext": "STEP07_AUTO_REPAIR",
+            "semanticVerification": {
+              "actionId": "prop-3-edit-mat-rangkaian-gerak",
+              "verdict": "SUPPORTED",
+              "reason": "Perubahan judul materi dari 'Rangkaian gerak berirama' menjadi 'Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama' secara eksplisit mengintegrasikan kedua kompetensi utama dari TP E1-SKG-02, yaitu 'menyesuaikan keterampilan gerak' dan 'mentransfer strategi gerak'. Materi ini, yang secara inheren melibatkan kombinasi dan adaptasi gerakan, sangat relevan dengan kedua kompetensi tersebut dalam konteks gerak berirama. Perubahan ini memperjelas aktivitas yang diharapkan dari peserta didik sesuai dengan capaian TP tanpa mengubah substansi inti materi.",
+              "missingEvidence": [],
+              "additionNecessary": false,
+              "evidence": [
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Rangkaian gerak berirama",
+                  "competenceQuote": "menyesuaikan",
+                  "contextQuote": "Rangkaian Gerak Berirama"
+                },
+                {
+                  "tpId": "tp-item-1794141762016-1-rxjk",
+                  "tpQuote": "Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.",
+                  "materialQuote": "Rangkaian gerak berirama",
+                  "competenceQuote": "mentransfer",
+                  "contextQuote": "Rangkaian Gerak Berirama"
+                }
+              ]
+            },
+            "reviewedUnitTitle": "Bab 6: Aktivitas Gerak Berirama",
+            "unitId": "unit-import-1794142086126-6-tfts0",
+            "materialId": "mat-import-1794142086126-6-3-a8qbu",
+            "before": "Rangkaian gerak berirama",
+            "after": "Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama",
+            "reason": "Materi 'Rangkaian gerak berirama' sudah mengacu pada kombinasi gerakan. Perubahan ini secara eksplisit menambahkan kompetensi 'menyesuaikan keterampilan gerak' dan 'mentransfer strategi gerak' dari TP E1-SKG-02, yang sangat relevan dengan penyusunan dan pelaksanaan rangkaian gerak untuk meningkatkan capaian.",
+            "reviewedTitle": "Menyesuaikan dan Mentransfer Rangkaian Gerak Berirama",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-1-rxjk"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-1-rxjk\",\"statement\":\"Peserta didik mampu menyesuaikan keterampilan gerak dan mentransfer strategi gerak yang dikuasai untuk meningkatkan capaian dalam berbagai situasi gerak.\",\"competence\":\"menyesuaikan, mentransfer\",\"contentScope\":\"keterampilan gerak, strategi gerak, berbagai situasi gerak\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-7-7lp8d",
+        "title": "Bab 7: Aktivitas Permainan dan Olahraga Air",
+        "order": 7,
+        "linkedAtpItemIds": [],
+        "linkedTpIds": [],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-7-1-m9an4",
+            "title": "Adaptasi air dan pernapasan",
+            "order": 1,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          },
+          {
+            "id": "mat-import-1794142086126-7-2-wojz7",
+            "title": "Teknik dasar meluncur",
+            "order": 2,
+            "linkedAtpItemIds": [],
+            "linkedTpIds": []
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-8-iwedc",
+        "title": "Bab 8: Aktivitas Kebugaran untuk Kesehatan",
+        "order": 8,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056669-3-mg8t"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-4-bio5"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-8-1-lt3t0",
+            "title": "Daya tahan jantung dan paru-paru",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-3-mg8t"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-8-2-wgtzx",
+            "title": "Latihan sirkuit",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-3-mg8t"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ]
+          },
+          {
+            "id": "alignment-prop-47",
+            "title": "Manfaat Aktivitas Jasmani dan Pencegahan Perilaku Sedenter",
+            "order": 3,
+            "linkedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ],
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-3-mg8t"
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-47",
+            "at": "2026-11-08T12:54:19.765Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-8-iwedc",
+            "materialId": "alignment-prop-47",
+            "before": "",
+            "after": "Manfaat Aktivitas Jasmani dan Pencegahan Perilaku Sedenter",
+            "reason": "ATP 4 mengharuskan peserta didik untuk 'menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan' dan 'mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter'. Materi yang ada lebih berfokus pada praktik aktivitas, bukan penjelasan atau identifikasi. Penambahan materi ini menutup kesenjangan tersebut.",
+            "reviewedTitle": "Manfaat Aktivitas Jasmani dan Pencegahan Perilaku Sedenter",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-4-bio5\",\"statement\":\"Peserta didik mampu berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.\",\"competence\":\"berpartisipasi, menjelaskan, mengidentifikasi\",\"contentScope\":\"aktivitas jasmani, pengaruh aktivitas jasmani teratur terhadap kesehatan, rekomendasi aktivitas jasmani, pencegahan perilaku sedenter\"}]"
+          },
+          {
+            "id": "action-prop-link-8-1-lt3t0",
+            "at": "2026-11-08T13:31:38.614Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-8-iwedc",
+            "materialId": "mat-import-1794142086126-8-1-lt3t0",
+            "before": "Daya tahan jantung dan paru-paru",
+            "after": "Daya tahan jantung dan paru-paru",
+            "reason": "Materi daya tahan jantung dan paru-paru memfasilitasi peserta didik berpartisipasi dalam aktivitas jasmani aerobik dan memahami pengaruh positifnya terhadap kesehatan organ vital.",
+            "reviewedTitle": "Daya tahan jantung dan paru-paru",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-4-bio5\",\"statement\":\"Peserta didik mampu berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.\",\"competence\":\"berpartisipasi, menjelaskan, mengidentifikasi\",\"contentScope\":\"aktivitas jasmani, pengaruh aktivitas jasmani teratur terhadap kesehatan, rekomendasi aktivitas jasmani, pencegahan perilaku sedenter\"}]"
+          },
+          {
+            "id": "action-prop-link-8-2-wgtzx",
+            "at": "2026-11-08T13:31:38.614Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-8-iwedc",
+            "materialId": "mat-import-1794142086126-8-2-wgtzx",
+            "before": "Latihan sirkuit",
+            "after": "Latihan sirkuit",
+            "reason": "Latihan sirkuit merupakan bentuk nyata partisipasi aktivitas jasmani multi-pos terstruktur untuk memelihara kebugaran fisik dan mencegah gaya hidup sedenter.",
+            "reviewedTitle": "Latihan sirkuit",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-4-bio5"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-4-bio5\",\"statement\":\"Peserta didik mampu berpartisipasi dalam aktivitas jasmani, menjelaskan pengaruh aktivitas jasmani teratur terhadap kesehatan, dan mengidentifikasi rekomendasi aktivitas jasmani serta pencegahan perilaku sedenter.\",\"competence\":\"berpartisipasi, menjelaskan, mengidentifikasi\",\"contentScope\":\"aktivitas jasmani, pengaruh aktivitas jasmani teratur terhadap kesehatan, rekomendasi aktivitas jasmani, pencegahan perilaku sedenter\"}]"
+          }
+        ]
+      },
+      {
+        "id": "unit-import-1794142086126-9-c00zt",
+        "title": "Bab 9: Gaya Hidup Sehat dan Pencegahan Risiko Kesehatan",
+        "order": 9,
+        "linkedAtpItemIds": [
+          "atp-item-1794142056669-4-67ax"
+        ],
+        "linkedTpIds": [
+          "tp-item-1794141762016-5-omch"
+        ],
+        "materials": [
+          {
+            "id": "mat-import-1794142086126-9-1-d4o5t",
+            "title": "Pengertian NAPZA",
+            "order": 1,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-4-67ax"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ]
+          },
+          {
+            "id": "mat-import-1794142086126-9-2-gm855",
+            "title": "Bahaya dan pencegahan penyalahgunaan NAPZA",
+            "order": 2,
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-4-67ax"
+            ],
+            "linkedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ]
+          },
+          {
+            "id": "alignment-prop-50",
+            "title": "Pola Makan Sehat dan Kandungan Gizi",
+            "order": 3,
+            "linkedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-4-67ax"
+            ]
+          },
+          {
+            "id": "alignment-prop-51",
+            "title": "Penanganan Cedera dan Pertolongan Pertama",
+            "order": 4,
+            "linkedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "linkedAtpItemIds": [
+              "atp-item-1794142056669-4-67ax"
+            ]
+          }
+        ],
+        "actionHistory": [
+          {
+            "id": "action-prop-50",
+            "at": "2026-11-08T12:54:19.765Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-9-c00zt",
+            "materialId": "alignment-prop-50",
+            "before": "",
+            "after": "Pola Makan Sehat dan Kandungan Gizi",
+            "reason": "ATP 5 secara eksplisit meminta peserta didik untuk 'menjelaskan pola makan sehat berdasarkan kandungan gizi'. Bagian ini tidak tercakup oleh materi yang ada di Bab 9. Penambahan materi ini menutup kesenjangan tersebut.",
+            "reviewedTitle": "Pola Makan Sehat dan Kandungan Gizi",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-5-omch\",\"statement\":\"Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.\",\"competence\":\"menghubungkan, menjelaskan, mempraktikkan\",\"contentScope\":\"gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama\"}]"
+          },
+          {
+            "id": "action-prop-51",
+            "at": "2026-11-08T12:54:19.766Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-9-c00zt",
+            "materialId": "alignment-prop-51",
+            "before": "",
+            "after": "Penanganan Cedera dan Pertolongan Pertama",
+            "reason": "ATP 5 secara eksplisit meminta peserta didik untuk 'mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama'. Bagian ini tidak tercakup oleh materi yang ada di Bab 9. Penambahan materi ini menutup kesenjangan tersebut.",
+            "reviewedTitle": "Penanganan Cedera dan Pertolongan Pertama",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-5-omch\",\"statement\":\"Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.\",\"competence\":\"menghubungkan, menjelaskan, mempraktikkan\",\"contentScope\":\"gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama\"}]"
+          },
+          {
+            "id": "action-prop-link-9-1-d4o5t",
+            "at": "2026-11-08T13:31:38.615Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-9-c00zt",
+            "materialId": "mat-import-1794142086126-9-1-d4o5t",
+            "before": "Pengertian NAPZA",
+            "after": "Pengertian NAPZA",
+            "reason": "Materi pengertian NAPZA memberikan dasar pemahaman konseptual bagi peserta didik dalam mengidentifikasi zat berbahaya dan menghubungkan pilihan gaya hidup dengan risiko kesehatan.",
+            "reviewedTitle": "Pengertian NAPZA",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-5-omch\",\"statement\":\"Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.\",\"competence\":\"menghubungkan, menjelaskan, mempraktikkan\",\"contentScope\":\"gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama\"}]"
+          },
+          {
+            "id": "action-prop-link-9-2-gm855",
+            "at": "2026-11-08T13:31:38.615Z",
+            "kind": "REALIGN",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-9-c00zt",
+            "materialId": "mat-import-1794142086126-9-2-gm855",
+            "before": "Bahaya dan pencegahan penyalahgunaan NAPZA",
+            "after": "Bahaya dan pencegahan penyalahgunaan NAPZA",
+            "reason": "Materi ini secara langsung mengajarkan analisis dampak buruk zat berbahaya dan tindakan preventif yang harus diambil untuk memitigasi risiko kesehatan.",
+            "reviewedTitle": "Bahaya dan pencegahan penyalahgunaan NAPZA",
+            "reviewedTpIds": [
+              "tp-item-1794141762016-5-omch"
+            ],
+            "reviewedTpFingerprint": "[{\"id\":\"tp-item-1794141762016-5-omch\",\"statement\":\"Peserta didik mampu menghubungkan antara gaya hidup dengan risiko kesehatan dan aktivitas pencegahannya, menjelaskan pola makan sehat berdasarkan kandungan gizi, serta mempraktikkan penanganan cedera sedang sesuai prinsip pertolongan pertama.\",\"competence\":\"menghubungkan, menjelaskan, mempraktikkan\",\"contentScope\":\"gaya hidup, risiko kesehatan, aktivitas pencegahan, pola makan sehat, kandungan gizi, penanganan cedera sedang, prinsip pertolongan pertama\"}]"
+          }
+        ],
+        "originalTitle": "Bab 9: Mencegah Bahaya NAPZA",
+        "titleHistory": [
+          {
+            "id": "title-prop-22-0",
+            "at": "2026-11-08T12:59:10.302Z",
+            "kind": "CONTENT_CHANGE",
+            "approval": "TEACHER",
+            "unitId": "unit-import-1794142086126-9-c00zt",
+            "before": "Bab 9: Mencegah Bahaya NAPZA",
+            "after": "Bab 9: Gaya Hidup Sehat dan Pencegahan Risiko Kesehatan",
+            "reason": "Judul bab saat ini terlalu spesifik hanya pada NAPZA, padahal ATP yang terkait (E4-PHN-01) mencakup lingkup yang lebih luas seperti pola makan sehat dan penanganan cedera. Judul baru lebih komprehensif dan sesuai dengan cakupan ATP serta materi-materi lain di bab ini."
+          }
+        ]
+      }
+    ],
+    "step07AutoRepair": {
+      "scope": "STEP07_AUTO_REPAIR",
+      "version": 1,
+      "runId": "source-project-replay",
+      "beforeUnits": [],
+      "resultFingerprint": "",
+      "expectedStoredFingerprint": "",
+      "addedMaterialIds": [],
+      "rounds": 0,
+      "outcome": "INCOMPLETE",
+      "issues": [],
+      "progress": {
+        "initial": 16,
+        "resolved": 8,
+        "remaining": 11
+      },
+      "initialIssueIds": [
+        "unit:unit-import-1794142086126-4-jk9r2",
+        "unit:unit-import-1794142086126-5-dg9vt",
+        "unit:unit-import-1794142086126-6-tfts0",
+        "unit:unit-import-1794142086126-7-7lp8d",
+        "material:mat-import-1794142086126-1-1-8d10f",
+        "material:mat-import-1794142086126-1-3-r526l",
+        "material:mat-import-1794142086126-4-1-sz91x",
+        "material:mat-import-1794142086126-4-2-3dggm",
+        "material:mat-import-1794142086126-5-1-un8m8",
+        "material:mat-import-1794142086126-5-2-3zqde",
+        "material:mat-import-1794142086126-5-3-bvqri",
+        "material:mat-import-1794142086126-6-1-3bzxx",
+        "material:mat-import-1794142086126-6-2-6w4xo",
+        "material:mat-import-1794142086126-6-3-a8qbu",
+        "material:mat-import-1794142086126-7-1-m9an4",
+        "material:mat-import-1794142086126-7-2-wojz7"
+      ]
+    }
+  }
+}
