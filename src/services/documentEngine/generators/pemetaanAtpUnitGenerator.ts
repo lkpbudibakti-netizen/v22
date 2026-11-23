@@ -1,3 +1,4 @@
+import { groupAtpMappingForExport } from '../atpMappingExportGroups';
 import { resolveEffectiveContext } from '../snapshot';
 import {
   Document,
@@ -96,11 +97,6 @@ function resolveAllocationForAtpItem(
   return { weekStr, jpStr, jpNumber: totalJp };
 }
 
-interface UnitGroup {
-  unitTitle: string;
-  items: ATPItem[];
-}
-
 export async function generatePemetaanAtpUnit(
   context: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
@@ -169,32 +165,7 @@ export async function generatePemetaanAtpUnit(
   const availableTps = tp?.items || [];
 
   {
-    // Canonical Data Mode
-    // 1. Sort ATP items by stepNumber
-    const sortedItems = [...(atp?.items || [])].sort(
-      (a, b) => (a.stepNumber || 0) - (b.stepNumber || 0)
-    );
-
-    // 2. Group by unitTitle while preserving first appearance order
-    const groups: UnitGroup[] = [];
-    const groupMap = new Map<string, UnitGroup>();
-
-    for (const item of sortedItems) {
-      const titleKey =
-        item.unitTitle && item.unitTitle.trim().length > 0
-          ? item.unitTitle.trim()
-          : 'Tanpa Unit / Bab';
-
-      let grp = groupMap.get(titleKey);
-      if (!grp) {
-        grp = { unitTitle: titleKey, items: [] };
-        groupMap.set(titleKey, grp);
-        groups.push(grp);
-      }
-      grp.items.push(item);
-    }
-
-    // 3. Build rows for each group
+    const groups = groupAtpMappingForExport(context);
     for (const group of groups) {
       // Build TP chain in ATP step order without duplicates within this group
       const seenCodesInGroup = new Set<string>();
@@ -232,7 +203,7 @@ export async function generatePemetaanAtpUnit(
               t.code.toUpperCase().trim() === item.tpCode.toUpperCase().trim()
           );
 
-        const alloc = resolveAllocationForAtpItem(item, uniqueAllocations);
+        const alloc = resolveAllocationForAtpItem(item, item.suppressLegacyAllocation ? undefined : uniqueAllocations);
         if (alloc.jpNumber > 0) {
           grandTotalJp += alloc.jpNumber;
           hasAnyAllocation = true;

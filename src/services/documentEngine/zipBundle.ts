@@ -549,7 +549,7 @@ export async function generateZipBundle(
     if (rawContext.workMode === 'production') throw new ProductionExportError([
       ...itemResults.filter(item => item.status !== 'SUCCESS').map(item => productionFinding(item.type, item.instanceTitle || item.instanceId || item.type, 'BLOCKER_DOKUMEN', item.reason || item.status)),
       productionFinding('ZIP', zipFileName, 'BLOCKER_PAKET', 'Tidak ada satu pun dokumen yang berhasil dihasilkan.'),
-    ]);
+    ], itemResults);
     throw new Error(
       (isBlank
         ? 'Tidak ada format dokumen kosong yang berhasil dibuat untuk kurikulum saat ini.'
@@ -578,7 +578,7 @@ export async function generateZipBundle(
 
   } catch (error) {
     if (rawContext.workMode !== 'production') throw error;
-    throw new ProductionExportError([productionFinding('ZIP', zipFileName, 'BLOCKER_PAKET', error instanceof Error ? error.message : String(error))]);
+    throw new ProductionExportError([productionFinding('ZIP', zipFileName, 'BLOCKER_PAKET', error instanceof Error ? error.message : String(error))], itemResults);
   }
   const requestedCount = itemResults.length;
   const successCount = itemResults.filter((r) => r.status === 'SUCCESS').length;

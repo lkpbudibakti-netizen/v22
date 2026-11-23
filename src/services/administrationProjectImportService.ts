@@ -189,6 +189,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   const modernMode = ADMINISTRATION_IMPORT_MODES.some(item=>item.mode===options.mode);
   if (!modernMode && !['RESTORE', 'COPY'].includes(options.mode)) throw new Error('Mode import tidak dikenal.');
   if (modernMode && !isValidDocumentDate(options.documentDate)) throw new Error('Tetapkan tanggal dokumen tujuan sebelum mengganti identitas.');
+  const productionIdentityOnly = options.mode === 'IDENTITY_ONLY' && options.workMode === 'production';
   const source = archive.project;
   const sourceYear = source.yearPlans[0];
   const targetClass = options.mode === 'OTHER_CLASS' ? (GRADE_PHASE_MAP[sourceYear.level] || []).find(item=>resolveGrade(undefined,item.grade)===resolveGrade(undefined,options.targetGrade)) : undefined;
@@ -486,8 +487,10 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       const checked = validateCalendarCompleteness(calendar.calendar, calendar.days);
       if (!checked.complete) {
         warnings.push(`Semester ${semester.semester}: ${checked.diagnostic}`);
-        calendar.calendar.workflowStatus = 'UNRESOLVED';
-        calendar.calendar.confirmedAt = undefined;
+        if (!productionIdentityOnly) {
+          calendar.calendar.workflowStatus = 'UNRESOLVED';
+          calendar.calendar.confirmedAt = undefined;
+        }
       }
     }
     if (weekly) warnings.push(...validateSubjectWeeklySchedule(weekly, jp).errors);
@@ -495,7 +498,7 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
       const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: true, data: schedule, semester: semester.semester, mapping,
         unitExecutionPlan: execution, subjectWeeklySchedule: weekly, expectedWeeklyJP: jp, calendar: calendar.calendar, calendarDays: calendar.days });
       warnings.push(...checked.errors);
-      if (!checked.isValid || checked.isStale) schedule.status = 'DRAFT';
+      if (!productionIdentityOnly && (!checked.isValid || checked.isStale)) schedule.status = 'DRAFT';
     }
   }
   if (modernMode && options.workMode !== 'production') {
@@ -552,7 +555,7 @@ export async function importCompleteAdministrationProjectAndExport(value: unknow
   exporter: typeof generateZipBundle = generateZipBundle) {
   const imported = importCompleteAdministrationProject(value, options);
   try {
-    const ready = importedProjectExportReadiness(imported.state, imported.yearPlanId);
+    const ready = importedProjectExportReadiness(imported.state, imported.yearPlanId, options.workMode);
     // Only this user-triggered export downloads the ZIP. Keep silent contexts
     // for previews/individual files; do not change the engine's global policy.
     const zipResult = await exporter({ types: ready.types, format: 'both', documentMode: 'data' }, { ...ready.context, skipDownload: false });

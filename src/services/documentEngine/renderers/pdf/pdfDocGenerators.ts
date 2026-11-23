@@ -1,3 +1,4 @@
+import { groupAtpMappingForExport } from '../../atpMappingExportGroups';
 import { assertProductionDocumentFile } from '../../../productionValidation';
 import { annualJPNotes, promesAnnualJPNotes } from '../../jpPresentation';
 import { validateDocumentRequirements } from '../../index';
@@ -370,32 +371,7 @@ export async function generatePdfDocument(
       let rows: (string | number)[][];
 
       {
-        const sortedItems = [...(atp?.items || [])].sort(
-          (a, b) => (a.stepNumber || 0) - (b.stepNumber || 0)
-        );
-
-        interface UnitGroup {
-          unitTitle: string;
-          items: ATPItem[];
-        }
-        const groups: UnitGroup[] = [];
-        const groupMap = new Map<string, UnitGroup>();
-
-        for (const item of sortedItems) {
-          const titleKey =
-            item.unitTitle && item.unitTitle.trim().length > 0
-              ? item.unitTitle.trim()
-              : 'Tanpa Unit / Bab';
-
-          let grp = groupMap.get(titleKey);
-          if (!grp) {
-            grp = { unitTitle: titleKey, items: [] };
-            groupMap.set(titleKey, grp);
-            groups.push(grp);
-          }
-          grp.items.push(item);
-        }
-
+        const groups = groupAtpMappingForExport(context);
         const dataRows: (string | number)[][] = [];
 
         for (const group of groups) {
@@ -433,7 +409,7 @@ export async function generatePdfDocument(
                   t.code.toUpperCase().trim() === item.tpCode.toUpperCase().trim()
               );
 
-            const alloc = resolveAllocationForAtpPdf(item, uniqueAllocations);
+            const alloc = resolveAllocationForAtpPdf(item, item.suppressLegacyAllocation ? undefined : uniqueAllocations);
             const materialText =
               item.materialScope || resolvedTp?.contentScope || '-';
 

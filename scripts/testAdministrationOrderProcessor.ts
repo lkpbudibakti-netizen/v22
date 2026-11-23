@@ -8,6 +8,8 @@ import { prepareCompleteAdministrationProjectImport } from '../src/services/admi
 import { createCompleteProjectZip, readCompleteProjectZip } from '../src/services/completeProjectZipService';
 import { assertProductionDocumentFile } from '../src/services/productionValidation';
 import { computeAtpSubstantiveFingerprint } from '../src/services/atpMappingActionApplyService';
+import { generateZipBundle } from '../src/services/documentEngine';
+import { importedProjectExportReadiness } from '../src/services/identityOnlyProjectExport';
 import { createInitialStorageV5 } from '../src/services/storageV5';
 import { createTwoSemesterAdministrationImportFixture } from './fixtures/readyAdministrationImportFixture';
 
@@ -50,6 +52,52 @@ test('arsip ZIP V22 dan relasi CP → TP → ATP tetap valid', async () => {
     pkg.instruments.flatMap(instrument => 'items' in instrument ? instrument.items.map(item => item.prompt) : []))),
   source.semesterData.assessmentPackage.map(e => e.value.flatMap(pkg =>
     pkg.instruments.flatMap(instrument => 'items' in instrument ? instrument.items.map(item => item.prompt) : []))));
+});
+
+test('impor produksi dan endpoint mempertahankan jadwal yang memakai JP tahunan', async () => {
+  const project = structuredClone(archive);
+  project.project.annualJPReferences = [{ yearPlanId: project.project.yearPlans[0].id,
+    value: { officialAnnualJP: null, referenceWeeklyEquivalentJP: 2 } }];
+  project.project.semesterJPSettings = [];
+  const atp = project.project.annualData.atp[0].value;
+  for (const item of atp.items) delete item.unitTitle;
+  project.project.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
+  const state = createInitialStorageV5();
+  state.profiles.push(source.profiles[1]);
+  state.schools.push(source.schools[1]);
+  const imported = prepareCompleteAdministrationProjectImport(state, project, {
+    mode: 'IDENTITY_ONLY', workMode: 'production', targetProfileId: 'p2', targetSchoolId: 's2',
+    documentDate: customer.documentDate,
+  });
+  const readiness = importedProjectExportReadiness(imported.state, imported.yearPlanId, 'production');
+  const target = imported.state;
+  for (const key of ['cp', 'cpAnalysis', 'tp', 'atp'] as const) {
+    assert.equal(target.annualData[key][0].value.workflowStatus, project.project.annualData[key][0].value.workflowStatus);
+    assert.equal(target.annualData[key][0].value.updatedAt, project.project.annualData[key][0].value.updatedAt);
+  }
+  const mapping = target.annualData.atpUnitMappings![0].value;
+  assert.equal(mapping.basedOnAtpFingerprint, computeAtpSubstantiveFingerprint(target.annualData.atp[0].value));
+  assert.deepEqual(mapping.units.map(unit => [unit.title, unit.materials.map(material => material.title)]),
+    project.project.annualData.atpUnitMappings![0].value.units.map(unit => [unit.title, unit.materials.map(material => material.title)]));
+  const meetings = target.annualData.unitExecutionPlans![0].value.units.flatMap(unit => unit.meetings);
+  for (const [index, scope] of target.semesterData.learningMeetingSchedules!.entries()) {
+    const original = project.project.semesterData.learningMeetingSchedules![index].value;
+    assert.equal(scope.value.status, 'COMPLETE');
+    assert.deepEqual(scope.value.entries.map(entry => [entry.date, entry.jp]), original.entries.map(entry => [entry.date, entry.jp]));
+    const plan = target.semesterData.learningPlan.find(item => item.semesterPlanId === scope.semesterPlanId)!.value[0];
+    assert.equal(plan.status, 'SIAP');
+    assert.deepEqual(plan.learningMeetingIds, scope.value.entries.map(entry => entry.meetingId));
+    for (const entry of scope.value.entries) {
+      assert(meetings.some(meeting => meeting.id === entry.meetingId && meeting.unitId === entry.unitId));
+      assert.equal(entry.sourceSlotId, `subject-slot:${scope.semesterPlanId}:${entry.sessionId}:${entry.date}`);
+    }
+  }
+  for (const type of ['PEMETAAN_ATP_UNIT', 'PROTA', 'PROMES', 'MODUL_AJAR', 'ASESMEN', 'JURNAL'] as const) {
+    const rows = readiness.rows.filter(row => row.type === type);
+    assert(rows.length && rows.every(row => row.ready), JSON.stringify(rows));
+  }
+  const result = await processAdministrationOrder({ project, customer });
+  assert(result.success, JSON.stringify(result.validation));
 });
 
 test('menolak ZIP rusak, schema salah, dan referensi yatim', async () => {
@@ -157,14 +205,31 @@ test('identitas di metadata yang tercetak tetap memblokir paket', async () => {
     JSON.stringify(result.validation));
 });
 
-test('dokumen wajib yang belum lengkap memblokir paket', async () => {
+test('jadwal sumber stale dilaporkan pada ZIP manual dan memblokir pesanan', async () => {
   const project = structuredClone(archive);
-  const atp = project.project.annualData.atp[0].value;
-  for (const item of atp.items) item.unitTitle = '';
-  project.project.annualData.atpUnitMappings![0].value.basedOnAtpFingerprint = computeAtpSubstantiveFingerprint(atp);
+  project.project.semesterData.learningMeetingSchedules![0].value.basedOnSubjectWeeklyScheduleUpdatedAt = '2025-01-01T00:00:00Z';
+  const state = createInitialStorageV5();
+  state.profiles.push(source.profiles[1]);
+  state.schools.push(source.schools[1]);
+  const options = { mode: 'IDENTITY_ONLY', targetProfileId: 'p2', targetSchoolId: 's2', documentDate: customer.documentDate } as const;
+  const imported = prepareCompleteAdministrationProjectImport(state, project, { ...options, workMode: 'production' });
+  assert(imported.warnings.some(warning => warning.includes('Jadwal stale')));
+  assert.equal(imported.state.semesterData.learningMeetingSchedules![0].value.status, 'COMPLETE');
+  const authoring = prepareCompleteAdministrationProjectImport(state, project, { ...options, workMode: 'authoring' });
+  assert.equal(authoring.state.semesterData.learningMeetingSchedules![0].value.status, 'DRAFT');
+
+  const readiness = importedProjectExportReadiness(imported.state, imported.yearPlanId, 'production');
+  const manual = await generateZipBundle({ types: ['CP', 'PROMES'], format: 'both', documentMode: 'data' }, readiness.context);
+  assert(!manual.isComplete && manual.zipBlob);
+  assert(manual.itemResults?.some(item => item.type === 'PROMES' && item.status === 'SKIPPED'));
+  const output = await JSZip.loadAsync(await manual.zipBlob.arrayBuffer());
+  const report = Object.values(output.files).find(entry => entry.name.endsWith('/Laporan_Ekspor.txt'));
+  assert.match(await report!.async('string'), /TIDAK LENGKAP[\s\S]*Jadwal stale/);
+
   const result = await processAdministrationOrder({ project, customer });
   assert(!result.success && !('zip' in result));
-  assert(result.validation.documents.some(item => item.type === 'PEMETAAN_ATP_UNIT' && item.status === 'SKIPPED'));
+  assert(result.validation.documents.some(item => item.type === 'CP' && item.status === 'SUCCESS'));
+  assert(result.validation.documents.some(item => item.type === 'PROMES' && item.status === 'SKIPPED' && item.reason?.includes('Jadwal stale')));
 });
 
 test('gagal menulis satu format menghasilkan PARTIAL dan tanpa ZIP pesanan', async (t) => {

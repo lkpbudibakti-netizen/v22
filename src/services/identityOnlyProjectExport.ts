@@ -4,9 +4,10 @@ import { buildAnnualZipWorkItems, resolveAnnualZipContexts } from './documentEng
 import { DOCUMENT_CATALOG, validateDocumentRequirements } from './documentEngine';
 import { resolveEffectiveContext } from './documentEngine/snapshot';
 import { getCurriculumDocumentTypes } from './curriculumRouter';
+import type { WorkMode } from './workMode';
 
 /** Existing annual ZIP planner supplies exact semester contexts; no fabricated scope. */
-export function buildImportedProjectExportContext(state: AppStorageStateV5, yearPlanId: string): DocumentGenerationContext {
+export function buildImportedProjectExportContext(state: AppStorageStateV5, yearPlanId: string, workMode?: WorkMode): DocumentGenerationContext {
   const year = state.yearPlans.find(year => year.id === yearPlanId);
   if (!year) throw new Error('Proyek hasil impor tidak ditemukan.');
   const profile = state.profiles.find(profile => profile.id === year.profileId);
@@ -16,6 +17,7 @@ export function buildImportedProjectExportContext(state: AppStorageStateV5, year
   if (!profile || !school || !workspace || !semesterPlans.length) throw new Error('Identitas/konteks tujuan tidak lengkap.');
   const read = <T,>(entries: { yearPlanId: string; value: T }[] | undefined) => entries?.find(entry => entry.yearPlanId === year.id)?.value;
   const base: DocumentGenerationContext = {
+    workMode, annualJPReference: read(state.annualJPReferences),
     profile, school, workspace: { ...workspace, academicSettingId: year.id },
     academicSetting: { ...year, id: semesterPlans[0].id, curriculum: year.curriculumType === 'K13' ? 'Kurikulum 2013' : 'Kurikulum Merdeka', phase: year.phase || '', semester: semesterPlans[0].semester === 1 ? '1 (Ganjil)' : '2 (Genap)' },
     cpAnalysis: read(state.annualData.cpAnalysis), cp: read(state.annualData.cp), tp: read(state.annualData.tp), atp: read(state.annualData.atp),
@@ -29,8 +31,8 @@ export function buildImportedProjectExportContext(state: AppStorageStateV5, year
   return resolveEffectiveContext({ ...first.context, zipAnnualSource: base.zipAnnualSource, snapshot: undefined });
 }
 
-export function importedProjectExportReadiness(state: AppStorageStateV5, yearPlanId: string, workMode?: import('./workMode').WorkMode) {
-  const context = { ...buildImportedProjectExportContext(state, yearPlanId), workMode };
+export function importedProjectExportReadiness(state: AppStorageStateV5, yearPlanId: string, workMode?: WorkMode) {
+  const context = buildImportedProjectExportContext(state, yearPlanId, workMode);
   const types = getCurriculumDocumentTypes(context.academicSetting.curriculumType || 'KURIKULUM_MERDEKA') as DocumentType[];
   const plan = buildAnnualZipWorkItems(types, context);
   const rows = plan.items.map(item => {

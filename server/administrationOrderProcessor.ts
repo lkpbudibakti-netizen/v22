@@ -4,9 +4,8 @@ import type { CompleteProjectArchive } from '../src/types/completeProjectTransfe
 import { prepareCompleteAdministrationProjectImport, validateCompleteProjectArchive } from '../src/services/administrationProjectImportService';
 import { readCompleteProjectZip } from '../src/services/completeProjectZipService';
 import { getCurriculumDocumentTypes } from '../src/services/curriculumRouter';
-import { generateZipBundle, validateDocumentRequirements } from '../src/services/documentEngine';
-import { buildAnnualZipWorkItems, resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
-import { resolveEffectiveContext } from '../src/services/documentEngine/snapshot';
+import { generateZipBundle } from '../src/services/documentEngine';
+import { resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
 import { orderZipContainsSourceIdentity } from './administrationOrderZipIdentity';
 import type { DocumentType, ZipExportItemStatus } from '../src/services/documentEngine/types';
 import { buildImportedProjectExportContext } from '../src/services/identityOnlyProjectExport';
@@ -66,12 +65,12 @@ export async function processAdministrationOrder(input: AdministrationOrderInput
     });
 
     const prepared = prepareCompleteAdministrationProjectImport(state, archive, {
-      mode: 'IDENTITY_ONLY', targetProfileId: profileId, targetSchoolId: schoolId, documentDate,
+      mode: 'IDENTITY_ONLY', workMode: 'production', targetProfileId: profileId, targetSchoolId: schoolId, documentDate,
     });
     validation.warnings = prepared.warnings;
     stage = 'VALIDASI';
     const context = {
-      ...buildImportedProjectExportContext(prepared.state, prepared.yearPlanId),
+      ...buildImportedProjectExportContext(prepared.state, prepared.yearPlanId, 'production'),
       skipDownload: true, skipExportDiagnostics: true,
     };
     const catalog = getCurriculumDocumentTypes(context.academicSetting.curriculumType || 'KURIKULUM_MERDEKA');
@@ -102,34 +101,16 @@ export async function processAdministrationOrder(input: AdministrationOrderInput
         );
       }
     }
-    if (validation.findings.length) return { success: false, validation };
-
-    // Keep the IDENTITY_ONLY workflow gates before applying production file validation.
-    const plan = buildAnnualZipWorkItems(required, context);
-    validation.documents = [...plan.skipped];
-    for (const item of plan.items) {
-      const checked = validateDocumentRequirements(item.type, resolveEffectiveContext(item.context));
-      if (!checked.isValid) validation.documents.push({
-        type: item.type, instanceId: item.instanceId, instanceTitle: item.instanceTitle,
-        status: 'SKIPPED', reason: checked.missingFields.join('; '),
-      });
-    }
-    if (validation.documents.length) {
-      for (const item of validation.documents) validation.findings.push(productionFinding(
-        item.type, item.instanceTitle || item.instanceId || item.type, 'BLOCKER_DOKUMEN', item.reason || item.status,
-      ));
-      return { success: false, validation };
-    }
-
     stage = 'ZIP';
     const result = await generateZipBundle({ types: required, format: 'both', documentMode: 'data' },
-      { ...context, workMode: 'production' });
+      context);
     validation.documents = result.itemResults || [];
     validation.findings.push(...productionZipFindings(result));
     if (!result.isComplete || !result.zipBlob || result.pdfCount !== result.requestedCount || result.docxCount !== result.requestedCount) {
       validation.findings.push(productionFinding(stage, 'Paket administrasi', 'BLOCKER_PAKET', 'Paket PDF dan DOCX belum lengkap.'));
       return { success: false, validation };
     }
+    if (validation.findings.some(finding => finding.classification !== 'WARNING')) return { success: false, validation };
     const zip = new Uint8Array(await result.zipBlob.arrayBuffer());
     if (await orderZipContainsSourceIdentity(zip, tokens)) {
       validation.findings.push(productionFinding(stage, 'Identitas sumber', 'BLOCKER_PAKET',
@@ -138,7 +119,10 @@ export async function processAdministrationOrder(input: AdministrationOrderInput
     }
     return { success: true, fileName: result.zipFileName, zip, validation };
   } catch (error) {
-    if (error instanceof ProductionExportError) validation.findings.push(...error.findings);
+    if (error instanceof ProductionExportError) {
+      validation.findings.push(...error.findings);
+      validation.documents = error.documents;
+    }
     else validation.findings.push(productionFinding(stage, 'Pesanan', 'BLOCKER_PAKET',
       error instanceof Error ? error.message : 'Pemrosesan pesanan gagal.'));
     return { success: false, validation };

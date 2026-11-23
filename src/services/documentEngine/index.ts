@@ -1,3 +1,5 @@
+import { usesImportedProductionMapping } from './atpMappingExportGroups';
+import { validateATPUnitMappingCanonical } from '../atpUnitMappingValidationService';
 import { assertProductionDocumentFile, productionReferenceIssues, productionFinding } from '../productionValidation';
 import { buildATPDocumentProjection } from './atpDocumentProjection';
 import JSZip from 'jszip';
@@ -450,6 +452,11 @@ function validateDocumentRequirementsCore(
         break;
 
       case 'PEMETAAN_ATP_UNIT': {
+        if (usesImportedProductionMapping(context)) {
+          const mapping = validateATPUnitMappingCanonical(context.atpUnitMapping, context.atp, context.tp);
+          if (!mapping.isValid || !mapping.isComplete) missingFields.push(...mapping.issues);
+          break;
+        }
         if (tpCount === 0) {
           missingFields.push('Tujuan Pembelajaran (TP) belum disusun');
         }

@@ -30,7 +30,7 @@ export function formatProductionFindings(findings: ProductionFinding[]): string 
     ...findings.map(f => [f.stage, f.object, f.classification, f.problem, f.exportImpact, f.minimalFix].map(cell).join(' | '))].join('\n');
 }
 export class ProductionExportError extends Error {
-  constructor(public findings: ProductionFinding[]) {
+  constructor(public findings: ProductionFinding[], public documents: import('./documentEngine/types').ZipExportItemStatus[] = []) {
     super(formatProductionFindings(findings));
     this.name = 'ProductionExportError';
   }
@@ -56,6 +56,14 @@ export function productionReferenceIssues(type: DocumentType, context: Partial<D
   if (type === 'MODUL_AJAR') for (const plan of (context.learningPlans || []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId)) {
     check(plan.tpIds || [], tpIds, `Modul ${plan.id} TP`);
     check(plan.atpItemIds || [], atpIds, `Modul ${plan.id} ATP`);
+    if (context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_ONLY') {
+      const meetingIds = (context.unitExecutionPlan?.units || []).filter(unit => unit.unitId === plan.unitId)
+        .flatMap(unit => unit.meetings.map(meeting => meeting.id));
+      const scheduledIds = (context.learningMeetingSchedules || []).filter(bundle => bundle.semesterPlanId === plan.academicSettingId)
+        .flatMap(bundle => bundle.schedule.entries.filter(entry => entry.unitId === plan.unitId).map(entry => entry.meetingId));
+      check(plan.learningMeetingIds || [], meetingIds, `Modul ${plan.id} pertemuan Bab`);
+      check(plan.learningMeetingIds || [], scheduledIds, `Modul ${plan.id} jadwal semester`);
+    }
   }
   return issues;
 }
