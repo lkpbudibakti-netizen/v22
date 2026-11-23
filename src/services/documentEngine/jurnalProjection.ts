@@ -34,7 +34,8 @@ export function buildJurnalProjection(context: DocumentGenerationContext): Jurna
   const bundle = bundles.length === 1 ? bundles[0] : undefined;
   const semester = context.academicSetting.semester?.startsWith('1') ? 1 : context.academicSetting.semester?.startsWith('2') ? 2 : undefined;
   if (!bundle || bundle.semester !== semester) result.reasons.push('Identitas semester jadwal tidak cocok dengan konteks jurnal.');
-  if (bundle && (bundle.schedule.basedOnMappingUpdatedAt !== context.atpUnitMapping?.updatedAt || bundle.schedule.basedOnUnitExecutionPlanUpdatedAt !== context.unitExecutionPlan?.updatedAt ||
+  const importedProduction = context.workMode === 'production' && context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_ONLY';
+  if (!importedProduction && bundle && (bundle.schedule.basedOnMappingUpdatedAt !== context.atpUnitMapping?.updatedAt || bundle.schedule.basedOnUnitExecutionPlanUpdatedAt !== context.unitExecutionPlan?.updatedAt ||
       (context.calendar && bundle.schedule.basedOnCalendarUpdatedAt !== context.calendar.updatedAt) ||
       (context.subjectWeeklySchedule && bundle.schedule.basedOnSubjectWeeklyScheduleUpdatedAt !== context.subjectWeeklySchedule.updatedAt))) result.reasons.push('Jadwal belum diperbarui setelah perubahan Bab, pertemuan, kalender, atau jadwal mapel.');
   const placement = context.unitExecutionPlan && context.atpUnitMapping ? resolveUnitSemesterPlacement(context.unitExecutionPlan, context.atpUnitMapping) : undefined;

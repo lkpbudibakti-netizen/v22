@@ -8,8 +8,10 @@ import { createModulAjarRuntimeFixture } from './fixtures/modulAjarRuntimeFixtur
 import { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder, resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
 import { buildModulAjarProjection } from '../src/services/documentEngine/modulAjarProjection';
 import { buildPromesProjection } from '../src/services/documentEngine/promesProjection';
-import { validateDocumentRequirements } from '../src/services/documentEngine';
+import { generateZipBundle, validateDocumentRequirements } from '../src/services/documentEngine';
 import { getCurriculumType } from '../src/services/curriculumRules';
+import { resolveEffectiveSubjectSlots } from '../src/services/subjectScheduleService';
+import { buildLearningMeetingScheduleData, resolveLearningMeetingSchedule } from '../src/services/learningMeetingScheduleService';
 import { resolveEffectiveContext } from '../src/services/documentEngine/snapshot';
 
 const base = createModulAjarRuntimeFixture();
@@ -24,25 +26,26 @@ base.academicSetting = { ...base.academicSetting, id: 's1', profileId: 'teacher'
 base.school.id = 'school'; base.profile.id = 'teacher';
 base.atpUnitMapping.academicSettingId = 'year';
 base.unitExecutionPlan.academicSettingId = 'year';
+base.unitExecutionPlan.updatedAt = base.atpUnitMapping.updatedAt;
 base.atpUnitMapping.units = [];
 base.unitExecutionPlan.units = [];
 const source: any = { yearPlan: { id: 'year', profileId: 'teacher', schoolId: 'school', academicYear: '2026/2027',
   subject: 'PJOK', grade: '7', curriculumType: 'KURIKULUM_MERDEKA' },
   semesterPlans: [1, 2].map(n => ({ id: 's'+n, yearPlanId: 'year', semester: n, updatedAt: 'now' })),
-  semesterJPSettings: [], semesterData: { academicCalendar: [], learningPlan: [], assessmentCriteria: [],
+  semesterJPSettings: [], semesterData: { subjectWeeklySchedules: [], academicCalendar: [], learningPlan: [], assessmentCriteria: [],
     learningMeetingSchedules: [], timeAllocation: [], assessmentPlan: [], assessmentPackage: [], roster: [], attendance: [], grade: [], remedial: [], enrichment: [] } };
 for (const semester of [1, 2]) {
   const id = 's'+semester;
   source.semesterData.learningPlan.push({ semesterPlanId: id, value: [] });
   source.semesterData.assessmentCriteria.push({ semesterPlanId: id, value: base.assessmentCriteria.map((criterion: any) => ({ ...criterion, academicSettingId: id })) });
-  source.semesterData.learningMeetingSchedules.push({ semesterPlanId: id, value: { semesterPlanId: id, status: 'COMPLETE', entries: [] } });
+  source.semesterData.learningMeetingSchedules.push({ semesterPlanId: id, value: { semesterPlanId: id, status: 'COMPLETE', entries: [], unresolvedMeetingIds: [] } });
   const year = semester === 1 ? 2026 : 2027, month = semester === 1 ? '10' : '01';
-  const calendar = { id: 'cal'+semester, academicSettingId: id, startDate: `${year}-${month}-01`, endDate: `${year}-${month}-31`, schoolDaysPerWeek: 5, workflowStatus: 'CONFIRMED' };
+  const calendar = { id: 'cal'+semester, academicSettingId: id, startDate: `${year}-${month}-01`, endDate: `${year}-${month}-31`, schoolDaysPerWeek: 5, workflowStatus: 'CONFIRMED', updatedAt: '2026-10-01T00:00:00Z' };
   source.semesterData.academicCalendar.push({ semesterPlanId: id, value: { calendar, days: Array.from({ length: 31 }, (_, i) => ({ id: 'd'+i, academicCalendarId: calendar.id, date: `${year}-${month}-${String(i+1).padStart(2, '0')}`, status: 'EFFECTIVE_LEARNING' })) } });
-  source.semesterJPSettings.push({ semesterPlanId: id, value: { semesterPlanId: id, actualScheduledWeeklyJP: 5, source: 'TEACHER_CONFIRMED' } });
+  source.semesterJPSettings.push({ semesterPlanId: id, value: { semesterPlanId: id, actualScheduledWeeklyJP: 6, source: 'TEACHER_CONFIRMED' } });
 }
-for (const order of [1, 2, 3]) {
-  const semester = order < 3 ? 1 : 2, id = 's'+semester, unitId = 'unit'+order;
+for (const order of [1, 2, 3, 4, 5, 6]) {
+  const semester = order <= 3 ? 1 : 2, id = 's'+semester, unitId = 'unit'+order;
   const remap = (id: string) => `u${order}-${id}`;
   base.atpUnitMapping.units.push({ ...structuredClone(templateUnit), id: unitId, order, title: 'Gerak Bab '+order });
   const meetings = templateExecution.meetings.map((m: any) => ({ ...m, id: remap(m.id), unitId }));
@@ -51,24 +54,40 @@ for (const order of [1, 2, 3]) {
   for (const phase of ['opening', 'core', 'closing']) plan.learningSteps[phase].forEach((step: any) => { step.learningMeetingId = remap(step.learningMeetingId); });
   plan.assessmentPlan.formative.forEach((a: any) => { if (a.learningMeetingId) a.learningMeetingId = remap(a.learningMeetingId); });
   source.semesterData.learningPlan[semester-1].value.push(plan);
-  source.semesterData.learningMeetingSchedules[semester-1].value.entries.push(...meetings.map((m: any) => ({
-    meetingId: m.id, unitId, semesterPlanId: id, date: semester === 1 ? '2026-10-19' : '2027-01-18', jp: 2, dayOfWeek: 1, weekIndex: m.order, mode: 'MANUAL',
-  })));
 }
-base.unitExecutionPlan.semesterPlacement = { mode: 'CONTIGUOUS_BOUNDARY', semester1LastUnitId: 'unit2' };
+base.unitExecutionPlan.semesterPlacement = { mode: 'CONTIGUOUS_BOUNDARY', semester1LastUnitId: 'unit3' };
+for (const semester of [1, 2] as const) {
+  const semesterPlanId = 's' + semester;
+  const { calendar, days: calendarDays } = source.semesterData.academicCalendar[semester - 1].value;
+  const expectedWeeklyJP = 6;
+  const subjectWeeklySchedule = { semesterPlanId, updatedAt: calendar.updatedAt, basedOnWeeklyJP: expectedWeeklyJP,
+    sessions: ([1, 2, 3] as const).map(dayOfWeek => ({ id: semesterPlanId + '-' + dayOfWeek, dayOfWeek, jp: 2, order: dayOfWeek })) };
+  const timing = { semesterPlanId, semester, mapping: base.atpUnitMapping, unitExecutionPlan: base.unitExecutionPlan };
+  const subjectSlotResult = resolveEffectiveSubjectSlots({ semesterPlanId, schedule: subjectWeeklySchedule, expectedWeeklyJP, calendar, calendarDays });
+  const autoResult = resolveLearningMeetingSchedule({ ...timing, subjectSlotResult });
+  assert(autoResult.isReady, autoResult.errors.join('; '));
+  source.semesterData.subjectWeeklySchedules.push({ semesterPlanId, value: subjectWeeklySchedule });
+  source.semesterData.learningMeetingSchedules[semester - 1].value = buildLearningMeetingScheduleData({
+    ...timing, subjectWeeklySchedule, expectedWeeklyJP, calendar, autoResult, manualOverrides: [],
+  });
+}
 base.zipAnnualSource = source;
 // The normal UI payload intentionally contains only active-semester plans.
 base.learningPlans = source.semesterData.learningPlan[0].value;
 base.snapshot = { semester: 'WRONG_HISTORICAL_SEMESTER' };
 const before = JSON.stringify(base);
-const requested: any = ['CP', 'ANALISIS_CP_TP', 'TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'PROTA', 'KALENDER_AKADEMIK', 'MODUL_AJAR', 'PROMES'];
+const requested: any = ['CP', 'ANALISIS_CP_TP', 'TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'PROTA', 'KALENDER_AKADEMIK', 'MODUL_AJAR', 'RPM', 'PROMES'];
 const planned = buildAnnualZipWorkItems(requested, base);
 assert.deepEqual(planned.skipped, []);
 const modules = planned.items.filter(i => i.type === 'MODUL_AJAR');
-assert.equal(modules.length, 3);
-assert.deepEqual(modules.map(i => i.folderCategory), ['Semester_1', 'Semester_1', 'Semester_2']);
+assert.equal(modules.length, 6);
+const rpms = planned.items.filter(i => i.type === 'RPM');
+assert.equal(rpms.length, 6);
+assert.deepEqual(rpms.map(i => i.instanceId), modules.map(i => i.instanceId));
+assert.deepEqual(rpms.map(i => i.seqNum), [1, 2, 3, 4, 5, 6]);
+assert.deepEqual(modules.map(i => i.folderCategory), ['Semester_1', 'Semester_1', 'Semester_1', 'Semester_2', 'Semester_2', 'Semester_2']);
 for (const [index, item] of modules.entries()) {
-  assert.equal(item.fileStem, `Modul_Ajar_BAB_${index+1}_Gerak_Bab_${index+1}`);
+  assert.equal(item.fileStem, `Modul_Ajar_Bab_${index+1}`);
   assert.equal(item.context.snapshot, undefined);
   const projection = buildModulAjarProjection(item.context);
   assert(projection.isReady, projection.error);
@@ -79,8 +98,8 @@ assert.deepEqual(promes.map(i => i.context.calendar?.id), ['cal1', 'cal2']);
 for (const item of promes) {
   const projection = buildPromesProjection(item.context);
   assert(projection.isReady, projection.unreadyReason);
-  assert.equal(projection.rows.length, item.context.academicSetting.id === 's1' ? 2 : 1);
-  assert.equal(projection.totalAllocatedJP, item.context.academicSetting.id === 's1' ? 12 : 6);
+  assert.equal(projection.rows.length, 3);
+  assert.equal(projection.totalAllocatedJP, 18);
 }
 assert(planned.items.every(i => i.context.skipDownload === true));
 for (const item of planned.items) {
@@ -91,9 +110,9 @@ assert.equal(JSON.stringify(base), before);
 
 for (const mutate of [
   (c: any) => { c.zipAnnualSource.semesterData.learningMeetingSchedules[1].value.entries.push({ ...c.zipAnnualSource.semesterData.learningMeetingSchedules[0].value.entries[0], semesterPlanId: 's2' }); },
-  (c: any) => { c.zipAnnualSource.semesterData.learningPlan[0].value[0].learningMeetingIds.push('u3-m1'); },
+  (c: any) => { c.zipAnnualSource.semesterData.learningPlan[0].value[0].learningMeetingIds.push('u4-m1'); },
   (c: any) => { c.zipAnnualSource.semesterData.learningPlan[0].value[0].learningMeetingIds = ['missing']; },
-  (c: any) => { c.zipAnnualSource.semesterData.learningPlan[0].value[0].unitId = 'unit3'; },
+  (c: any) => { c.zipAnnualSource.semesterData.learningPlan[0].value[0].unitId = 'unit4'; },
 ]) {
   const bad = structuredClone(base); mutate(bad);
   const result = buildAnnualZipWorkItems(['MODUL_AJAR'], bad);
@@ -123,23 +142,36 @@ const changedOwner = structuredClone(base); changedOwner.zipAnnualSource.semeste
 assert(buildAnnualZipWorkItems(requested, changedOwner).skipped.some(i => i.instanceId === 'lp1'));
 const isolated = structuredClone(base);
 isolated.zipAnnualSource.semesterData.learningPlan.push({ semesterPlanId: 'unrelated-year-sem', value: [{ ...templatePlan, id: 'other-year' }] });
-assert.equal(buildAnnualZipWorkItems(['MODUL_AJAR'], isolated).items.length, 3);
+assert.equal(buildAnnualZipWorkItems(['MODUL_AJAR'], isolated).items.length, 6);
+
+const rendered = await generateZipBundle({ types: ['MODUL_AJAR', 'RPM'], format: 'both' }, { ...base, skipDownload: true });
+assert(rendered.isComplete, JSON.stringify(rendered.itemResults));
+assert.equal(rendered.requestedCount, 12);
+assert.equal(rendered.pdfCount, 12);
+assert.equal(rendered.docxCount, 12);
+const renderedZip = await JSZip.loadAsync(await rendered.zipBlob!.arrayBuffer(), { checkCRC32: true });
+for (const item of [...modules, ...rpms]) {
+  assert(renderedZip.file([administrationZipRoot(base), 'PDF', item.folderCategory, item.fileStem + '.pdf'].join('/')));
+  assert(renderedZip.file([administrationZipRoot(base), 'WORD', item.folderCategory, item.fileStem + '.docx'].join('/')));
+}
 
 // Exercise the real ZIP orchestration with real validators/projections, simulated renderer bytes,
 // and a captured download. This verifies archive paths and one browser save without a DOM.
 const downloads: { blob: Blob; name: string }[] = [];
 const renderCalls: any[] = [];
+let failRpm = false;
 const fakeRender = async (type: any, context: any) => {
+  if (failRpm && type === 'RPM') throw new Error('Renderer RPM gagal');
   assert.equal(context.skipDownload, true);
   const validation = validateDocumentRequirements(type, context);
   assert(validation.isValid, validation.missingFields.join('; '));
   renderCalls.push({ type, id: context.academicSetting.id });
-  return { blob: new Uint8Array([1, 2, 3]) };
+  return { blob: new Blob([new Uint8Array([1, 2, 3])]) };
 };
 const exports: any = {};
 runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zipBundle.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
-}).outputText, { exports, console, require: (id: string) => {
+}).outputText, { exports, console, Blob, Uint8Array, Error, require: (id: string) => {
   if (id === 'jszip') return JSZip;
   if (id === 'file-saver') return (blob: Blob, name: string) => downloads.push({ blob, name });
   if (id === './annualZipPlan') return { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder };
@@ -151,9 +183,7 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
   if (id === '../curriculumRouter') return { MERDEKA_EXPORT_DOC_TYPES: requested };
   throw new Error('Unexpected dependency '+id);
 } });
-// Existing Zip renderer contract tests blob.size; simulated bytes provide the same envelope.
-Object.defineProperty(Uint8Array.prototype, 'size', { configurable: true, get() { return this.byteLength; } });
-try {
+{
   const exportContext = structuredClone(base);
   const draftPlan = { ...structuredClone(source.semesterData.learningPlan[0].value[0]), id: 'draft-plan', status: 'DRAFT' };
   exportContext.zipAnnualSource.semesterData.learningPlan[0].value.push(draftPlan);
@@ -165,29 +195,41 @@ try {
   const skipped = result.itemResults.find((r: any) => r.instanceId === draftPlan.id);
   assert.equal(skipped.status, 'SKIPPED');
   assert.equal(skipped.reason, invalid.missingFields.join('; '), 'Preserve the original validator reason');
-  assert.equal(result.exportedCount, 13);
+  assert.equal(result.exportedCount, 22);
   assert.equal(downloads.length, 1);
-  assert.equal(renderCalls.length, 26);
+  assert.equal(renderCalls.length, 44);
   assert(!result.zipFileName.includes('Sem'));
   assert(result.zipFileName.includes('2026_2027'));
   const archive = await JSZip.loadAsync(await downloads[0].blob.arrayBuffer());
-  const files = Object.keys(archive.files).filter(path => !archive.files[path].dir);
-  assert.equal(files.length, 26);
-  for (const item of modules) for (const ext of ['pdf', 'docx']) assert(files.includes(`${administrationZipRoot(base)}/${item.folderCategory}/${item.fileStem}.${ext}`));
+  const files = Object.keys(archive.files).filter(path => !archive.files[path].dir && !path.endsWith('/Laporan_Ekspor.txt'));
+  assert.equal(files.length, 44);
+  assert.equal(new Set(files).size, files.length);
+  assert(files.every(path => path.endsWith('.pdf') ? path.includes('/PDF/') : path.includes('/WORD/')));
+  for (const item of [...modules, ...rpms]) for (const ext of ['pdf', 'docx']) assert(files.includes(`${administrationZipRoot(base)}/${ext === 'pdf' ? 'PDF' : 'WORD'}/${item.folderCategory}/${item.fileStem}.${ext}`));
   const root = administrationZipRoot(base);
   assert.equal(root, 'Kelas_7_PJOK_Adzani Kusumawardani S.Pd');
   assert.equal(administrationZipRoot({ ...base, academicSetting: { ...base.academicSetting, grade: 'Kelas 1', subject: 'PJOK/SD' } }), 'Kelas 1_PJOK_SD_Adzani Kusumawardani S.Pd');
-  assert(files.every(f => f.split('/').length === 3), 'No nested document-type folders');
+  assert(files.every(f => f.split('/').length === 4), 'No nested document-type folders');
   for (const folder of ['Semester_1', 'Semester_2']) {
-    assert(files.filter(f => f.startsWith(root+'/'+folder+'/')).some(f => f.includes('PROMES')));
+    assert(files.filter(f => f.includes('/'+folder+'/')).some(f => f.includes('PROMES')));
   }
   for (const type of ['CP', 'ANALISIS_CP_TP', 'TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'PROTA', 'KALENDER_AKADEMIK']) {
     assert(result.itemResults.some((r: any) => r.type === type && r.status === 'SUCCESS'));
   }
-  assert.equal(files.filter(f => f.startsWith(root+'/Administrasi_Umum/')).length, 16);
+  assert.equal(files.filter(f => f.includes('/Administrasi_Umum/')).length, 16);
   assert.deepEqual(Object.keys(archive.files).filter(path => archive.files[path].dir).sort(), [
-    root+'/', root+'/Administrasi_Umum/', root+'/Semester_1/', root+'/Semester_2/',
+    root+'/', ...['PDF', 'WORD'].flatMap(format => [root+'/'+format+'/', ...['Administrasi_Umum','Semester_1','Semester_2'].map(scope => root+'/'+format+'/'+scope+'/')]),
   ].sort());
-} finally { delete (Uint8Array.prototype as any).size; }
+  failRpm = true;
+  const partial = await exports.generateZipBundle({ types: ['MODUL_AJAR', 'RPM'], format: 'both' }, { ...base, skipDownload: true });
+  assert.equal(partial.isComplete, false);
+  assert.equal(partial.requestedCount, 12);
+  assert.equal(partial.successCount, 6);
+  assert.equal(partial.failedCount, 6);
+  assert(partial.itemResults.filter((row: any) => row.type === 'RPM').every((row: any) => row.status === 'FAILED'));
+  const partialZip = await JSZip.loadAsync(await partial.zipBlob.arrayBuffer());
+  const report = Object.values(partialZip.files).find(entry => entry.name.endsWith('/Laporan_Ekspor.txt'));
+  assert.match(await report!.async('string'), /TIDAK LENGKAP[\s\S]*Renderer RPM gagal/);
+}
 assert.equal(JSON.stringify(base), before);
-console.log('PASS: readable root with three flat folders, all validator-approved annual documents/calendar, 2+1 modules, isolated PROMES, original validator skip reason, no generic status gate, immutable source and one ZIP download; renderer bytes simulated.');
+console.log('PASS: readable root with separate PDF and Word trees, all validator-approved annual documents/calendar, six modules and six RPM, isolated PROMES, original validator skip reason, no generic status gate, immutable source and one ZIP download; renderer bytes simulated.');

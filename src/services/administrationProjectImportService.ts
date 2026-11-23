@@ -260,11 +260,12 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   if (targetClass) { year.grade = targetClass.grade; year.phase = targetClass.phase.replace(/^Fase\s*/i,''); year.classSection = targetSection; }
   const warnings: string[] = [];
   if (modernMode) {
-    const identityValues = (owner: typeof profile, campus: typeof school) => [owner.name, owner.nip, campus.name, campus.npsn, campus.address, campus.principalName, campus.principalNip].filter((value): value is string => Boolean(value?.trim())).map(value => value.trim());
-    const destinationValues = new Set(identityValues(profile, school).map(value => value.toLocaleLowerCase('id')));
+    const identityValues = (owner: typeof profile, campus: typeof school) => [owner.name, owner.nip, campus.name, campus.npsn, campus.address, campus.principalName, campus.principalNip, ...(productionIdentityOnly ? [owner.nuptk, campus.village, campus.district, campus.regency, campus.province] : [])].filter((value): value is string => Boolean(value?.trim())).map(value => value.trim());
+    const normalizeIdentity = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('id');
+    const destinationValues = new Set(identityValues(profile, school).map(normalizeIdentity));
     year.identityOnlyImport = { importedAt: new Date().toISOString(), timingIsSourceReference: true, factualDataExcluded: true,
       mode: options.mode as NonNullable<YearPlan['identityOnlyImport']>['mode'], sourceGrade: sourceYear.grade, sourcePhase: sourceYear.phase,
-      sourceIdentityTokens: [...new Set([...(sourceYear.identityOnlyImport?.sourceIdentityTokens || []), ...identityValues(source.profiles[0], source.schools[0])])].filter(value => !destinationValues.has(value.toLocaleLowerCase('id'))) };
+      sourceIdentityTokens: [...new Set([...(sourceYear.identityOnlyImport?.sourceIdentityTokens || []), ...identityValues(source.profiles[0], source.schools[0])])].filter(value => !destinationValues.has(normalizeIdentity(value))) };
     for (const workspace of imported.workspaces) {
       workspace.documentDate = options.documentDate;
       workspace.name = `${year.subject} — ${year.grade}${year.classSection ? ' '+year.classSection : ''} — ${profile.name}`;
@@ -495,9 +496,9 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
     }
     if (weekly) warnings.push(...validateSubjectWeeklySchedule(weekly, jp).errors);
     if (schedule && mapping && execution && calendar && weekly && jp) {
-      const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: true, data: schedule, semester: semester.semester, mapping,
+      const checked = validateLearningMeetingScheduleData({ allowUnusedSlots: true, allowVerifiedTimestampDrift: productionIdentityOnly, data: schedule, semester: semester.semester, mapping,
         unitExecutionPlan: execution, subjectWeeklySchedule: weekly, expectedWeeklyJP: jp, calendar: calendar.calendar, calendarDays: calendar.days });
-      warnings.push(...checked.errors);
+      warnings.push(...checked.errors, ...(checked.warnings || []).map(warning => 'Semester ' + semester.semester + ': ' + warning));
       if (!productionIdentityOnly && (!checked.isValid || checked.isStale)) schedule.status = 'DRAFT';
     }
   }

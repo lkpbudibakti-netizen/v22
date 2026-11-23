@@ -1,3 +1,4 @@
+import { withLearningPlanPresentation } from '../../types';
 import { groupAtpMappingForExport } from '../../atpMappingExportGroups';
 import { assertProductionDocumentFile } from '../../../productionValidation';
 import { annualJPNotes, promesAnnualJPNotes } from '../../jpPresentation';
@@ -123,7 +124,7 @@ export async function generatePdfDocument(
   type: DocumentType,
   rawContext: DocumentGenerationContext
 ): Promise<{ blob: Blob; fileName: string; title: string; snapshot: DocumentSnapshot }> {
-  const context = resolveEffectiveContext(rawContext);
+  const context = resolveEffectiveContext(withLearningPlanPresentation(type, rawContext));
   const validation = validateDocumentRequirements(type, context);
   if (!validation.isValid) throw new Error(validation.message || validation.missingFields.join('; '));
   const identityIssue = sourceIdentityExportIssue(type, context);
@@ -629,6 +630,7 @@ export async function generatePdfDocument(
       break;
     }
 
+    case 'RPM':
     case 'MODUL_AJAR': {
       const projection = buildModulAjarProjection(context);
 
@@ -1294,6 +1296,6 @@ export async function generatePdfDocument(
 
   const blob = builder.getBlob();
   if (context.workMode === 'production') await assertProductionDocumentFile(blob, 'pdf');
-  if (type === 'MODUL_AJAR') recordModulAjarExportDiagnostic(context, buildModulAjarProjection(context), snapshot, 'pdf');
+  if ((type === 'MODUL_AJAR' || type === 'RPM')) recordModulAjarExportDiagnostic(context, buildModulAjarProjection(context), snapshot, 'pdf');
   return { blob, fileName, title, snapshot };
 }

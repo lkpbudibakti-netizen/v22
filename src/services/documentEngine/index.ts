@@ -1,3 +1,4 @@
+import { withLearningPlanPresentation } from './types';
 import { usesImportedProductionMapping } from './atpMappingExportGroups';
 import { validateATPUnitMappingCanonical } from '../atpUnitMappingValidationService';
 import { assertProductionDocumentFile, productionReferenceIssues, productionFinding } from '../productionValidation';
@@ -159,6 +160,14 @@ export const DOCUMENT_CATALOG: DocumentCatalogItem[] = [
     title: 'Modul Ajar / RPP Berdiferensiasi',
     description: 'Perangkat ajar lengkap memuat Informasi Umum, Pemahaman Bermakna, Pertanyaan Pemantik, Kegiatan Berdiferensiasi, LKPD, dan Glosarium.',
     requiredSources: ['Data Profil & Sekolah', 'Data Akademik', 'Tujuan Pembelajaran (TP)', 'Alur Tujuan Pembelajaran (ATP)'],
+  },
+  {
+    id: 'RPM',
+    type: 'RPM',
+    category: 'Perencanaan Utama',
+    title: 'Rencana Pembelajaran Mendalam (RPM)',
+    description: 'Penyajian pembelajaran mendalam dari rencana pembelajaran yang sama.',
+    requiredSources: ['Rencana Pembelajaran', 'TP dan ATP', 'Jadwal Pertemuan'],
   },
   {
     id: 'KKTP',
@@ -329,7 +338,7 @@ function validateDocumentRequirementsCore(
       type === 'ANALISIS_CP_TP' ||
       type === 'ATP' ||
       type === 'PEMETAAN_ATP_UNIT' ||
-      type === 'MODUL_AJAR' ||
+      (type === 'MODUL_AJAR' || type === 'RPM') ||
       type === 'KKTP' ||
       type === 'ASESMEN' ||
       type === 'CP' ||
@@ -506,6 +515,7 @@ function validateDocumentRequirementsCore(
         break;
       }
 
+      case 'RPM':
       case 'MODUL_AJAR': {
         const projection = buildModulAjarProjection(context as DocumentGenerationContext);
         if (!projection.isReady) {
@@ -564,9 +574,9 @@ function validateDocumentRequirementsCore(
         targetStep = 'academic';
       } else if (!cpHasContent) {
         targetStep = 'cp';
-      } else if (tpCount === 0 && (type === 'ATP' || type === 'PEMETAAN_ATP_UNIT' || type === 'MODUL_AJAR' || type === 'ASESMEN' || type === 'KKTP')) {
+      } else if (tpCount === 0 && (type === 'ATP' || type === 'PEMETAAN_ATP_UNIT' || (type === 'MODUL_AJAR' || type === 'RPM') || type === 'ASESMEN' || type === 'KKTP')) {
         targetStep = 'tp';
-      } else if (atpCount === 0 && (type === 'PROTA' || type === 'PROMES' || type === 'ATP' || type === 'PEMETAAN_ATP_UNIT' || type === 'MODUL_AJAR' || type === 'ASESMEN')) {
+      } else if (atpCount === 0 && (type === 'PROTA' || type === 'PROMES' || type === 'ATP' || type === 'PEMETAAN_ATP_UNIT' || (type === 'MODUL_AJAR' || type === 'RPM') || type === 'ASESMEN')) {
         targetStep = 'atp';
       }
 
@@ -587,13 +597,15 @@ function validateDocumentRequirementsCore(
 
 /** Production classifications drive the same per-document decision used by all exports. */
 export function validateDocumentRequirements(type: DocumentType, context: Partial<DocumentGenerationContext>): DocumentValidationResult {
+  context = withLearningPlanPresentation(type, context);
   if (context.workMode !== 'production') return validateDocumentRequirementsCore(type, context);
   let result: DocumentValidationResult;
+  const warnings: string[] = [];
   try {
     result = validateDocumentRequirementsCore(type, context);
     const references = productionReferenceIssues(type, context);
     if (references.length) result = { ...result, isValid: false, missingFields: [...result.missingFields, ...references] };
-    if (['PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','ASESMEN','JURNAL'].includes(type) && context.atpUnitMapping && context.unitExecutionPlan) {
+    if (['PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','RPM','ASESMEN','JURNAL'].includes(type) && context.atpUnitMapping && context.unitExecutionPlan) {
       for (const bundle of context.learningMeetingSchedules || []) {
         if (!bundle.schedule.entries.length) continue;
         const source = context.zipAnnualSource;
@@ -607,11 +619,14 @@ export function validateDocumentRequirements(type: DocumentType, context: Partia
           continue;
         }
         const setting = source?.semesterJPSettings.find(e=>e.semesterPlanId===bundle.semesterPlanId)?.value || (ownSemester ? context.semesterJPSetting : undefined);
-        const checked = validateLearningMeetingScheduleData({data:bundle.schedule,semester:bundle.semester,mapping:context.atpUnitMapping,unitExecutionPlan:context.unitExecutionPlan,
+        const checked = validateLearningMeetingScheduleData({
+          allowVerifiedTimestampDrift: source?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_ONLY',
+          data:bundle.schedule,semester:bundle.semester,mapping:context.atpUnitMapping,unitExecutionPlan:context.unitExecutionPlan,
           subjectWeeklySchedule:weekly,expectedWeeklyJP:resolveSemesterJPFromValues(setting,context.annualJPReference).weeklyJP,
           // Production treats confirmation as a workflow warning. Validate the
           // actual saved days/slots and fingerprints without promoting storage.
           calendar:{...activeCalendar,workflowStatus:'CONFIRMED'},calendarDays:calendar?.days || context.calendarDays || []});
+        warnings.push(...(checked.warnings || []).map(warning => 'Semester ' + bundle.semester + ': ' + warning));
         const errors = checked.errors.filter(error=>!error.startsWith('Status DRAFT tidak valid karena seluruh pertemuan'));
         if (errors.length) result = {...result,isValid:false,missingFields:[...result.missingFields,...errors.map(error=>'Jadwal aktual perlu diperbarui: '+error)]};
       }
@@ -619,7 +634,11 @@ export function validateDocumentRequirements(type: DocumentType, context: Partia
   } catch (error) {
     result = { isValid: false, missingFields: [error instanceof Error ? error.message : String(error)] };
   }
-  const findings = result.missingFields.map(problem => productionFinding(type, context.activeLearningPlanId || context.activeAssessmentPackageId || type, 'BLOCKER_DOKUMEN', problem));
+  const object = context.activeLearningPlanId || context.activeAssessmentPackageId || type;
+  const findings = [
+    ...result.missingFields.map(problem => productionFinding(type, object, 'BLOCKER_DOKUMEN', problem)),
+    ...warnings.map(problem => productionFinding(type, object, 'WARNING', problem)),
+  ];
   return { ...result, message: result.missingFields.join('; '), findings };
 }
 
@@ -630,7 +649,7 @@ export async function generateDocument(
   type: DocumentType,
   rawContext: DocumentGenerationContext
 ): Promise<GeneratedDocumentResult> {
-  const context = { ...resolveEffectiveContext(rawContext) };
+  const context = { ...resolveEffectiveContext(withLearningPlanPresentation(type, rawContext)) };
   const validation = validateDocumentRequirements(type, context);
   if (!validation.isValid) {
     throw new Error(validation.message || 'Prasyarat dokumen belum terpenuhi.');
@@ -670,6 +689,7 @@ export async function generateDocument(
     case 'PROMES':
       result = await generatePROMES(context);
       break;
+    case 'RPM':
     case 'MODUL_AJAR':
       result = await generateModulAjar(context);
       break;
@@ -722,7 +742,7 @@ export async function generateDocumentFormatted(
   rawContext: DocumentGenerationContext,
   format: 'docx' | 'pdf' = 'docx'
 ): Promise<GeneratedDocumentResult & { format: 'docx' | 'pdf'; snapshot: DocumentSnapshot }> {
-  const context = resolveEffectiveContext(rawContext);
+  const context = resolveEffectiveContext(withLearningPlanPresentation(type, rawContext));
   const validation = validateDocumentRequirements(type, context);
   if (!validation.isValid) {
     throw new Error(validation.message || 'Prasyarat dokumen belum terpenuhi.');

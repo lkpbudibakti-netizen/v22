@@ -7,7 +7,7 @@ import { buildJurnalProjection } from './jurnalProjection';
 export function sourceIdentityExportIssue(type: DocumentType, context: Partial<DocumentGenerationContext>): string | undefined {
   const tokens = context.zipAnnualSource?.yearPlan.identityOnlyImport?.sourceIdentityTokens;
   if (!tokens?.length) return;
-  const plans = (type === 'MODUL_AJAR' ? context.learningPlans || [] : []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId);
+  const plans = ((type === 'MODUL_AJAR' || type === 'RPM') ? context.learningPlans || [] : []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId);
   const unitIds = new Set(plans.map(plan => plan.unitId));
   const planTpIds = new Set(plans.flatMap(plan => plan.tpIds));
   const packages = (type === 'ASESMEN' ? context.assessmentPackages || [] : []).filter(pkg => !context.activeAssessmentPackageId || pkg.id === context.activeAssessmentPackageId);
@@ -21,6 +21,7 @@ export function sourceIdentityExportIssue(type: DocumentType, context: Partial<D
     ASESMEN: () => [packages, context.tp?.items?.filter(tp => packageTpIds.has(tp.id)), context.assessmentPlans?.filter(plan => packages.some(pkg => pkg.assessmentPlanId === plan.id))],
     KKTP: () => context.assessmentCriteria, JURNAL: () => [context.unitExecutionPlan, context.journalRealizations],
   };
+  sources.RPM = sources.MODUL_AJAR;
   // Use existing projections to avoid blocking Semester 1 for prose used only in Semester 2.
   if (context.academicSetting) {
     if (type === 'PROMES' || type === 'ALOKASI_WAKTU') sources[type] = () => buildPromesProjection(context as DocumentGenerationContext).rows;

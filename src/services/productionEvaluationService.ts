@@ -24,7 +24,7 @@ export function buildProductionEvaluationReport(context: DocumentGenerationConte
   }
   const k13 = getCurriculumTypeFromSetting(context.academicSetting) === 'K13';
   const types = DOCUMENT_CATALOG.map(doc => doc.type).filter(type => k13
-    ? !['CP', 'TP', 'ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR', 'KKTP', 'ASESMEN'].includes(type)
+    ? !['CP', 'TP', 'ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR','RPM', 'KKTP', 'ASESMEN'].includes(type)
     : !['ANALISIS_SKL_KI_KD', 'PENETAPAN_KKM'].includes(type));
   const work = buildAnnualZipWorkItems(types, production);
   for (const item of work.items) {

@@ -1385,7 +1385,7 @@ export function saveATPUnitMappingV5(
   if (previous && previous.updatedAt !== next.updatedAt) {
     const semesterIds = new Set(state.semesterPlans.filter(sp => sp.yearPlanId === yearPlanId).map(sp => sp.id));
     const workspaceIds = new Set(state.workspaces.filter(w => w.yearPlanId === yearPlanId).map(w => w.id));
-    for (const doc of state.documents) if (['PEMETAAN_ATP_UNIT','PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','JURNAL'].includes(doc.type) &&
+    for (const doc of state.documents) if (['PEMETAAN_ATP_UNIT','PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','RPM','JURNAL'].includes(doc.type) &&
       (doc.academicSettingId === yearPlanId || semesterIds.has(doc.academicSettingId || '') || workspaceIds.has(doc.workspaceId || ''))) doc.status = 'draft';
   }
   upsertAnnualScopedEntry(state.annualData.atpUnitMappings, yearPlanId, next);
@@ -1490,7 +1490,7 @@ export function getMeetingAlignmentSourceV5(yearPlanId: string, state = loadStor
   const schedules=state.semesterData.learningMeetingSchedules?.filter(e => semesterIds.has(e.semesterPlanId)) || [];
   if(schedules.length) context.impacts.push('Jadwal tersimpan ditandai DRAFT/stale. Entry ID yang dipertahankan beserta tanggalnya tetap disimpan; ID yang dikurangi dilepas. Tinjau dan simpan ulang Langkah 5.');
   if(state.semesterData.learningPlan.some(e => semesterIds.has(e.semesterPlanId) && e.value.length)) context.impacts.push('Rencana pembelajaran/asesmen tetap disimpan dan memerlukan validasi ulang setelah jadwal diperbarui.');
-  if(scopedDocuments.some(d => ['PROTA','PROMES','ALOKASI_WAKTU','JURNAL','MODUL_AJAR'].includes(d.type))) context.impacts.push('Dokumen waktu/jurnal/modul terkait ditandai draft. Snapshot historis tetap utuh; buat ulang dokumen dari jadwal yang disetujui.');
+  if(scopedDocuments.some(d => ['PROTA','PROMES','ALOKASI_WAKTU','JURNAL','MODUL_AJAR','RPM'].includes(d.type))) context.impacts.push('Dokumen waktu/jurnal/modul terkait ditandai draft. Snapshot historis tetap utuh; buat ulang dokumen dari jadwal yang disetujui.');
   return {mapping,capacity,context,persistedPlan:plan};
 }
 
@@ -1569,7 +1569,7 @@ export function saveUnitExecutionPlanV5(
     }
     const workspaces = new Set(state.workspaces.filter(w => w.yearPlanId === yearPlanId).map(w => w.id));
     for (const doc of state.documents) {
-      if (['PROTA', 'PROMES', 'ALOKASI_WAKTU', 'JURNAL', 'MODUL_AJAR'].includes(doc.type) &&
+      if (['PROTA', 'PROMES', 'ALOKASI_WAKTU', 'JURNAL', 'MODUL_AJAR','RPM'].includes(doc.type) &&
           (doc.academicSettingId === yearPlanId || semesterIds.has(doc.academicSettingId || '') || (!doc.academicSettingId && workspaces.has(doc.workspaceId || '')))) doc.status = 'draft';
     }
   }

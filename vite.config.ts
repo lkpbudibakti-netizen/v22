@@ -36,6 +36,7 @@ export default defineConfig(() => {
         workbox: {
           skipWaiting: false,
           clientsClaim: true,
+          globPatterns: ['**/*.{js,wasm,css,html}', '**/pdf.worker-*.mjs'],
           globIgnores: ['**/build-info.json'],
           navigateFallbackDenylist: [/^\/api\//, /\/build-info\.json$/],
           maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,

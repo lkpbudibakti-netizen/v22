@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { createReadyAdministrationImportFixture } from './fixtures/readyAdministrationImportFixture';
 import { buildImportedProjectExportContext } from '../src/services/identityOnlyProjectExport';
 import { buildModulAjarProjection } from '../src/services/documentEngine/modulAjarProjection';
-import { generateDocument, generatePdfDocument } from '../src/services/documentEngine';
+import { DOCUMENT_CATALOG, generateDocument, generatePdfDocument } from '../src/services/documentEngine';
 import { validateAILearningPlanPayload, normalizeDeepLearningContext, normalizeLearningExperiencePhase, validateGraduateProfileDimensions, createAIDraftLearningPlan, normalizeAIAssessmentPlan, normalizeAIReflection, normalizeAIResources } from '../src/services/learningPlanService';
 import { validateLearningPlanActivityMeetings, resolveLearningPlanMeetingBudgets } from '../src/services/learningPlanActivityMeetingService';
 import { generateZipBundle } from '../src/services/documentEngine/zipBundle';
@@ -128,18 +128,11 @@ assert(rpmView.isReady,rpmView.error);assert.deepEqual(rpmView.plan,moduleView.p
 assert.deepEqual(rpmView.resolvedTPs,moduleView.resolvedTPs);assert.equal(rpmView.resolvedAllocatedJP,moduleView.resolvedAllocatedJP);
 const headings=['I. IDENTIFIKASI','II. DESAIN PEMBELAJARAN','III. PENGALAMAN BELAJAR','IV. ASESMEN'];assert.deepEqual(rpmView.sections!.map(s=>s.title),headings);
 const beforePresentation=JSON.stringify(designedContext);
-const uiAst=ts.createSourceFile('AdminDocsExport.tsx',readFileSync('src/components/AdminDocsExport.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let selection='';
-function findSelection(node:ts.Node) {
-  if(ts.isJsxOpeningElement(node)&&node.tagName.getText(uiAst)==='select'&&node.attributes.properties.some(a=>ts.isJsxAttribute(a)&&a.name.getText(uiAst)==='value'&&a.initializer?.getText(uiAst)==='{learningPlanPresentation}')) {
-    const change=node.attributes.properties.find(a=>ts.isJsxAttribute(a)&&a.name.getText(uiAst)==='onChange');
-    if(change&&ts.isJsxAttribute(change)&&change.initializer&&ts.isJsxExpression(change.initializer)&&change.initializer.expression)selection=change.initializer.expression.getText(uiAst);
-  }
-  ts.forEachChild(node,findSelection);
-}findSelection(uiAst);assert(selection);let selected='';
-evaluateExpression(selection,{setLearningPlanPresentation:(value:string)=>selected=value,generateLearningPlanWithAI:()=>assert.fail('Presentation switch must not call AI')})({target:{value:'RPM'}});assert.equal(selected,'RPM');
-const rpmWord=await generateDocument('MODUL_AJAR',rpmContext);assert(rpmWord.fileName.startsWith('RPM_'));
+assert.deepEqual(DOCUMENT_CATALOG.filter(item => ['MODUL_AJAR', 'RPM'].includes(item.type)).map(item => item.type), ['MODUL_AJAR', 'RPM']);
+assert(!readFileSync('src/components/AdminDocsExport.tsx','utf8').includes('Penyajian perencanaan'));
+const rpmWord=await generateDocument('RPM',designedContext);assert(rpmWord.fileName.startsWith('RPM_'));assert.equal(rpmWord.record?.type,'RPM');assert.equal(rpmWord.record?.snapshot?.learningPlanId,raw.id);
 const rpmZip=await JSZip.loadAsync(new Uint8Array(await rpmWord.blob!.arrayBuffer())),rpmXml=await rpmZip.file('word/document.xml')!.async('string');
-const rpmPdf=await generatePdfDocument('MODUL_AJAR',rpmContext);assert(rpmPdf.fileName.startsWith('RPM_'));
+const rpmPdf=await generatePdfDocument('RPM',designedContext);assert(rpmPdf.fileName.startsWith('RPM_'));
 const rpmLoader=getDocument({data:new Uint8Array(await rpmPdf.blob.arrayBuffer()),useSystemFonts:true}),rpmDoc=await rpmLoader.promise;let rpmText='',lastPageText='';
 for(let page=1;page<=rpmDoc.numPages;page++) {
   const p=await rpmDoc.getPage(page),viewport=p.getViewport({scale:1}),items=(await p.getTextContent()).items as any[];
@@ -162,11 +155,20 @@ console.log('PASS P2: RPM four sections, same LearningPlan/lineage/JP/dates, act
 const transferable=structuredClone(source);transferable.semesterData.learningPlan[0].value=[raw];
 const original=JSON.stringify(transferable),project=await readCompleteProjectZip(await createCompleteProjectZip(transferable,'y'));
 const target=prepareCompleteAdministrationProjectImport(transferable,project,{mode:'IDENTITY_ONLY',targetProfileId:'p2',targetSchoolId:'s2',documentDate:'2026-11-16',workMode:'production'});
-const importedContext={...buildImportedProjectExportContext(target.state,target.yearPlanId),workMode:'production' as const,learningPlanPresentation:'RPM' as const,skipDownload:true};
-const bundle=await generateZipBundle({types:['MODUL_AJAR'],format:'both'},importedContext);assert(bundle.zipBlob);assert(!bundle.itemResults?.some(item=>item.status==='FAILED'));
+const importedContext={...buildImportedProjectExportContext(target.state,target.yearPlanId),workMode:'production' as const,skipDownload:true};
+const bundle=await generateZipBundle({types:['MODUL_AJAR','RPM'],format:'both'},importedContext);assert(bundle.zipBlob);assert(!bundle.itemResults?.some(item=>item.status==='FAILED'));
 const files=await JSZip.loadAsync(new Uint8Array(await bundle.zipBlob.arrayBuffer())),names=Object.keys(files.files).filter(name=>/\.(docx|pdf)$/.test(name));
-assert.equal(names.length,2);assert(names.every(name=>name.includes('RPM')));
-const importedXml=await(await JSZip.loadAsync(await files.file(names.find(name=>name.endsWith('.docx'))!)!.async('uint8array'))).file('word/document.xml')!.async('string');
+assert.equal(names.length,4);
+assert.equal(new Set(names).size,4);
+assert(names.some(name=>name.endsWith('/WORD/Semester_1/RPM_Bab_1.docx')));
+assert(names.some(name=>name.endsWith('/PDF/Semester_1/Modul_Ajar_Bab_1.pdf')));
+for (const format of ['pdf', 'docx'] as const) {
+  const single = await generateZipBundle({ types: ['RPM'], format }, importedContext);
+  const files = Object.keys((await JSZip.loadAsync(await single.zipBlob!.arrayBuffer())).files);
+  assert(files.some(name => name.endsWith('.'+format)));
+  assert(files.every(name => !name.includes(format === 'pdf' ? '/WORD/' : '/PDF/')));
+}
+const importedXml=await(await JSZip.loadAsync(await files.file(names.find(name=>name.endsWith('/RPM_Bab_1.docx'))!)!.async('uint8array'))).file('word/document.xml')!.async('string');
 assert(importedXml.includes('GURU_TUJUAN_TEST'));assert(!importedXml.includes('GURU_ASAL_TEST'));assert(importedXml.includes(raw.materialCharacteristics));
 assert.equal(JSON.stringify(transferable),original,'Import/export cannot change the source project');
-console.log('PASS Production RPM ZIP actual two files, import to another teacher/school, shared design/substance, no AI; Normal exports remain available');
+console.log('PASS Production RPM ZIP actual four files, import to another teacher/school, shared design/substance, no AI; Normal exports remain available');

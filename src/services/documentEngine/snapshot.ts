@@ -35,7 +35,7 @@ export function createDocumentSnapshot(
       ? formatDocumentDate(rawDate)
       : undefined;
 
-  const projection = documentType === 'MODUL_AJAR'
+  const projection = (documentType === 'MODUL_AJAR' || documentType === 'RPM')
     ? buildModulAjarProjection(context) : undefined;
   return maskExportIdentity({ documentMode: docMode, snapshot: {
     ...(documentType === 'JURNAL' ? { jurnalProjection: buildJurnalProjection({ ...context, snapshot: undefined, documentMode: docMode }) } : {}),

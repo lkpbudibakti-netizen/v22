@@ -704,6 +704,7 @@ export type DocumentType =
   | 'PROTA'
   | 'PROMES'
   | 'MODUL_AJAR'
+  | 'RPM'
   | 'ASESMEN'
   | 'JURNAL'
   | 'KALENDER_AKADEMIK'

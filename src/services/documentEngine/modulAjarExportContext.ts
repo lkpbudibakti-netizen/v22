@@ -6,9 +6,10 @@ export function prepareModulAjarExportContext(
   format: 'docx' | 'pdf',
   source: 'live' | 'snapshot' = 'live',
   historicalSnapshot?: DocumentSnapshot,
+  type: 'MODUL_AJAR' | 'RPM' = 'MODUL_AJAR',
 ): DocumentGenerationContext {
   // Discard inherited snapshots before resolving a new live snapshot.
-  const live = { ...liveContext, snapshot: undefined };
+  const live = { ...liveContext, snapshot: undefined, learningPlanPresentation: type };
   if (source === 'snapshot') {
     if (!historicalSnapshot) throw new Error('Snapshot lama belum tersedia.');
     if (((!historicalSnapshot.learningPlanId || !historicalSnapshot.sourceVersions?.learningPlanUpdatedAt))) {
@@ -28,5 +29,5 @@ export function prepareModulAjarExportContext(
       activeLearningPlanId: historicalSnapshot.learningPlanId,
     }, historicalSnapshot);
   }
-  return resolveEffectiveContext(live, createDocumentSnapshot(live, format, live.documentMode, 'MODUL_AJAR'));
+  return resolveEffectiveContext(live, createDocumentSnapshot(live, format, live.documentMode, type));
 }

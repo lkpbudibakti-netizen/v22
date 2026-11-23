@@ -58,6 +58,7 @@ export function getDocumentZipFolder(type: DocumentType, _identityMasked: boolea
     case 'ALOKASI_WAKTU':
     case 'PROTA':
     case 'PROMES':
+    case 'RPM':
     case 'MODUL_AJAR':
       return '02_Perencanaan';
 
@@ -96,6 +97,7 @@ export function getBlankSubCategoryFolder(type: DocumentType): string {
     case 'ALOKASI_WAKTU':
     case 'PROTA':
     case 'PROMES':
+    case 'RPM':
     case 'MODUL_AJAR':
       return '02_Perencanaan';
 
@@ -134,6 +136,7 @@ export function getDocumentSequenceNumber(type: DocumentType): number {
     PROTA: 5,
     PROMES: 6,
     MODUL_AJAR: 7,
+    RPM: 8,
 
     KKTP: 1,
     ASESMEN: 2,
@@ -179,8 +182,8 @@ export function formatDocumentZipFileName(
   // Multi-instance naming with sanitized title
   if (instanceTitle?.trim()) {
     const sanitizedTitle = sanitizeForFileName(instanceTitle.trim());
-    if (type === 'MODUL_AJAR') {
-      if(context.learningPlanPresentation==='RPM')return `${seqStr}_RPM_${sanitizedTitle}${blankTag}.${ext}`;
+    if (type === 'RPM' || type === 'MODUL_AJAR') {
+      if(type === 'RPM')return `${seqStr}_RPM_${sanitizedTitle}${blankTag}.${ext}`;
       const cleanModTitle = sanitizedTitle.startsWith('Modul_Ajar')
         ? sanitizedTitle
         : `Modul_Ajar_${sanitizedTitle}`;
@@ -209,7 +212,8 @@ export function formatDocumentZipFileName(
     ALOKASI_WAKTU: 'Alokasi_Waktu',
     PROTA: 'Program_Tahunan_PROTA',
     PROMES: 'Program_Semester_PROMES',
-    MODUL_AJAR: context.learningPlanPresentation==='RPM' ? 'RPM' : 'Modul_Ajar_RPP',
+    MODUL_AJAR: 'Modul_Ajar_RPP',
+    RPM: 'RPM',
     KKTP: 'KKTP',
     ASESMEN: 'Instrumen_Asesmen_Rubrik',
     DAFTAR_HADIR: 'Daftar_Hadir_Siswa',
@@ -299,7 +303,7 @@ export async function generateZipBundle(
           type !== 'ANALISIS_CP_TP' &&
           type !== 'ATP' &&
           type !== 'PEMETAAN_ATP_UNIT' &&
-          type !== 'MODUL_AJAR' &&
+          type !== 'MODUL_AJAR' && type !== 'RPM' &&
           type !== 'KKTP' &&
           type !== 'ASESMEN' &&
           type !== 'CP' &&
@@ -317,8 +321,11 @@ export async function generateZipBundle(
   let docxCount = 0;
   const foldersCreatedSet = new Set<string>();
   const rootFolder = administrationZipRoot(resolveEffectiveContext({ ...rawContext, documentMode }));
-  for (const folder of ['Administrasi_Umum', 'Semester_1', 'Semester_2']) {
-    const path = `${rootFolder}/${folder}`;
+  const folderPath = (format: 'pdf' | 'docx', category: string) =>
+    [rootFolder, format === 'pdf' ? 'PDF' : 'WORD', category].join('/');
+  const formats = exportFormat === 'both' ? ['pdf', 'docx'] as const : [exportFormat];
+  for (const format of formats) for (const category of ['Administrasi_Umum', 'Semester_1', 'Semester_2']) {
+    const path = folderPath(format, category);
     zip.folder(path);
     foldersCreatedSet.add(path);
   }
@@ -342,6 +349,7 @@ export async function generateZipBundle(
   // Track item counts for ordering within folders
   const folderItemCount: Record<string, number> = {};
   const itemResults: ZipExportItemStatus[] = [];
+  const warnings: import('../productionValidation').ProductionFinding[] = [];
   const workItems: ZipWorkItem[] = [];
 
   {
@@ -359,6 +367,7 @@ export async function generateZipBundle(
     try {
       effectiveContext = resolveEffectiveContext(item.context);
       validation = validateDocumentRequirements(item.type, effectiveContext);
+      warnings.push(...(validation.findings || []).filter(finding => finding.classification === 'WARNING').map(finding => ({ ...finding, object: item.instanceTitle || item.type })));
     } catch (error) {
       itemResults.push({ type: item.type, instanceId: item.instanceId, instanceTitle: item.instanceTitle, status: 'FAILED', reason: error instanceof Error ? error.message : String(error) });
       continue;
@@ -373,13 +382,6 @@ export async function generateZipBundle(
       });
       continue;
     }
-
-    const folderPath = `${rootFolder}/${item.folderCategory}`;
-    let targetFolder = zip.folder(folderPath);
-    if (!targetFolder) {
-      targetFolder = zip;
-    }
-    foldersCreatedSet.add(folderPath);
 
     const filesGenerated: string[] = [];
     let pdfSuccess = false;
@@ -408,6 +410,7 @@ export async function generateZipBundle(
             item.seqNum,
             item.instanceTitle
           );
+          const targetFolder = zip.folder(folderPath('pdf', item.folderCategory))!;
           const pdfFileName = getUniqueZipFileName(targetFolder, candidatePdfName);
           targetFolder.file(pdfFileName, await zipDocumentData(pdfResult.blob));
           filesGenerated.push(pdfFileName);
@@ -446,6 +449,7 @@ export async function generateZipBundle(
             item.seqNum,
             item.instanceTitle
           );
+          const targetFolder = zip.folder(folderPath('docx', item.folderCategory))!;
           const docxFileName = getUniqueZipFileName(targetFolder, candidateDocxName);
           targetFolder.file(docxFileName, await zipDocumentData(docxResult.blob));
           filesGenerated.push(docxFileName);
@@ -558,10 +562,10 @@ export async function generateZipBundle(
     );
   }
 
-  if (rawContext.workMode === 'production') {
-    const incomplete = itemResults.some(item => item.status !== 'SUCCESS');
+  const incomplete = itemResults.some(item => item.status !== 'SUCCESS');
+  if (rawContext.workMode === 'production' || incomplete) {
     const findings = itemResults.filter(item => item.status !== 'SUCCESS').map(item => productionFinding(item.type, item.instanceTitle || item.instanceId || item.type, 'BLOCKER_DOKUMEN', item.reason || item.status));
-    zip.file(rootFolder + '/Laporan_Ekspor.txt', 'Status: ' + (incomplete ? 'TIDAK LENGKAP' : 'LENGKAP') + '\n' + formatProductionFindings(findings));
+    zip.file(rootFolder + '/Laporan_Ekspor.txt', 'Status: ' + (incomplete ? 'TIDAK LENGKAP' : 'LENGKAP') + '\n' + formatProductionFindings([...findings, ...warnings]));
   }
   let zipBlob: Blob;
   try {
@@ -598,6 +602,7 @@ export async function generateZipBundle(
     foldersCreated: Array.from(foldersCreatedSet),
     snapshots,
     itemResults,
+    warnings,
     requestedCount,
     successCount,
     partialCount,

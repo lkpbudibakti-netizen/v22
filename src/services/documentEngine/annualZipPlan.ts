@@ -103,15 +103,17 @@ export function resolveAnnualZipContexts(base: DocumentGenerationContext): {
 
 /** Meeting IDs determine semester; Unit placement is an independent cross-check. */
 export function resolveZipLearningPlan(plan: LearningPlan, annual: DocumentGenerationContext,
-  semesters: ReturnType<typeof resolveAnnualZipContexts>['semesters']) {
+  semesters: ReturnType<typeof resolveAnnualZipContexts>['semesters'], type: 'MODUL_AJAR' | 'RPM' = 'MODUL_AJAR') {
   const fail = (reason: string) => ({ reason, item: undefined });
+  const unitOrder = annual.atpUnitMapping?.units.find(unit => unit.id === plan.unitId)?.order;
+  const fileStem = unitOrder ? (type === 'RPM' ? 'RPM' : 'Modul_Ajar') + '_Bab_' + unitOrder : undefined;
   if (annual.workMode === 'production') {
     const targets = semesters.filter(target => target.context.academicSetting.id === plan.academicSettingId);
     if (targets.length !== 1) return fail('Semester tujuan Modul Ajar tidak tersedia atau ambigu.');
     const target = targets[0];
-    const item: AnnualZipWorkItem = { type: 'MODUL_AJAR', instanceId: plan.id, instanceTitle: plan.title || plan.topic || plan.id,
-      context: { ...target.context, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
-      folderCategory: semesterZipFolder(target.semester), seqNum: 1 };
+    const item: AnnualZipWorkItem = { type, instanceId: plan.id, instanceTitle: plan.title || plan.topic || plan.id,
+      context: { ...target.context, learningPlanPresentation: type, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
+      folderCategory: semesterZipFolder(target.semester), seqNum: unitOrder ?? 1, fileStem };
     return { item, reason: undefined };
   }
   const units = annual.atpUnitMapping?.units.filter(unit => unit.id === plan.unitId) || [];
@@ -137,10 +139,10 @@ export function resolveZipLearningPlan(plan: LearningPlan, annual: DocumentGener
   const targets = semesters.filter(s => planIds.has(s.context.academicSetting.id));
   if (targets.length !== 1 || plan.academicSettingId !== targets[0].context.academicSetting.id) return fail('SemesterPlan Modul Ajar tidak cocok atau context semester tidak tersedia.');
   const target = targets[0];
-  const item: AnnualZipWorkItem = { type: 'MODUL_AJAR', instanceId: plan.id, instanceTitle: unit.title,
-    context: { ...target.context, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
+  const item: AnnualZipWorkItem = { type, instanceId: plan.id, instanceTitle: unit.title,
+    context: { ...target.context, learningPlanPresentation: type, learningPlans: [plan], activeLearningPlanId: plan.id, skipDownload: true },
     folderCategory: semesterZipFolder(target.semester), seqNum: unit.order,
-    fileStem: `${annual.learningPlanPresentation==='RPM' ? 'RPM' : 'Modul_Ajar'}_BAB_${unit.order}_${clean(unit.title)}` };
+    fileStem };
   return { item, reason: undefined };
 }
 
@@ -159,12 +161,23 @@ export function buildAnnualZipWorkItems(types: DocumentType[], base: DocumentGen
         continue;
       }
       items.push({ type, context: annual, folderCategory: 'Administrasi_Umum', seqNum: items.length + 1 });
-    } else if (type === 'MODUL_AJAR') {
-      const plans = semesters.flatMap(s => s.context.learningPlans || []);
-      if (!plans.length) skip(type, 'Belum ada Modul Ajar pada context semester tersedia. ' + issues.join('; '));
+    } else if (type === 'MODUL_AJAR' || type === 'RPM') {
+      const orders = new Map(annual.atpUnitMapping?.units.map(unit => [unit.id, unit.order]));
+      const plans = semesters.flatMap(s => s.context.learningPlans || []).sort((a, b) =>
+        (orders.get(a.unitId) ?? Infinity) - (orders.get(b.unitId) ?? Infinity));
+      if (base.workMode === 'production' && base.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_ONLY') {
+        for (const semester of [1, 2]) {
+          if (!semesters.find(scope => scope.semester === semester)?.context.learningPlans?.length) {
+            skip(type, 'Semester ' + semester + ': Modul Ajar belum tersedia.');
+          }
+        }
+        for (const unit of annual.atpUnitMapping?.units || []) {
+          if (!plans.some(plan => plan.unitId === unit.id)) skip(type, 'Bab ' + unit.title + ': Modul Ajar belum tersedia.', unit.id);
+        }
+      } else if (!plans.length) skip(type, 'Belum ada Modul Ajar pada context semester tersedia. ' + issues.join('; '));
       for (const plan of plans) {
         if (plans.filter(p => p.id === plan.id).length !== 1) { skip(type, 'ID Modul Ajar ganda/ambigu.', plan.id); continue; }
-        const result = resolveZipLearningPlan(plan, annual, semesters);
+        const result = resolveZipLearningPlan(plan, annual, semesters, type);
         if (result.item) items.push(result.item); else skip(type, result.reason!, plan.id);
       }
     } else {

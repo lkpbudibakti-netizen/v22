@@ -722,7 +722,8 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
   });
 
   const blob = await Packer.toBlob(doc);
-  const snapshot = context.snapshot || createDocumentSnapshot(context, 'docx', context.documentMode, 'MODUL_AJAR');
+  const type = context.learningPlanPresentation === 'RPM' ? 'RPM' : 'MODUL_AJAR';
+  const snapshot = context.snapshot || createDocumentSnapshot(context, 'docx', context.documentMode, type);
   recordModulAjarExportDiagnostic(context, sharedProjection, snapshot, 'docx');
   const cleanSubject = (academicSetting.subject || 'Mapel').replace(/[^a-zA-Z0-9]/g, '_');
   const cleanGrade = (academicSetting.grade || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_');
@@ -734,14 +735,14 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
 
   return {
     success: true,
-    type: 'MODUL_AJAR',
+    type,
     title: docTitle,
     fileName,
     blob,
     document: doc,
     record: {
-      id: `doc-modul-${Date.now()}`,
-      type: 'MODUL_AJAR',
+      id: `doc-${type === 'RPM' ? 'rpm' : 'modul'}-${Date.now()}`,
+      type,
       title: docTitle,
       status: 'completed',
       lastGenerated: new Date().toISOString(),

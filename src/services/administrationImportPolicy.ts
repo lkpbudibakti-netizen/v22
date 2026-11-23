@@ -51,8 +51,8 @@ export function importDocumentPolicyIssue(type: DocumentType, context: Partial<D
   const compatibility = classImportCompatibility(year,context.cp,context.tp,context.atp,context.workMode === 'production');
   if (type==='CP' && !compatibility.cpCompatible) return compatibility.reasons[0];
   if (['TP','ANALISIS_CP_TP'].includes(type) && !compatibility.tpCompatible) return compatibility.reasons.join('; ');
-  if (['ATP','PEMETAAN_ATP_UNIT','PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','KKTP','ASESMEN','JURNAL'].includes(type) && !compatibility.atpCompatible) return compatibility.reasons.join('; ');
-  if (context.academicSetting && ['PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','JURNAL','KALENDER_AKADEMIK','HARI_EFEKTIF'].includes(type)) {
+  if (['ATP','PEMETAAN_ATP_UNIT','PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','RPM','KKTP','ASESMEN','JURNAL'].includes(type) && !compatibility.atpCompatible) return compatibility.reasons.join('; ');
+  if (context.academicSetting && ['PROTA','PROMES','ALOKASI_WAKTU','MODUL_AJAR','RPM','JURNAL','KALENDER_AKADEMIK','HARI_EFEKTIF'].includes(type)) {
     const issues = importedTimingIssues(context as DocumentGenerationContext, type==='PROTA', ['KALENDER_AKADEMIK','HARI_EFEKTIF'].includes(type));
     if (issues.length) return issues.join('; ');
   }

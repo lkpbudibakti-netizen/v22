@@ -1,3 +1,5 @@
+import { withLearningPlanPresentation } from '../services/documentEngine/types';
+import { downloadAdministrationZip } from '../services/documentEngine/browserProductionZipIdentity';
 import { ProductionExportError, productionFinding, productionZipFindings, type ProductionFinding } from '../services/productionValidation';
 import { JournalPreview, JournalRealizationEditor } from './JournalRealizationEditor';
 import { buildJurnalProjection } from '../services/documentEngine/jurnalProjection';
@@ -70,7 +72,6 @@ import {
   DOCUMENT_CATALOG,
   generateDocument,
   generatePdfDocument,
-  generateZipBundle,
   validateDocumentRequirements,
   DocumentGenerationContext,
   INDONESIAN_MONTHS,
@@ -191,7 +192,6 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [zipProgressText, setZipProgressText] = useState<string | null>(null);
   const [documentMode, setDocumentMode] = useState<DocumentMode>('data');
-  const [learningPlanPresentation,setLearningPlanPresentation]=useState<'MODUL_AJAR'|'RPM'>('MODUL_AJAR');
   const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [localDocs, setLocalDocs] = useState<AppDocumentRecord[]>(documents);
@@ -233,7 +233,6 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     academicSetting,
     workspace,
     documentMode,
-    learningPlanPresentation,
     cpAnalysis,
     cp: cp || { id: '', academicSettingId: '', generalDescription: '', elements: [], updatedAt: '' },
     tp: tp || { id: '', academicSettingId: '', items: [], updatedAt: '' },
@@ -298,6 +297,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       case 'PROTA':
       case 'PROMES':
         return atpTime > docTime || tpTime > docTime || cpTime > docTime;
+      case 'RPM':
       case 'MODUL_AJAR':
         return learningPlanTime > docTime || atpTime > docTime || tpTime > docTime || cpTime > docTime;
       case 'ASESMEN':
@@ -319,16 +319,17 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
   ) => {
     const productionMode = context.workMode === 'production';
     const existingRec = getDocRecord(type);
-    const historicalModul = !productionMode && type === 'MODUL_AJAR' && source === 'snapshot';
-    const historicalSnapshot = historicalModulSnapshot || existingRec?.snapshot;
+    const planDocument = type === 'MODUL_AJAR' || type === 'RPM';
+    const historicalModul = !productionMode && planDocument && source === 'snapshot';
+    const historicalSnapshot = (type === 'MODUL_AJAR' ? historicalModulSnapshot : undefined) || existingRec?.snapshot;
     if (historicalModul && !historicalSnapshot) {
       setExportErrorMessage('Snapshot lama belum tersedia.');
       return;
     }
     let effectiveContext: DocumentGenerationContext;
     try {
-      effectiveContext = type === 'MODUL_AJAR'
-        ? prepareModulAjarExportContext(context, format, productionMode ? 'live' : source, historicalSnapshot)
+      effectiveContext = type === 'MODUL_AJAR' || type === 'RPM'
+        ? prepareModulAjarExportContext(context, format, productionMode ? 'live' : source, historicalSnapshot, type)
         : resolveEffectiveContext(context, !forceNew && !productionMode && existingRec?.snapshot
         ? existingRec.snapshot : createDocumentSnapshot(context, format, documentMode, type));
     } catch (error) {
@@ -387,7 +388,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         };
       }
 
-      if (type === 'MODUL_AJAR') setExportDiagnostic(getLastModulAjarExportDiagnostic());
+      if (planDocument) setExportDiagnostic(getLastModulAjarExportDiagnostic());
       if (documentMode === 'blank') {
         setExportSuccessMessage('Format Kosong berhasil diunduh dengan isi administrasi lengkap, tanpa identitas guru dan sekolah. Snapshot tersimpan tidak diubah.');
         return;
@@ -407,7 +408,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
       }
       const finalGeneratedAt = record.snapshot?.generatedAt || effectiveSnapshot.generatedAt;
       setExportSuccessMessage(
-        (forceNew || type === 'MODUL_AJAR')
+        (forceNew || planDocument)
           ? `Dokumen ${title} (.${format}) berhasil diperbarui dengan data sekolah/kepsek terbaru!`
           : `Dokumen ${title} (.${format}) [Snapshot: ${formatOfficialSnapshotDate(finalGeneratedAt)}] berhasil diunduh!`
       );
@@ -429,7 +430,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
     setZipProgressText('Menyiapkan struktur folder administrasi...');
 
     try {
-      const result = await generateZipBundle(
+      const result = await downloadAdministrationZip(
         {
           format,
           documentMode,
@@ -449,7 +450,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
         );
       } else {
         setExportSuccessMessage(
-          `Sukses! ${result.exportedCount} dokumen (${result.pdfCount} PDF, ${result.docxCount} Word) telah lengkap dikompresi ke dalam arsip ZIP "${result.zipFileName}" (6 Folder Administrasi).`
+          `Sukses! ${result.exportedCount} dokumen (${result.pdfCount} PDF, ${result.docxCount} Word) telah lengkap dikompresi ke dalam arsip ZIP "${result.zipFileName}".`
         );
       }
       setTimeout(() => {
@@ -492,7 +493,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
             const pdfRes = await generatePdfDocument(type, context);
             saveAs(pdfRes.blob, pdfRes.fileName);
             const finalSnapshot: DocumentSnapshot =
-              (type === 'ASESMEN' || type === 'MODUL_AJAR' || type === 'JURNAL') && pdfRes.snapshot
+              (type === 'ASESMEN' || type === 'MODUL_AJAR' || type === 'RPM' || type === 'JURNAL') && pdfRes.snapshot
                 ? pdfRes.snapshot
                 : snapshot;
             const rec: AppDocumentRecord = {
@@ -516,7 +517,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
           } else {
             const res = await generateDocument(type, context);
             const finalSnapshot: DocumentSnapshot =
-              (type === 'ASESMEN' || type === 'MODUL_AJAR' || type === 'JURNAL') && res.record?.snapshot
+              (type === 'ASESMEN' || type === 'MODUL_AJAR' || type === 'RPM' || type === 'JURNAL') && res.record?.snapshot
                 ? res.record.snapshot
                 : snapshot;
             const rec: AppDocumentRecord = {
@@ -623,11 +624,6 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
 
           {/* Mode Selector & Action Buttons */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {!isK13Curriculum && <label className="text-xs font-semibold">Penyajian perencanaan
-              <select aria-label="Penyajian perencanaan" value={learningPlanPresentation} onChange={event=>setLearningPlanPresentation(event.target.value as 'MODUL_AJAR'|'RPM')} className="ml-2 rounded-lg border border-slate-300 p-2">
-                <option value="MODUL_AJAR">Modul Ajar</option><option value="RPM">Rencana Pembelajaran Mendalam (RPM)</option>
-              </select>
-            </label>}
             {/* Mode Switcher: Data vs Blank */}
             <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
               <button
@@ -947,7 +943,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-blue-600" />
                 <span>
-                  Katalog Dokumen Administrasi ({DOCUMENT_CATALOG.filter((c) => isK13Curriculum ? !['ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR', 'KKTP', 'ASESMEN', 'CP', 'TP'].includes(c.type) : !['ANALISIS_SKL_KI_KD', 'PENETAPAN_KKM'].includes(c.type)).length})
+                  Katalog Dokumen Administrasi ({DOCUMENT_CATALOG.filter((c) => isK13Curriculum ? !['ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR', 'RPM', 'KKTP', 'ASESMEN', 'CP', 'TP'].includes(c.type) : !['ANALISIS_SKL_KI_KD', 'PENETAPAN_KKM'].includes(c.type)).length})
                 </span>
               </h4>
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
@@ -960,7 +956,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                 const itemsInCategory = DOCUMENT_CATALOG.filter((c) => {
                   if (c.category !== category.key) return false;
                   if (isK13Curriculum) {
-                    return !['ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR', 'KKTP', 'ASESMEN', 'CP', 'TP'].includes(c.type);
+                    return !['ANALISIS_CP_TP', 'ATP', 'PEMETAAN_ATP_UNIT', 'MODUL_AJAR', 'RPM', 'KKTP', 'ASESMEN', 'CP', 'TP'].includes(c.type);
                   } else {
                     return !['ANALISIS_SKL_KI_KD', 'PENETAPAN_KKM'].includes(c.type);
                   }
@@ -1114,7 +1110,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
             const activeRecord = getDocRecord(activePreviewType);
             const storedSnapshot = activePreviewType === 'MODUL_AJAR'
               ? historicalModulSnapshot || activeRecord?.snapshot : activeRecord?.snapshot;
-            const activeSnapshot = productionMode || activePreviewType === 'MODUL_AJAR' ? undefined : storedSnapshot;
+            const activeSnapshot = productionMode || activePreviewType === 'MODUL_AJAR' || activePreviewType === 'RPM' ? undefined : storedSnapshot;
 
             const previewContext = resolveEffectiveContext(context, activeSnapshot);
             const previewSchoolName = previewContext.school.name || '-';
@@ -1162,7 +1158,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       title={activeSnapshot ? 'Unduh DOCX sesuai snapshot historis tersimpan' : 'Unduh Dokumen DOCX'}
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>{activePreviewType === 'MODUL_AJAR' ? 'Unduh DOCX Terbaru' : activeSnapshot ? 'Unduh DOCX (Snapshot)' : 'Unduh DOCX'}</span>
+                      <span>{(activePreviewType === 'MODUL_AJAR' || activePreviewType === 'RPM') ? 'Unduh DOCX Terbaru' : activeSnapshot ? 'Unduh DOCX (Snapshot)' : 'Unduh DOCX'}</span>
                     </button>
 
                     <button
@@ -1172,16 +1168,16 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       title={activeSnapshot ? 'Unduh PDF sesuai snapshot historis tersimpan' : 'Unduh Dokumen PDF'}
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      <span>{activePreviewType === 'MODUL_AJAR' ? 'Unduh PDF Terbaru' : activeSnapshot ? 'Unduh PDF (Snapshot)' : 'Unduh PDF'}</span>
+                      <span>{(activePreviewType === 'MODUL_AJAR' || activePreviewType === 'RPM') ? 'Unduh PDF Terbaru' : activeSnapshot ? 'Unduh PDF (Snapshot)' : 'Unduh PDF'}</span>
                     </button>
 
-                    {!productionMode && activePreviewType === 'MODUL_AJAR' && storedSnapshot && (
+                    {!productionMode && (activePreviewType === 'MODUL_AJAR' || activePreviewType === 'RPM') && storedSnapshot && (
                       <>
-                        <button onClick={() => handleGenerateSingleDoc('MODUL_AJAR', 'docx', false, 'snapshot')}
+                        <button onClick={() => handleGenerateSingleDoc(activePreviewType, 'docx', false, 'snapshot')}
                           disabled={Boolean(generatingDocType)} className="text-xs underline px-2 py-1.5">
                           Unduh Snapshot Lama (DOCX)
                         </button>
-                        <button onClick={() => handleGenerateSingleDoc('MODUL_AJAR', 'pdf', false, 'snapshot')}
+                        <button onClick={() => handleGenerateSingleDoc(activePreviewType, 'pdf', false, 'snapshot')}
                           disabled={Boolean(generatingDocType)} className="text-xs underline px-2 py-1.5">
                           Unduh Snapshot Lama (PDF)
                         </button>
@@ -1238,7 +1234,8 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
                       {activePreviewType === 'ATP' && 'ALUR TUJUAN PEMBELAJARAN (ATP)'}
                       {activePreviewType === 'PROTA' && 'PROGRAM TAHUNAN (PROTA)'}
                       {activePreviewType === 'PROMES' && 'PROGRAM SEMESTER (PROMES)'}
-                      {activePreviewType === 'MODUL_AJAR' && (learningPlanPresentation==='RPM' ? 'RENCANA PEMBELAJARAN MENDALAM (RPM)' : 'MODUL AJAR / RPP BERDIFERENSIASI')}
+                      {activePreviewType === 'RPM' && 'RENCANA PEMBELAJARAN MENDALAM (RPM)'}
+                      {activePreviewType === 'MODUL_AJAR' && 'MODUL AJAR / RPP BERDIFERENSIASI'}
                       {activePreviewType === 'KKTP' && 'KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN (KKTP)'}
                       {activePreviewType === 'DAFTAR_HADIR' && 'DAFTAR HADIR SISWA & REKAPITULASI PRESENSI'}
                       {activePreviewType === 'DAFTAR_NILAI' && 'BUKU DAFTAR NILAI & REKAPITULASI ASESMEN'}
@@ -1864,10 +1861,10 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
             })()}
 
             {/* 4. MODUL AJAR PREVIEW */}
-            {activePreviewType === 'MODUL_AJAR' && (() => {
+            {(activePreviewType === 'MODUL_AJAR' || activePreviewType === 'RPM') && (() => {
               ;
 
-              const projection = buildModulAjarProjection(context);
+              const projection = buildModulAjarProjection(withLearningPlanPresentation(activePreviewType, context));
 
               if (!projection.isReady || !projection.plan) {
                 return (
@@ -1886,7 +1883,7 @@ export const AdminDocsExport: React.FC<AdminDocsExportProps> = ({
               const alokasiWaktuDisplay = typeof projection.resolvedAllocatedJP === 'number' && projection.resolvedAllocatedJP > 0
                 ? `${projection.resolvedAllocatedJP} JP`
                 : 'Belum Ditetapkan';
-              if(learningPlanPresentation==='RPM')return <div className="space-y-3 text-slate-800">
+              if(activePreviewType==='RPM')return <div className="space-y-3 text-slate-800">
                 <p className="text-xs">{plan.status==='SIAP' ? 'Terkonfirmasi' : 'Draf — perlu tinjauan guru'} • {alokasiWaktuDisplay}</p>
                 {(projection.sections || []).map(section=><section key={section.title} className="rounded-xl border border-slate-200 p-3">
                   <h4 className="text-sm font-bold">{section.title}</h4>{section.lines.map((line,index)=><p key={index} className="mt-1 whitespace-pre-wrap text-xs">{line}</p>)}

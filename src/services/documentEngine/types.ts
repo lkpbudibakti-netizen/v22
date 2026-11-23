@@ -120,6 +120,7 @@ export interface ZipExportItemStatus {
 }
 
 export interface ZipExportResult {
+  warnings?: import('../productionValidation').ProductionFinding[];
   success: boolean;
   isComplete?: boolean;
   zipFileName: string;
@@ -162,4 +163,9 @@ export interface DocumentCatalogItem {
   title: string;
   description: string;
   requiredSources: string[];
+}
+
+/** Both export types present the same canonical LearningPlan. */
+export function withLearningPlanPresentation<T extends Partial<DocumentGenerationContext>>(type: DocumentType, context: T): T {
+  return type === 'MODUL_AJAR' || type === 'RPM' ? { ...context, learningPlanPresentation: type } : context;
 }

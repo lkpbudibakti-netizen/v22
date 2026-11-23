@@ -1,3 +1,4 @@
+import { downloadAdministrationZip } from '../services/documentEngine/browserProductionZipIdentity';
 import { productionZipFindings, ProductionExportError, type ProductionFinding } from '../services/productionValidation';
 import React, { useState } from 'react';
 import {
@@ -25,7 +26,6 @@ import {
   AppDocumentRecord,
 } from '../types';
 import {
-  generateZipBundle,
   ZipExportFormat,
   ZipExportResult,
   MERDEKA_DOC_TYPES,
@@ -91,7 +91,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
     setProgressText('Menyiapkan struktur folder administrasi...');
 
     try {
-      const result = await generateZipBundle(
+      const result = await downloadAdministrationZip(
         {
           format: selectedFormat,
           documentMode: selectedMode,
@@ -150,6 +150,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
       PROTA: 'Program Tahunan (PROTA)',
       PROMES: 'Program Semester (PROMES)',
       MODUL_AJAR: 'Modul Ajar / RPP Berdiferensiasi',
+      RPM: 'Rencana Pembelajaran Mendalam (RPM)',
       KKTP: 'Kriteria Ketercapaian TP (KKTP)',
       ASESMEN: 'Instrumen & Rubrik Asesmen',
       DAFTAR_HADIR: 'Buku Daftar Hadir Siswa',
@@ -174,7 +175,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
             <div>
               <h3 className="font-bold text-base leading-tight">Pusat Ekspor Paket ZIP Administrasi</h3>
               <p className="text-xs text-emerald-200/90 mt-0.5">
-                Bundling terstruktur 6 kategori folder administrasi ({curType})
+                Satu ZIP untuk dokumen administrasi ({curType})
               </p>
             </div>
           </div>
@@ -257,7 +258,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
                 </div>
                 <div>
                   <div className="font-bold text-xs">ZIP PDF + Word (Lengkap)</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Kedua versi PDF & DOCX per folder</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">PDF dan DOCX dalam folder PDF dan WORD</div>
                 </div>
               </button>
             </div>
@@ -316,7 +317,7 @@ export const ZipExportModal: React.FC<ZipExportModalProps> = ({
             <div className="flex items-center justify-between mb-2.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <FolderTree className="w-4 h-4 text-slate-500" />
-                <span>3. Struktur Folder Administrasi & Dokumen</span>
+                <span>3. Pilih Dokumen Administrasi</span>
               </label>
               <div className="flex items-center gap-2">
                 <button

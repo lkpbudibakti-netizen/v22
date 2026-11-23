@@ -9,7 +9,7 @@ import { createCompleteProjectZip, readCompleteProjectZip } from '../src/service
 import { assertProductionDocumentFile } from '../src/services/productionValidation';
 import { computeAtpSubstantiveFingerprint } from '../src/services/atpMappingActionApplyService';
 import { generateZipBundle } from '../src/services/documentEngine';
-import { importedProjectExportReadiness } from '../src/services/identityOnlyProjectExport';
+import { generateImportedProductionPackage, importedProjectExportReadiness } from '../src/services/identityOnlyProjectExport';
 import { createInitialStorageV5 } from '../src/services/storageV5';
 import { createTwoSemesterAdministrationImportFixture } from './fixtures/readyAdministrationImportFixture';
 
@@ -143,13 +143,16 @@ test('dua pelanggan paralel mendapat ZIP PDF/DOCX dengan identitas masing-masing
     ]);
     for (const [i, result] of results.entries()) {
       assert(result.success, JSON.stringify(result.validation));
-      assert.equal(result.validation.documents.length, 20);
+      assert.equal(result.validation.documents.length, 22);
       assert(result.validation.documents.every(item => item.status === 'SUCCESS' && item.filesGenerated?.length === 2));
       const expected = i === 0 ? customer : other;
       const unexpected = i === 0 ? other : customer;
       const output = await JSZip.loadAsync(result.zip, { checkCRC32: true });
       const paths = Object.values(output.files).filter(entry => !entry.dir && /[.](pdf|docx)$/.test(entry.name));
-      assert.equal(paths.length, 40, '20 dokumen masing-masing dalam PDF dan DOCX');
+      assert.equal(paths.length, 44, '22 dokumen masing-masing dalam PDF dan DOCX');
+      assert.equal(result.validation.documents.filter(item => item.type === 'RPM').length, 2);
+      assert.equal(result.validation.documents.filter(item => item.type === 'MODUL_AJAR').length, 2);
+      assert(paths.every(entry => entry.name.endsWith('.pdf') ? entry.name.includes('/PDF/') : entry.name.includes('/WORD/')));
       for (const format of ['pdf', 'docx'] as const) {
         const entries = paths.filter(entry => entry.name.endsWith('.' + format));
         assert.equal(entries.length, result.validation.documents.length);
@@ -205,9 +208,54 @@ test('identitas di metadata yang tercetak tetap memblokir paket', async () => {
     JSON.stringify(result.validation));
 });
 
-test('jadwal sumber stale dilaporkan pada ZIP manual dan memblokir pesanan', async () => {
+test('paket core melalui jalur UI dan endpoint ekuivalen walau asesmen belum ada dan timestamp berbeda', async () => {
+  const project = structuredClone(archive);
+  const original = project.project.semesterData.learningMeetingSchedules![0].value;
+  original.basedOnSubjectWeeklyScheduleUpdatedAt = '2025-01-01T00:00:00Z';
+  project.project.semesterData.assessmentPackage = [];
+  const state = createInitialStorageV5();
+  state.profiles.push({ ...source.profiles[1], ...customer.teacher });
+  state.schools.push({ ...source.schools[1], ...customer.school });
+  const prepared = prepareCompleteAdministrationProjectImport(state, project, {
+    mode: 'IDENTITY_ONLY', workMode: 'production', targetProfileId: 'p2', targetSchoolId: 's2',
+    documentDate: customer.documentDate,
+  });
+  const target = prepared.state.semesterData.learningMeetingSchedules![0].value;
+  assert.equal(target.basedOnSubjectWeeklyScheduleUpdatedAt, original.basedOnSubjectWeeklyScheduleUpdatedAt);
+  assert.deepEqual(target.entries.map(entry => [entry.date, entry.jp]), original.entries.map(entry => [entry.date, entry.jp]));
+  assert.deepEqual(prepared.state.semesterData.learningPlan[0].value[0].learningMeetingIds, target.entries.map(entry => entry.meetingId));
+
+  const [manual, order] = await Promise.all([
+    generateImportedProductionPackage(prepared.state, prepared.yearPlanId, {
+      scope: 'core', containsSourceIdentity: orderZipContainsSourceIdentity,
+    }),
+    processAdministrationOrder({ project, customer, packageScope: 'core' }),
+  ]);
+  assert(order.success, JSON.stringify(order.validation));
+  assert(manual.exportGenerated && manual.exportCompleteForRequestedScope && manual.orderFulfillable);
+  assert(order.validation.excludedDocumentTypes.includes('ASESMEN'));
+  assert(!order.validation.documents.some(item => item.type === 'ASESMEN'));
+  assert(order.validation.findings.some(item => item.classification === 'WARNING' && item.problem.includes('Timestamp jadwal')));
+  const statuses = (documents: typeof manual.documents) => documents.map(({ type, status, filesGenerated }) => [type, status, filesGenerated]);
+  assert.deepEqual(statuses(manual.documents), statuses(order.validation.documents));
+  const [uiZip, orderZip] = await Promise.all([JSZip.loadAsync(manual.zip), JSZip.loadAsync(order.zip)]);
+  assert.deepEqual(Object.keys(uiZip.files).sort(), Object.keys(orderZip.files).sort());
+  assert(await orderZipContainsSourceIdentity(order.zip, [customer.school.name]));
+  assert(!(await orderZipContainsSourceIdentity(order.zip, [source.schools[0].name])));
+  const report = Object.values(orderZip.files).find(entry => entry.name.endsWith('/Laporan_Ekspor.txt'));
+  assert.match(await report!.async('string'), /WARNING.*Timestamp jadwal/);
+
+  const completeOrder = await processAdministrationOrder({ project, customer });
+  assert(!completeOrder.success && !('zip' in completeOrder));
+  assert(completeOrder.validation.exportGenerated && !completeOrder.validation.orderFulfillable);
+  assert(completeOrder.validation.documents.some(item => item.type === 'ASESMEN' && item.status === 'SKIPPED'));
+});
+
+test('jadwal sumber berubah substantif dan dilaporkan pada ZIP manual dan memblokir pesanan', async () => {
   const project = structuredClone(archive);
   project.project.semesterData.learningMeetingSchedules![0].value.basedOnSubjectWeeklyScheduleUpdatedAt = '2025-01-01T00:00:00Z';
+  project.project.semesterData.learningMeetingSchedules![0].value.entries[0].jp = 1;
+  project.project.semesterData.learningMeetingSchedules![0].value.basedOnWeeklyJP = 3;
   const state = createInitialStorageV5();
   state.profiles.push(source.profiles[1]);
   state.schools.push(source.schools[1]);
@@ -282,6 +330,7 @@ test('endpoint internal autentikasi, validasi, dan hanya mengirim ZIP lengkap', 
   };
   await expectJsonFailure(await send(body), 401);
   await expectJsonFailure(await send(body, 'wrong-token'), 401);
+  await expectJsonFailure(await send({ ...body, packageScope: 'unknown' }, secret), 400);
   await expectJsonFailure(await send({ ...body, projectZipBase64: '!!!' }, secret), 400);
   await expectJsonFailure(await send({ ...body, customer: { ...customer, documentDate: '2026-02-30' } }, secret), 400);
   await expectJsonFailure(await send({ ...body, projectZipBase64: 'UEsDBA==' }, secret), 400);
@@ -294,8 +343,8 @@ test('endpoint internal autentikasi, validasi, dan hanya mengirim ZIP lengkap', 
   assert.match(response.headers.get('content-disposition') || '', /^attachment;.*\.zip/i);
   const output = await JSZip.loadAsync(await response.arrayBuffer(), { checkCRC32: true });
   const files = Object.values(output.files).filter(entry => !entry.dir);
-  assert.equal(files.filter(entry => entry.name.endsWith('.pdf')).length, 20);
-  assert.equal(files.filter(entry => entry.name.endsWith('.docx')).length, 20);
+  assert.equal(files.filter(entry => entry.name.endsWith('.pdf')).length, 22);
+  assert.equal(files.filter(entry => entry.name.endsWith('.docx')).length, 22);
 
   const originalArrayBuffer = Blob.prototype.arrayBuffer;
   let failNextPdf = true;

@@ -86,7 +86,12 @@ export function registerAdministrationOrderRoute(app: express.Express) {
       if (project.length > maxZipBytes) {
         return res.status(413).json({ success: false, error: 'ZIP melebihi batas 8 MiB.' });
       }
-      input = { project, customer: parseCustomer(body.customer) };
+      const packageScope = body.packageScope;
+      if (packageScope !== undefined && packageScope !== 'complete' && packageScope !== 'core') {
+        throw new Error('packageScope harus complete atau core.');
+      }
+      input = { project, customer: parseCustomer(body.customer),
+        packageScope: packageScope === 'core' || packageScope === 'complete' ? packageScope : undefined };
     } catch (error) {
       return res.status(400).json({ success: false, error: (error as Error).message });
     }

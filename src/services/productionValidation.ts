@@ -53,7 +53,7 @@ export function productionReferenceIssues(type: DocumentType, context: Partial<D
   if (type === 'ATP') for (const item of context.atp?.items || []) check(item.linkedTpIds?.length ? item.linkedTpIds : item.tpId ? [item.tpId] : [], tpIds, `ATP ${item.id}`);
   if (type === 'PEMETAAN_ATP_UNIT') for (const unit of context.atpUnitMapping?.units || []) check(unit.linkedAtpItemIds || [], atpIds, `Unit ${unit.id}`);
   if (type === 'KKTP') for (const item of context.assessmentCriteria || []) check([item.tpId], tpIds, `KKTP ${item.id}`);
-  if (type === 'MODUL_AJAR') for (const plan of (context.learningPlans || []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId)) {
+  if ((type === 'MODUL_AJAR' || type === 'RPM')) for (const plan of (context.learningPlans || []).filter(plan => !context.activeLearningPlanId || plan.id === context.activeLearningPlanId)) {
     check(plan.tpIds || [], tpIds, `Modul ${plan.id} TP`);
     check(plan.atpItemIds || [], atpIds, `Modul ${plan.id} ATP`);
     if (context.zipAnnualSource?.yearPlan.identityOnlyImport?.mode === 'IDENTITY_ONLY') {

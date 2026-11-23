@@ -296,6 +296,7 @@ export function isLearningMeetingScheduleStale(params: {
 }
 
 export interface ValidateLearningMeetingScheduleParams {
+  allowVerifiedTimestampDrift?: boolean;
   allowUnusedSlots?: boolean;
   data: LearningMeetingScheduleData;
   semester: 1 | 2;
@@ -308,6 +309,7 @@ export interface ValidateLearningMeetingScheduleParams {
 }
 
 export interface ValidateLearningMeetingScheduleResult {
+  warnings?: string[];
   isValid: boolean;
   isStale: boolean;
   errors: string[];
@@ -370,7 +372,12 @@ export function validateLearningMeetingScheduleData(
     expectedWeeklyJP,
   });
 
-  if (isStale) {
+  const timestampOnlyMismatch = isStale && params.allowVerifiedTimestampDrift &&
+    data.basedOnWeeklyJP === expectedWeeklyJP &&
+    [data.basedOnMappingUpdatedAt, data.basedOnUnitExecutionPlanUpdatedAt, data.basedOnSubjectWeeklyScheduleUpdatedAt,
+      data.basedOnCalendarUpdatedAt, mapping?.updatedAt, unitExecutionPlan?.updatedAt,
+      subjectWeeklySchedule?.updatedAt, calendar?.updatedAt].every(value => value && Number.isFinite(Date.parse(value)));
+  if (isStale && !timestampOnlyMismatch) {
     errors.push('Jadwal stale: lineage timestamp atau JP mingguan tidak cocok dengan data perencanaan terkini.');
   }
 
@@ -644,6 +651,9 @@ export function validateLearningMeetingScheduleData(
     isValid: errors.length === 0,
     isStale,
     errors,
+    ...(timestampOnlyMismatch && !errors.length ? {
+      warnings: ['Timestamp jadwal berbeda, tetapi relasi pertemuan, tanggal, slot, dan JP aktual lolos validasi.'],
+    } : {}),
   };
 }
 

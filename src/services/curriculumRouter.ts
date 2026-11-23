@@ -205,6 +205,7 @@ export const MERDEKA_EXPORT_DOC_TYPES: DocumentType[] = [
   'PROTA',
   'PROMES',
   'MODUL_AJAR',
+  'RPM',
   'KKTP',
   'ASESMEN',
   'DAFTAR_HADIR',

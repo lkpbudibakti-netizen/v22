@@ -7,7 +7,9 @@ import { GRADE_PHASE_MAP } from '../data/curriculumDefaults';
 import { resolveGrade } from '../services/cognitiveAdaptationService';
 import { readCompleteProjectZip } from '../services/completeProjectZipService';
 import { importCompleteAdministrationProject, importCompleteAdministrationProjectAndExport, prepareCompleteAdministrationProjectImport } from '../services/administrationProjectImportService';
-import { importedProjectExportReadiness } from '../services/identityOnlyProjectExport';
+import saveAs from 'file-saver';
+import { generateImportedProductionPackage, importedProjectExportReadiness, PRODUCTION_PACKAGE_LABELS, type ProductionPackageScope } from '../services/identityOnlyProjectExport';
+import { browserProductionZipContainsSourceIdentity } from '../services/documentEngine/browserProductionZipIdentity';
 import { generateZipBundle } from '../services/documentEngine';
 import type { ZipExportResult, ZipExportFormat } from '../services/documentEngine/types';
 import { loadStorageV5 } from '../services/storageV5';
@@ -32,6 +34,8 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
     state, yearPlanId: importedYearPlanId, warnings: [], mode: state.yearPlans.find(year=>year.id===importedYearPlanId)?.identityOnlyImport?.mode || 'CONTINUE_EDITING', nextStep: 'admin',
   } : undefined);
   const [zipResult, setZipResult] = useState<ZipExportResult>();
+  const [packageScope, setPackageScope] = useState<ProductionPackageScope>('complete');
+  const productionPackage = workMode === 'production' && completed?.mode === 'IDENTITY_ONLY';
   const [zipFormat, setZipFormat] = useState<ZipExportFormat>('both');
   const [replace, setReplace] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -50,9 +54,9 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
   }, [archive, state, mode, profileId, replace, documentDate, completed, targetGrade, targetClassSection, workMode]);
   const exportReadiness = useMemo(() => {
     if (!completed) return undefined;
-    try { return { ...importedProjectExportReadiness(completed.state, completed.yearPlanId, workMode), error: '' }; }
+    try { return { ...importedProjectExportReadiness(completed.state, completed.yearPlanId, workMode, packageScope), error: '' }; }
     catch (error) { return { rows: [], readyCount: 0, skippedCount: 0, error: error instanceof Error ? error.message : 'Kesiapan ekspor belum dapat diperiksa.' }; }
-  }, [completed, workMode]);
+  }, [completed, workMode, packageScope]);
   const source = archive?.project;
   const sourceYear = source?.yearPlans[0];
   const progress = source ? [
@@ -74,13 +78,25 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
       {exportReadiness?.error && <p role="alert" className="text-red-700">{exportReadiness.error}</p>}
       <ul className="text-xs space-y-1">{exportReadiness?.rows.map((row,index) => <li key={index}>{row.title}: {row.ready ? 'Siap diekspor' : row.reasons.join('; ')}</li>)}</ul>
       <details className="text-xs"><summary>Hasil validasi impor</summary><ul>{completed.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>
+      {productionPackage && <label className="text-sm">Cakupan paket <select value={packageScope} disabled={busy}
+        onChange={event => { setPackageScope(event.target.value as ProductionPackageScope); setZipResult(undefined); }}>
+        {Object.entries(PRODUCTION_PACKAGE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select></label>}
       <label className="text-sm">Format ZIP <select value={zipFormat} disabled={busy} onChange={event => setZipFormat(event.target.value as ZipExportFormat)} className="border p-1"><option value="both">PDF dan DOCX</option><option value="pdf">PDF</option><option value="docx">DOCX</option></select></label>
       <button type="button" disabled={busy || !exportReadiness?.readyCount} className="block rounded bg-blue-800 text-white p-3 disabled:opacity-40" onClick={async () => {
         if (submitting.current) return;
         submitting.current = true;
         setBusy(true); setError(''); setZipResult(undefined);
         try {
-          const fresh = importedProjectExportReadiness(loadStorageV5(), completed.yearPlanId, workMode);
+          if (productionPackage) {
+            const { result } = await generateImportedProductionPackage(loadStorageV5(), completed.yearPlanId, {
+              scope: packageScope, format: zipFormat, containsSourceIdentity: browserProductionZipContainsSourceIdentity,
+            });
+            saveAs(result.zipBlob!, result.zipFileName);
+            setZipResult(result);
+            return;
+          }
+          const fresh = importedProjectExportReadiness(loadStorageV5(), completed.yearPlanId, workMode, packageScope);
           const result = await generateZipBundle({ types: fresh.types, format: zipFormat, documentMode: 'data' }, { ...fresh.context, skipDownload: false });
           if (!result.zipBlob) throw new Error('Berkas ZIP tidak dihasilkan. Silakan coba unduh kembali.');
           setZipResult(result);
@@ -90,6 +106,7 @@ export function CompleteProjectImportModal({ state, onClose, onSuccess, onContin
       {zipResult && <div role="status" className="text-sm">
         <p>SUCCESS: {zipResult.successCount || 0} · PARTIAL: {zipResult.partialCount || 0} · SKIPPED: {zipResult.skippedCount || 0} · FAILED: {zipResult.failedCount || 0}</p>
         <p>{zipResult.partialCount || zipResult.skippedCount || zipResult.failedCount ? 'ZIP hanya memuat dokumen yang berhasil dibuat; paket belum lengkap.' : 'Seluruh dokumen yang diminta berhasil dibuat.'}</p>
+        {zipResult.warnings?.map((warning, index) => <p key={index}>{warning.problem}</p>)}
         <ul>{zipResult.itemResults?.filter(item => item.reason).map((item,index) => <li key={index}>{item.type} {item.instanceTitle || ''}: {item.reason}</li>)}</ul>
       </div>}
       {error && <p role="alert" className="text-red-700">{error}</p>}
