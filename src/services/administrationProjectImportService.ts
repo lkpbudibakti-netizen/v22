@@ -260,8 +260,21 @@ export function prepareCompleteAdministrationProjectImport(current: AppStorageSt
   if (targetClass) { year.grade = targetClass.grade; year.phase = targetClass.phase.replace(/^Fase\s*/i,''); year.classSection = targetSection; }
   const warnings: string[] = [];
   if (modernMode) {
-    const identityValues = (owner: typeof profile, campus: typeof school) => [owner.name, owner.nip, campus.name, campus.npsn, campus.address, campus.principalName, campus.principalNip, ...(productionIdentityOnly ? [owner.nuptk, campus.village, campus.district, campus.regency, campus.province] : [])].filter((value): value is string => Boolean(value?.trim())).map(value => value.trim());
     const normalizeIdentity = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('id');
+    const bareRegionValues = (campus: typeof school) => new Set(
+      [campus.village, campus.district, campus.regency, campus.province]
+        .filter((value): value is string => Boolean(value?.trim()))
+        .map(normalizeIdentity)
+    );
+    const identityValues = (owner: typeof profile, campus: typeof school) => {
+      const regions = bareRegionValues(campus);
+      const address = campus.address?.trim();
+      const specificAddress = address && !regions.has(normalizeIdentity(address)) ? address : undefined;
+      return [
+        owner.name, owner.nip, ...(productionIdentityOnly ? [owner.nuptk] : []),
+        campus.name, campus.npsn, specificAddress, campus.principalName, campus.principalNip,
+      ].filter((value): value is string => Boolean(value?.trim())).map(value => value.trim());
+    };
     const destinationValues = new Set(identityValues(profile, school).map(normalizeIdentity));
     year.identityOnlyImport = { importedAt: new Date().toISOString(), timingIsSourceReference: true, factualDataExcluded: true,
       mode: options.mode as NonNullable<YearPlan['identityOnlyImport']>['mode'], sourceGrade: sourceYear.grade, sourcePhase: sourceYear.phase,

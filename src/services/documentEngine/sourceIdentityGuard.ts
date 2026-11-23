@@ -12,11 +12,18 @@ export function sourceIdentityExportIssue(type: DocumentType, context: Partial<D
   const planTpIds = new Set(plans.flatMap(plan => plan.tpIds));
   const packages = (type === 'ASESMEN' ? context.assessmentPackages || [] : []).filter(pkg => !context.activeAssessmentPackageId || pkg.id === context.activeAssessmentPackageId);
   const packageTpIds = new Set(packages.flatMap(pkg => (pkg.blueprintItems || []).map(item => item.objectiveRefId)));
+  const printableCalendarText = () => [
+    context.calendar?.academicYear,
+    context.calendar?.semester,
+    context.calendar?.startDate,
+    context.calendar?.endDate,
+    ...(context.calendarDays || []).map(day => [day.date, day.notes]),
+  ];
   const sources: Partial<Record<DocumentType, () => unknown>> = {
     CP: () => context.cp, TP: () => context.tp, ANALISIS_CP_TP: () => [context.cp, context.tp], ATP: () => [context.atp, context.tp],
     PEMETAAN_ATP_UNIT: () => context.atpUnitMapping, PROTA: () => [context.atpUnitMapping, context.timeAllocations],
     PROMES: () => [context.atpUnitMapping, context.timeAllocations, context.tp], ALOKASI_WAKTU: () => [context.atpUnitMapping, context.timeAllocations, context.tp],
-    KALENDER_AKADEMIK: () => [context.calendar, context.calendarDays], HARI_EFEKTIF: () => [context.calendar, context.calendarDays],
+    KALENDER_AKADEMIK: printableCalendarText, HARI_EFEKTIF: printableCalendarText,
     MODUL_AJAR: () => [plans, context.atpUnitMapping?.units?.filter(unit => unitIds.has(unit.id)), context.unitExecutionPlan?.units?.filter(unit => unitIds.has(unit.unitId)), context.tp?.items?.filter(tp => planTpIds.has(tp.id))],
     ASESMEN: () => [packages, context.tp?.items?.filter(tp => packageTpIds.has(tp.id)), context.assessmentPlans?.filter(plan => packages.some(pkg => pkg.assessmentPlanId === plan.id))],
     KKTP: () => context.assessmentCriteria, JURNAL: () => [context.unitExecutionPlan, context.journalRealizations],
@@ -33,7 +40,9 @@ export function sourceIdentityExportIssue(type: DocumentType, context: Partial<D
 
 export function containsSourceIdentity(value: unknown, tokens: string[], includeMetadata = false): boolean {
   const normalize = (text: string) => text.normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('id');
-  const patterns = tokens.map(token => new RegExp(`(^|[^\\p{L}\\p{N}])${normalize(token).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u'));
+  const activeTokens = tokens.map(normalize).filter(Boolean);
+  if (!activeTokens.length) return false;
+  const patterns = activeTokens.map(token => new RegExp(`(^|[^\\p{L}\\p{N}])${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u'));
   const containsIdentity = (value: unknown): boolean => {
     if (typeof value === 'string') return patterns.some(pattern => pattern.test(normalize(value)));
     if (Array.isArray(value)) return value.some(containsIdentity);
