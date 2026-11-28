@@ -444,6 +444,8 @@ export async function generateModulAjar(context: DocumentGenerationContext): Pro
     docChildren.push(
       new Paragraph({
         heading: HeadingLevel.HEADING_2,
+        keepNext: true,
+        keepLines: true,
         spacing: { before: 180, after: 80 },
         children: [
           new TextRun({

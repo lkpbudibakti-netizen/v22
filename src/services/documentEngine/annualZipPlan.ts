@@ -2,7 +2,7 @@ import { resolveCalendarSubjectCapacity } from '../jpEngine';
 import { resolveSemesterJPFromValues } from '../semesterJPResolver';
 import type { DocumentGenerationContext, DocumentType, ZipExportItemStatus, LearningPlan } from './types';
 import { resolveUnitSemesterPlacement } from '../unitSemesterPlanningService';
-import { maskExportIdentity } from './exportIdentity';
+import { findSubjectByCode, findSubjectByNameOrAlias } from '../../data/curriculum/subjects';
 
 export interface AnnualZipWorkItem {
   type: DocumentType;
@@ -19,16 +19,37 @@ const annualTypes = new Set<DocumentType>([
   'ANALISIS_SKL_KI_KD', 'PENETAPAN_KKM', 'KALENDER_AKADEMIK',
 ]);
 export const isAnnualZipDocument = (type: DocumentType) => annualTypes.has(type);
-const clean = (text: string) => text.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
 export const semesterZipFolder = (semester: 1 | 2) => semester === 1 ? 'Semester_1' : 'Semester_2';
 
-/** Keep spaces, punctuation and Unicode names; replace only filesystem-invalid characters. */
+function zipLabel(value: string, limit: number, fallback: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, limit).replace(/-+$/g, '') || fallback;
+}
+
+function administrationZipLabels(context: DocumentGenerationContext) {
+  const setting = context.academicSetting;
+  const subject = setting?.subject || '';
+  const code = context.zipAnnualSource?.yearPlan.subjectCode;
+  const canonical = findSubjectByCode(code) || findSubjectByCode(subject) || findSubjectByNameOrAlias(subject);
+  return {
+    subject: zipLabel(canonical?.code || subject, 16, 'MAPEL'),
+    grade: 'K' + zipLabel((setting?.grade || '').replace(/^kelas\s+/i, ''), 12, 'X'),
+    level: zipLabel(setting?.level || context.zipAnnualSource?.yearPlan.level || '', 4, 'SEK'),
+    year: zipLabel(setting?.academicYear || '', 12, 'TA'),
+  };
+}
+
 export function administrationZipRoot(context: DocumentGenerationContext): string {
-  context = maskExportIdentity(context);
-  const safe = (value: string) => value.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_');
-  const grade = context.academicSetting?.grade || 'Kelas';
-  const label = (/^\d+$/.test(grade) ? `Kelas_${grade}` : grade) + (context.academicSetting?.classSection?.trim() ? ` (${context.academicSetting.classSection.trim()})` : '');
-  return [label, context.academicSetting?.subject || 'Mapel', context.profile?.name || 'Guru'].map(safe).join('_');
+  const { subject, grade } = administrationZipLabels(context);
+  return `ADM_${subject}_${grade}`;
+}
+
+export function administrationZipFileName(context: DocumentGenerationContext, format: 'pdf' | 'docx' | 'both'): string {
+  const { subject, grade, level, year } = administrationZipLabels(context);
+  const section = zipLabel(context.academicSetting?.classSection || '', 8, '');
+  const mode = context.documentMode === 'blank' ? '_Kosong' : '';
+  const formatSuffix = format === 'both' ? '' : format === 'pdf' ? '_PDF' : '_WORD';
+  return `ADM_${subject}_${level}_${grade}${section ? '_' + section : ''}_${year}${mode}${formatSuffix}.zip`;
 }
 
 /** No storage reads or semester-label fallback: each context owns persisted SemesterPlan data. */

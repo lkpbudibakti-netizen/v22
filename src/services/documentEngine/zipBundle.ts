@@ -1,6 +1,6 @@
 import { assertProductionDocumentFile, productionFinding, formatProductionFindings, ProductionExportError } from '../productionValidation';
 import JSZip from 'jszip';
-import { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder, type AnnualZipWorkItem } from './annualZipPlan';
+import { administrationZipRoot, administrationZipFileName, buildAnnualZipWorkItems, type AnnualZipWorkItem } from './annualZipPlan';
 import saveAs from 'file-saver';
 import {
   DocumentType,
@@ -171,38 +171,11 @@ export function formatDocumentZipFileName(
   ext: 'pdf' | 'docx',
   context: DocumentGenerationContext,
   indexPrefix?: number,
-  instanceTitle?: string
+  instanceTitle?: string,
+  fileStem?: string,
 ): string {
-  const isBlank = context.documentMode === 'blank';
-  const cleanSubject = (context.academicSetting?.subject || 'Mapel').replace(/[^a-zA-Z0-9]/g, '_');
-  const cleanGrade = (context.academicSetting?.grade || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_');
-  const seqStr = String(indexPrefix ?? getDocumentSequenceNumber(type)).padStart(2, '0');
-  const blankTag = isBlank ? '_Format_Kosong' : '';
-
-  // Multi-instance naming with sanitized title
-  if (instanceTitle?.trim()) {
-    const sanitizedTitle = sanitizeForFileName(instanceTitle.trim());
-    if (type === 'RPM' || type === 'MODUL_AJAR') {
-      if(type === 'RPM')return `${seqStr}_RPM_${sanitizedTitle}${blankTag}.${ext}`;
-      const cleanModTitle = sanitizedTitle.startsWith('Modul_Ajar')
-        ? sanitizedTitle
-        : `Modul_Ajar_${sanitizedTitle}`;
-      return `${seqStr}_${cleanModTitle}${blankTag}.${ext}`;
-    }
-    if (type === 'ASESMEN') {
-      const cleanAssessTitle = sanitizedTitle.startsWith('Asesmen')
-        ? sanitizedTitle
-        : `Asesmen_${sanitizedTitle}`;
-      return `${seqStr}_${cleanAssessTitle}${blankTag}.${ext}`;
-    }
-  }
-
-  if (type === 'CP') {
-    return `${seqStr}_Capaian_Pembelajaran${blankTag}.${ext}`;
-  }
-  if (type === 'TP') {
-    return `${seqStr}_Tujuan_Pembelajaran${blankTag}.${ext}`;
-  }
+  const seq = String(indexPrefix ?? getDocumentSequenceNumber(type)).padStart(2, '0');
+  const blankTag = context.documentMode === 'blank' ? '_Format_Kosong' : '';
 
   const baseNames: Record<DocumentType, string> = {
     ANALISIS_CP_TP: 'Analisis_CP_TP',
@@ -227,26 +200,28 @@ export function formatDocumentZipFileName(
     HARI_EFEKTIF: 'Rincian_Hari_Efektif',
   };
 
-  const name = baseNames[type] || type;
-
-  return `${seqStr}_${name}_${cleanSubject}_${cleanGrade}${blankTag}.${ext}`;
+  const multiInstance = type === 'MODUL_AJAR' || type === 'RPM' || type === 'ASESMEN';
+  const title = multiInstance && instanceTitle?.trim() ? sanitizeForFileName(instanceTitle.replace(/[^a-zA-Z0-9 _-]/g, '_')) : '';
+  const stem = fileStem || [seq, baseNames[type], title].filter(Boolean).join('_');
+  return boundedZipName(stem, blankTag + '.' + ext);
 }
 
-/**
- * Ensures unique file names within a ZIP folder to prevent overwrites.
- */
-function getUniqueZipFileName(folder: JSZip, candidateName: string): string {
-  if (!folder.file(candidateName)) {
-    return candidateName;
+// The root is at most 34 characters and the deepest folder prefix adds 24.
+const maxZipFileNameLength = 64;
+function boundedZipName(stem: string, suffix: string): string {
+  return stem.slice(0, maxZipFileNameLength - suffix.length).replace(/[ ._-]+$/g, '') + suffix;
+}
+
+function getUniqueZipFileName(used: Set<string>, candidate: string): string {
+  const lastDot = candidate.lastIndexOf('.');
+  const stem = candidate.slice(0, lastDot);
+  const ext = candidate.slice(lastDot);
+  let name = candidate;
+  for (let counter = 2; used.has(name.toLowerCase()); counter++) {
+    name = boundedZipName(stem, '_' + counter + ext);
   }
-  const lastDot = candidateName.lastIndexOf('.');
-  const base = lastDot !== -1 ? candidateName.slice(0, lastDot) : candidateName;
-  const ext = lastDot !== -1 ? candidateName.slice(lastDot) : '';
-  let counter = 1;
-  while (folder.file(`${base}_${counter}${ext}`)) {
-    counter++;
-  }
-  return `${base}_${counter}${ext}`;
+  used.add(name.toLowerCase());
+  return name;
 }
 
 type ZipWorkItem = AnnualZipWorkItem;
@@ -338,16 +313,16 @@ export async function generateZipBundle(
     skipDownload: true, // Crucial: prevents individual browser download prompts
   };
 
-  const safeSubject = (rawContext.academicSetting?.subject || 'Mapel').replace(/[^a-zA-Z0-9]/g, '_');
-  const safeGrade = ((rawContext.academicSetting?.grade || 'Kelas') + (rawContext.academicSetting?.classSection ? '_'+rawContext.academicSetting.classSection : '')).replace(/[^a-zA-Z0-9]/g, '_');
-  const safeYear = sanitizeForFileName(rawContext.academicSetting?.academicYear || 'TahunAjaran');
-
-  const formatTag = exportFormat === 'both' ? 'PDF_Word' : exportFormat === 'pdf' ? 'PDF' : 'Word';
-  const modeTag = isBlank ? 'Format_Kosong_' : '';
-  const zipFileName = `Paket_Administrasi_${modeTag}${safeSubject}_${safeGrade}_${safeYear}_${formatTag}.zip`;
-
-  // Track item counts for ordering within folders
-  const folderItemCount: Record<string, number> = {};
+  const zipFileName = administrationZipFileName(effectiveContextBase, exportFormat);
+  const usedNames = new Map<string, Set<string>>();
+  const reserveName = (item: ZipWorkItem, context: DocumentGenerationContext, ext: 'pdf' | 'docx') => {
+    const path = folderPath(ext, item.folderCategory);
+    const used = usedNames.get(path) ?? new Set<string>();
+    usedNames.set(path, used);
+    return getUniqueZipFileName(used, formatDocumentZipFileName(
+      item.type, ext, context, item.seqNum, item.instanceTitle, item.fileStem,
+    ));
+  };
   const itemResults: ZipExportItemStatus[] = [];
   const warnings: import('../productionValidation').ProductionFinding[] = [];
   const workItems: ZipWorkItem[] = [];
@@ -403,15 +378,8 @@ export async function generateZipBundle(
         const pdfResult = await generatePdfDocument(item.type, effectiveContext);
         if (rawContext.workMode === 'production') await assertProductionDocumentFile(pdfResult.blob, 'pdf');
         if (pdfResult.blob && pdfResult.blob.size > 0) {
-          const candidatePdfName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.pdf` : formatDocumentZipFileName(
-            item.type,
-            'pdf',
-            effectiveContext,
-            item.seqNum,
-            item.instanceTitle
-          );
           const targetFolder = zip.folder(folderPath('pdf', item.folderCategory))!;
-          const pdfFileName = getUniqueZipFileName(targetFolder, candidatePdfName);
+          const pdfFileName = reserveName(item, effectiveContext, 'pdf');
           targetFolder.file(pdfFileName, await zipDocumentData(pdfResult.blob));
           filesGenerated.push(pdfFileName);
           pdfCount++;
@@ -442,15 +410,8 @@ export async function generateZipBundle(
 
         if (rawContext.workMode === 'production') await assertProductionDocumentFile(docxResult.blob, 'docx');
         if (docxResult.blob && docxResult.blob.size > 0) {
-          const candidateDocxName = item.fileStem ? `${item.fileStem}${isBlank ? '_Format_Kosong' : ''}.docx` : formatDocumentZipFileName(
-            item.type,
-            'docx',
-            effectiveContext,
-            item.seqNum,
-            item.instanceTitle
-          );
           const targetFolder = zip.folder(folderPath('docx', item.folderCategory))!;
-          const docxFileName = getUniqueZipFileName(targetFolder, candidateDocxName);
+          const docxFileName = reserveName(item, effectiveContext, 'docx');
           targetFolder.file(docxFileName, await zipDocumentData(docxResult.blob));
           filesGenerated.push(docxFileName);
           docxCount++;

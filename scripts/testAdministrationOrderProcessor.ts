@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { win32 } from 'node:path';
 import { inflateSync } from 'node:zlib';
 import JSZip from 'jszip';
 import { orderZipContainsSourceIdentity } from '../server/administrationOrderZipIdentity';
@@ -29,6 +30,27 @@ const customer = {
   },
   documentDate: '2026-10-28',
 } satisfies AdministrationOrderInput['customer'];
+
+for (const [grade, phase] of [[1, 'A'], [6, 'C']] as const) {
+  test(`ekspor produksi PJOK SD kelas ${grade} memakai nama ZIP ringkas`, async () => {
+    const fixture = structuredClone(source);
+    Object.assign(fixture.yearPlans[0], { grade: `Kelas ${grade}`, phase });
+    const project = await createCompleteProjectZip(fixture, 'y');
+    const order = await processAdministrationOrder({ project, customer, packageScope: 'core' });
+    assert(order.success, JSON.stringify(order.validation));
+    assert.equal(order.fileName, `ADM_PJOK_SD_K${grade}_2026-2027.zip`);
+    const zip = await JSZip.loadAsync(order.zip, { checkCRC32: true });
+    const paths = Object.keys(zip.files);
+    assert.equal(new Set(paths.map(path => path.toLowerCase())).size, paths.length);
+    const destination = String.raw`C:\Users\Nama Guru\Downloads\Administrasi Sekolah\Tahun Pelajaran 2026-2027\Paket dari Google Drive`;
+    assert(paths.every(path => path.length <= 140 && win32.join(destination, path).length < 260));
+    for (const folder of ['Administrasi_Umum', 'Semester_1', 'Semester_2']) {
+      for (const [format, extension] of [['PDF', 'pdf'], ['WORD', 'docx']]) {
+        assert(paths.some(path => path.startsWith(`ADM_PJOK_K${grade}/${format}/${folder}/`) && path.endsWith('.' + extension)));
+      }
+    }
+  });
+}
 
 test('arsip ZIP V22 dan relasi CP → TP → ATP tetap valid', async () => {
   assert.equal(archive.schemaVersion, '2.0');
@@ -577,6 +599,9 @@ test('validasi identitas kalender: metadata internal & wilayah umum lolos, agend
     body: JSON.stringify({ projectZipBase64: Buffer.from(projectZip).toString('base64'), customer, packageScope: 'core' }),
   });
   assert.equal(httpRes.status, 200);
+  assert.equal(httpRes.headers.get('content-type'), 'application/zip');
+  assert.equal(httpRes.headers.get('content-disposition'), `attachment; filename="${procRes.fileName}"`);
+  assert.equal(procRes.fileName, 'ADM_PJOK_SD_K2_2026-2027.zip');
   const httpZip = await JSZip.loadAsync(await httpRes.arrayBuffer(), { checkCRC32: true });
   assert.deepEqual(Object.keys(httpZip.files).sort(), Object.keys(procZipObj.files).sort());
   const allDocFiles = Object.values(httpZip.files).filter(entry => !entry.dir && /\.(pdf|docx)$/.test(entry.name));

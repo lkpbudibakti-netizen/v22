@@ -33,11 +33,12 @@ async function checkPdf(blob: Blob, name: string, expectedLandscape: boolean, re
     assert(Math.abs(Math.min(w,h)-595.28)<1 && Math.abs(Math.max(w,h)-841.89)<1, `${name}: not A4`);
     const items: any[] = (await page.getTextContent()).items;
     const text = items.map(it=>it.str || '').join(' ');
+    if (text.includes('Kolom Uji Pagination')) assert(text.includes('DATA-001'), `${name}: table header without its first row`);
     if (name === 'PROTA-data' && i === 1) assert(text.includes('Bab 1'), 'Long Prota must start its first data row with the table header');
     if (name.startsWith('PROMES') && items.some(it=>it.str === 'Unit/Bab')) {
       assert(items.some(it=>it.str === 'No'), `${name}: number header wraps into separate letters`);
     }
-    assert(text.trim().length, `${name}: blank page ${i}`);
+    assert(items.some(item => item.str?.trim() && !/^Halaman \d+ dari \d+$/.test(item.str)), `${name}: blank page ${i}`);
     // PDF text extents are measurable evidence, not a substitute for raster inspection.
     const left = (expectedLandscape ? 25 : 30) * 72 / 25.4;
     const right = w - (expectedLandscape ? 20 : 25) * 72 / 25.4;
@@ -70,6 +71,11 @@ for (const type of types) {
     assert(signoff.includes('<w:cantSplit'), `${type}: TTD can split`);
     assert(signoff.includes('<w:keepNext') && signoff.includes('<w:keepLines'), `${type}: no paragraph protection`);
     assert(!signoff.includes('<w:trHeight'), `${type}: fixed row height`);
+    if (type === 'MODUL_AJAR') {
+      const headings = [...xml.matchAll(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g)]
+        .map(match => match[0]).filter(paragraph => paragraph.includes('w:val="Heading2"'));
+      assert(headings.length && headings.every(paragraph => paragraph.includes('<w:keepNext') && paragraph.includes('<w:keepLines')));
+    }
     assert.equal(xml.includes('w:orient="landscape"'), landscape.has(type), type);
     const pageSize = xml.match(/<w:pgSz\b[^>]*\/>/)![0];
     assert(pageSize.includes(`w:w="${landscape.has(type) ? 16838 : 11906}"`), `${type}: wrong page width`);
@@ -143,6 +149,29 @@ for (const orientation of ['portrait','landscape'] as const) {
   const doc=new Document({sections:[{properties:createDocxSectionProperties(orientation),children:[...Array.from({length:55},(_,i)=>new Paragraph(`Konteks pembelajaran baris ${i+1}`)),...createPrintSignoff(signoff)]}]});
   writeFileSync(`${out}/STRESS-${orientation}.docx`, Buffer.from(await Packer.toBuffer(doc)));
 }
+const longLayout = new PdfDocumentBuilder('portrait');
+const heading = 'Judul Pembelajaran '.repeat(18).trim();
+const calloutTitle = 'Catatan Pelaksanaan '.repeat(12).trim();
+const callout = Array.from({ length: 360 }, (_, i) => `Kegiatan${i + 1}`).join(' ');
+longLayout.renderHeading(heading);
+longLayout.renderCallout(callout, calloutTitle);
+const longBlob = longLayout.getBlob();
+results.push({type:'STRESS-heading-callout', ...await checkPdf(longBlob, 'STRESS-heading-callout', false, false)});
+const longTask = getDocument({ data: new Uint8Array(await longBlob.arrayBuffer()), useSystemFonts: true });
+const longPdf = await longTask.promise;
+let longText = '';
+for (let page = 1; page <= longPdf.numPages; page++) {
+  const content = await (await longPdf.getPage(page)).getTextContent();
+  longText += content.items.map(item => 'str' in item && !/^Halaman \d+ dari \d+$/.test(item.str) ? item.str : '').join('');
+}
+assert.equal(longText.replace(/\s/g, ''), (heading + calloutTitle + callout).replace(/\s/g, ''), 'Long heading/callout text must survive pagination in order');
+await longTask.destroy();
+const tableBoundary = new PdfDocumentBuilder('portrait');
+tableBoundary.renderHeader('Uji awal tabel dekat batas halaman');
+(tableBoundary as any).currentY = (tableBoundary as any).pageHeight - (tableBoundary as any).marginBottom - 25;
+tableBoundary.renderTable({ type:'table', columns:['Kolom Uji Pagination'], rows:[['DATA-001\n' + 'Isi baris tabel panjang\n'.repeat(10)]] });
+results.push({type:'STRESS-table-boundary', ...await checkPdf(tableBoundary.getBlob(), 'STRESS-table-boundary', false, false)});
+
 assert(annualJPNotes({totalAllocatedJP:344,officialAnnualJP:288,availableAnnualJP:350}).includes('melebihi acuan regulasi sebesar 56 JP'));
 assert(!annualJPNotes({totalAllocatedJP:288,officialAnnualJP:288,availableAnnualJP:350}).includes('Selisih'));
 assert(annualJPNotes({totalAllocatedJP:280,officialAnnualJP:288}).includes('di bawah acuan regulasi sebesar 8 JP'));

@@ -1,11 +1,13 @@
 import * as productionValidation from '../src/services/productionValidation';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { win32 } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import JSZip from 'jszip';
 import { createModulAjarRuntimeFixture } from './fixtures/modulAjarRuntimeFixture';
-import { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder, resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
+import { administrationZipRoot, administrationZipFileName, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder, resolveAnnualZipContexts } from '../src/services/documentEngine/annualZipPlan';
+import { formatDocumentZipFileName } from '../src/services/documentEngine/zipBundle';
 import { buildModulAjarProjection } from '../src/services/documentEngine/modulAjarProjection';
 import { buildPromesProjection } from '../src/services/documentEngine/promesProjection';
 import { generateZipBundle, validateDocumentRequirements } from '../src/services/documentEngine';
@@ -160,6 +162,7 @@ for (const item of [...modules, ...rpms]) {
 const downloads: { blob: Blob; name: string }[] = [];
 const renderCalls: any[] = [];
 let failRpm = false;
+let collideModuleNames = false;
 const fakeRender = async (type: any, context: any) => {
   if (failRpm && type === 'RPM') throw new Error('Renderer RPM gagal');
   assert.equal(context.skipDownload, true);
@@ -174,7 +177,18 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
 }).outputText, { exports, console, Blob, Uint8Array, Error, require: (id: string) => {
   if (id === 'jszip') return JSZip;
   if (id === 'file-saver') return (blob: Blob, name: string) => downloads.push({ blob, name });
-  if (id === './annualZipPlan') return { administrationZipRoot, buildAnnualZipWorkItems, isAnnualZipDocument, semesterZipFolder };
+  if (id === './annualZipPlan') return {
+    administrationZipRoot, administrationZipFileName, isAnnualZipDocument, semesterZipFolder,
+    buildAnnualZipWorkItems: (...args: Parameters<typeof buildAnnualZipWorkItems>) => {
+      const plan = buildAnnualZipWorkItems(...args);
+      if (!collideModuleNames) return plan;
+      const [first, second] = plan.items;
+      return { skipped: [], items: [
+        { ...first, fileStem: undefined, seqNum: 1, instanceTitle: 'Gerak Dasar '.repeat(30) + 'A' },
+        { ...second, folderCategory: first.folderCategory, fileStem: undefined, seqNum: 1, instanceTitle: 'gerak dasar '.repeat(30) + 'B' },
+      ] };
+    },
+  };
   if (id === '../curriculumRules') return { getCurriculumType };
   if (id === './snapshot') return { resolveEffectiveContext };
   if (id === './index') return { validateDocumentRequirements, generateDocument: fakeRender };
@@ -199,16 +213,31 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
   assert.equal(downloads.length, 1);
   assert.equal(renderCalls.length, 44);
   assert(!result.zipFileName.includes('Sem'));
-  assert(result.zipFileName.includes('2026_2027'));
+  assert(result.zipFileName.includes('2026-2027'));
   const archive = await JSZip.loadAsync(await downloads[0].blob.arrayBuffer());
   const files = Object.keys(archive.files).filter(path => !archive.files[path].dir && !path.endsWith('/Laporan_Ekspor.txt'));
   assert.equal(files.length, 44);
-  assert.equal(new Set(files).size, files.length);
+  assert.equal(new Set(files.map(path => path.toLowerCase())).size, files.length);
+  const destination = String.raw`C:\Users\Nama Guru\Downloads\Administrasi Sekolah\Tahun Pelajaran 2026-2027\Paket dari Google Drive`;
+  for (const path of Object.keys(archive.files)) {
+    assert(path.length <= 140, path);
+    assert(win32.join(destination, path).length < 260, path);
+    assert(!/[\\:*?"<>|]/.test(path), path);
+  }
+  assert(files.every(path => path.split('/').at(-1)!.length <= 64));
   assert(files.every(path => path.endsWith('.pdf') ? path.includes('/PDF/') : path.includes('/WORD/')));
   for (const item of [...modules, ...rpms]) for (const ext of ['pdf', 'docx']) assert(files.includes(`${administrationZipRoot(base)}/${ext === 'pdf' ? 'PDF' : 'WORD'}/${item.folderCategory}/${item.fileStem}.${ext}`));
   const root = administrationZipRoot(base);
-  assert.equal(root, 'Kelas_7_PJOK_Adzani Kusumawardani S.Pd');
-  assert.equal(administrationZipRoot({ ...base, academicSetting: { ...base.academicSetting, grade: 'Kelas 1', subject: 'PJOK/SD' } }), 'Kelas 1_PJOK_SD_Adzani Kusumawardani S.Pd');
+  assert.equal(root, 'ADM_PJOK_K7');
+  for (const grade of ['1', '6']) {
+    const elementary = { ...base, academicSetting: { ...base.academicSetting, grade: 'Kelas ' + grade, classSection: undefined, level: 'SD' as const } };
+    assert.equal(administrationZipRoot(elementary), 'ADM_PJOK_K' + grade);
+    assert.equal(administrationZipFileName(elementary, 'both'), 'ADM_PJOK_SD_K' + grade + '_2026-2027.zip');
+  }
+  const title = 'Judul modul yang sangat panjang '.repeat(20);
+  const names = [1, 2].map(index => formatDocumentZipFileName('MODUL_AJAR', 'docx', base, index, title));
+  assert(names.every(name => name.length === 64 && name.endsWith('.docx')));
+  assert.equal(new Set(names).size, names.length);
   assert(files.every(f => f.split('/').length === 4), 'No nested document-type folders');
   for (const folder of ['Semester_1', 'Semester_2']) {
     assert(files.filter(f => f.includes('/'+folder+'/')).some(f => f.includes('PROMES')));
@@ -230,6 +259,14 @@ runInNewContext(ts.transpileModule(readFileSync('src/services/documentEngine/zip
   const partialZip = await JSZip.loadAsync(await partial.zipBlob.arrayBuffer());
   const report = Object.values(partialZip.files).find(entry => entry.name.endsWith('/Laporan_Ekspor.txt'));
   assert.match(await report!.async('string'), /TIDAK LENGKAP[\s\S]*Renderer RPM gagal/);
+  collideModuleNames = true;
+  const collisions = await exports.generateZipBundle({ types: ['MODUL_AJAR'], format: 'both' }, { ...base, skipDownload: true });
+  const collisionZip = await JSZip.loadAsync(await collisions.zipBlob.arrayBuffer(), { checkCRC32: true });
+  const entries = Object.values(collisionZip.files).filter(entry => !entry.dir);
+  assert.equal(entries.length, 4);
+  assert.equal(new Set(entries.map(entry => entry.name.toLowerCase())).size, 4);
+  assert.equal(entries.filter(entry => /_2\.(pdf|docx)$/.test(entry.name)).length, 2);
+  assert(entries.every(entry => entry.name.split('/').at(-1)!.length <= 64));
 }
 assert.equal(JSON.stringify(base), before);
 console.log('PASS: readable root with separate PDF and Word trees, all validator-approved annual documents/calendar, six modules and six RPM, isolated PROMES, original validator skip reason, no generic status gate, immutable source and one ZIP download; renderer bytes simulated.');

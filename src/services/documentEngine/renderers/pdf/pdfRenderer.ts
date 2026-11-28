@@ -1,7 +1,7 @@
 import { signoffColumns, type PrintSignoff } from '../../signoffLayout';
 import { formatClassLabel } from '../../../academicScope';
 import { jsPDF } from 'jspdf';
-import autoTable, { UserOptions } from 'jspdf-autotable';
+import autoTable, { __createTable, __drawTable, UserOptions } from 'jspdf-autotable';
 import { SchoolData, TeacherProfile, AcademicSetting } from '../../../../types';
 import {
   PDF_THEME,
@@ -409,8 +409,6 @@ export class PdfDocumentBuilder {
   }
 
   public renderHeading(text: string, level: 1 | 2 | 3 = 1): void {
-    this.checkPageBreak(12);
-
     this.doc.setFont(this.theme.fonts.bold, 'bold');
     if (level === 1) {
       this.doc.setFontSize(this.theme.sizes.heading1);
@@ -423,8 +421,15 @@ export class PdfDocumentBuilder {
       this.doc.setTextColor(this.theme.colors.secondary[0], this.theme.colors.secondary[1], this.theme.colors.secondary[2]);
     }
 
-    this.doc.text(text, this.marginLeft, this.currentY);
-    this.currentY += level === 1 ? 5.5 : 4.5;
+    const lines: string[] = this.doc.splitTextToSize(text, this.getContentWidth());
+    const lineHeight = Math.max(level === 1 ? 5.5 : 4.5, this.doc.getFontSize() * 25.4 / 72 * 1.2);
+    const height = lines.length * lineHeight + 8;
+    if (height <= this.pageHeight - this.marginTop - this.marginBottom) this.checkPageBreak(height);
+    for (const line of lines) {
+      this.checkPageBreak(lineHeight);
+      this.doc.text(line, this.marginLeft, this.currentY);
+      this.currentY += lineHeight;
+    }
   }
 
   public renderParagraph(
@@ -481,39 +486,43 @@ export class PdfDocumentBuilder {
   }
 
   public renderCallout(text: string, title?: string): void {
-    this.checkPageBreak(18);
-
-    const contentWidth = this.getContentWidth();
-    const splitLines = this.doc.splitTextToSize(text, contentWidth - 8);
-    const boxHeight = splitLines.length * 4.5 + (title ? 9 : 6);
-
-    this.checkPageBreak(boxHeight + 4);
-
-    // Callout box background
-    this.doc.setFillColor(this.theme.colors.calloutBg[0], this.theme.colors.calloutBg[1], this.theme.colors.calloutBg[2]);
-    this.doc.setDrawColor(this.theme.colors.primary[0], this.theme.colors.primary[1], this.theme.colors.primary[2]);
-    this.doc.setLineWidth(0.4);
-    this.doc.roundedRect(this.marginLeft, this.currentY, contentWidth, boxHeight, 1.5, 1.5, 'FD');
-
-    let innerY = this.currentY + 4;
-    if (title) {
-      this.doc.setFont(this.theme.fonts.bold, 'bold');
-      this.doc.setFontSize(this.theme.sizes.body);
-      this.doc.setTextColor(this.theme.colors.primary[0], this.theme.colors.primary[1], this.theme.colors.primary[2]);
-      this.doc.text(title, this.marginLeft + 4, innerY);
-      innerY += 4.5;
-    }
-
+    const width = this.getContentWidth();
+    this.doc.setFont(this.theme.fonts.bold, 'bold');
+    this.doc.setFontSize(this.theme.sizes.body);
+    const titleLines: string[] = title ? this.doc.splitTextToSize(title, width - 8) : [];
     this.doc.setFont(this.theme.fonts.base, 'normal');
     this.doc.setFontSize(this.theme.sizes.small);
-    this.doc.setTextColor(this.theme.colors.text[0], this.theme.colors.text[1], this.theme.colors.text[2]);
+    const bodyLines: string[] = this.doc.splitTextToSize(text, width - 8);
+    const lines = [...titleLines, ...bodyLines];
+    const lineHeight = Math.max(4.5, this.theme.sizes.body * 25.4 / 72 * 1.2);
+    const padding = 6;
+    const bottom = this.pageHeight - this.marginBottom;
+    const maximumHeight = bottom - this.marginTop;
+    const fullHeight = lines.length * lineHeight + padding;
+    this.checkPageBreak(fullHeight <= maximumHeight
+      ? fullHeight
+      : Math.min((titleLines.length + 1) * lineHeight + padding, maximumHeight));
 
-    for (const line of splitLines) {
-      this.doc.text(line, this.marginLeft + 4, innerY);
-      innerY += 4;
+    for (let offset = 0; offset < lines.length;) {
+      this.checkPageBreak(lineHeight + padding);
+      const count = Math.min(lines.length - offset, Math.floor((bottom - this.currentY - padding) / lineHeight + 1e-9));
+      const height = count * lineHeight + padding;
+      this.doc.setFillColor(...this.theme.colors.calloutBg as [number, number, number]);
+      this.doc.setDrawColor(...this.theme.colors.primary as [number, number, number]);
+      this.doc.setLineWidth(0.4);
+      this.doc.roundedRect(this.marginLeft, this.currentY, width, height, 1.5, 1.5, 'FD');
+
+      const end = offset + count;
+      for (let index = offset; index < end; index++) {
+        const isTitle = index < titleLines.length;
+        this.doc.setFont(isTitle ? this.theme.fonts.bold : this.theme.fonts.base, isTitle ? 'bold' : 'normal');
+        this.doc.setFontSize(isTitle ? this.theme.sizes.body : this.theme.sizes.small);
+        this.doc.setTextColor(...(isTitle ? this.theme.colors.primary : this.theme.colors.text) as [number, number, number]);
+        this.doc.text(lines[index], this.marginLeft + 4, this.currentY + 5 + (index - offset) * lineHeight);
+      }
+      this.currentY += height + 4;
+      offset = end;
     }
-
-    this.currentY += boxHeight + 4;
   }
 
   public renderTable(section: PdfSectionTable): void {
@@ -550,7 +559,7 @@ export class PdfDocumentBuilder {
       if (typeof style.cellWidth === 'number' && style.cellWidth <= 18) style.cellPadding = { top: 2, bottom: 2, left: 0.8, right: 0.8 };
     }
 
-    autoTable(this.doc, {
+    const table = __createTable(this.doc, {
       startY: this.currentY,
       margin: { left: this.marginLeft, right: this.marginRight, top: this.marginTop, bottom: this.marginBottom },
       head: [headers],
@@ -586,8 +595,16 @@ export class PdfDocumentBuilder {
       rowPageBreak: section.rowPageBreak || 'avoid',
     });
 
-    const finalY = (this.doc as any).lastAutoTable?.finalY;
-    this.currentY = (finalY || this.currentY) + 6;
+    const firstRow = table.body[0];
+    if (firstRow && table.settings.rowPageBreak === 'avoid') {
+      const firstGroupHeight = table.getHeadHeight(table.columns) + firstRow.height;
+      if (firstGroupHeight <= this.pageHeight - this.marginTop - this.marginBottom) {
+        this.checkPageBreak(firstGroupHeight);
+        table.settings.startY = this.currentY;
+      }
+    }
+    __drawTable(this.doc, table);
+    this.currentY = (table.finalY ?? this.currentY) + 6;
   }
 
   public renderSignatureBlock(
